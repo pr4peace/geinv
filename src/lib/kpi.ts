@@ -1,0 +1,236 @@
+import { createAdminClient } from '@/lib/supabase/admin'
+import { addDays, format, parseISO } from 'date-fns'
+
+export interface QuarterlyForecast {
+  quarter: string
+  quarterStart: Date
+  quarterEnd: Date
+  payouts: Array<{
+    agreement_id: string
+    investor_name: string
+    reference_id: string
+    payout_frequency: string
+    due_by: string
+    gross_interest: number
+    tds_amount: number
+    net_interest: number
+    is_principal_repayment: boolean
+    status: string
+  }>
+  maturities: Array<{
+    agreement_id: string
+    investor_name: string
+    reference_id: string
+    principal_amount: number
+    maturity_date: string
+  }>
+  totals: {
+    gross_interest: number
+    tds_amount: number
+    net_interest: number
+    principal_maturing: number
+  }
+}
+
+export interface DashboardKPIs {
+  total_principal: number
+  active_agreements: number
+  quarter_gross_interest: number
+  quarter_tds: number
+  quarter_net_interest: number
+  overdue_count: number
+  overdue_amount: number
+  maturing_in_90_days: Array<{
+    investor_name: string
+    principal_amount: number
+    maturity_date: string
+    reference_id: string
+  }>
+}
+
+export interface FrequencyBreakdown {
+  quarterly: { count: number; principal: number; total_expected_interest: number }
+  annual: { count: number; principal: number; total_expected_interest: number }
+  cumulative: { count: number; principal: number; total_expected_interest: number }
+}
+
+export function getQuarterLabel(date: Date = new Date()): string {
+  const month = date.getMonth() // 0-indexed
+  // Indian financial year: Apr=Q1, Jul=Q2, Oct=Q3, Jan=Q4
+  const year = date.getFullYear()
+  if (month >= 3 && month <= 5) return `Q1-${year}-${String(year + 1).slice(2)}`
+  if (month >= 6 && month <= 8) return `Q2-${year}-${String(year + 1).slice(2)}`
+  if (month >= 9 && month <= 11) return `Q3-${year}-${String(year + 1).slice(2)}`
+  // Jan-Mar is Q4 of previous financial year
+  return `Q4-${year - 1}-${String(year).slice(2)}`
+}
+
+export function getIndianFinancialQuarterBounds(date: Date = new Date()): { start: Date; end: Date } {
+  const month = date.getMonth()
+  const year = date.getFullYear()
+
+  if (month >= 3 && month <= 5) return { start: new Date(year, 3, 1), end: new Date(year, 5, 30) }
+  if (month >= 6 && month <= 8) return { start: new Date(year, 6, 1), end: new Date(year, 8, 30) }
+  if (month >= 9 && month <= 11) return { start: new Date(year, 9, 1), end: new Date(year, 11, 31) }
+  return { start: new Date(year - 1, 12, 1), end: new Date(year, 2, 31) }
+}
+
+export async function getDashboardKPIs(): Promise<DashboardKPIs> {
+  const supabase = createAdminClient()
+  const now = new Date()
+  const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(now)
+  const in90Days = addDays(now, 90)
+
+  // Active agreements
+  const { data: agreements } = await supabase
+    .from('agreements')
+    .select('id, investor_name, principal_amount, maturity_date, reference_id, status')
+    .eq('status', 'active')
+
+  const activeAgreements = agreements ?? []
+  const totalPrincipal = activeAgreements.reduce((s, a) => s + a.principal_amount, 0)
+
+  // Quarter payouts
+  const { data: quarterPayouts } = await supabase
+    .from('payout_schedule')
+    .select('gross_interest, tds_amount, net_interest, status, due_by')
+    .gte('due_by', format(qStart, 'yyyy-MM-dd'))
+    .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
+
+  const qPayouts = quarterPayouts ?? []
+  const quarterGross = qPayouts.reduce((s, p) => s + p.gross_interest, 0)
+  const quarterTds = qPayouts.reduce((s, p) => s + p.tds_amount, 0)
+  const quarterNet = qPayouts.reduce((s, p) => s + p.net_interest, 0)
+
+  // Overdue
+  const { data: overduePayouts } = await supabase
+    .from('payout_schedule')
+    .select('net_interest')
+    .eq('status', 'overdue')
+
+  const overdue = overduePayouts ?? []
+
+  // Maturing in 90 days
+  const maturingIn90 = activeAgreements.filter(a => {
+    const mat = parseISO(a.maturity_date)
+    return mat >= now && mat <= in90Days
+  })
+
+  return {
+    total_principal: totalPrincipal,
+    active_agreements: activeAgreements.length,
+    quarter_gross_interest: quarterGross,
+    quarter_tds: quarterTds,
+    quarter_net_interest: quarterNet,
+    overdue_count: overdue.length,
+    overdue_amount: overdue.reduce((s, p) => s + p.net_interest, 0),
+    maturing_in_90_days: maturingIn90.map(a => ({
+      investor_name: a.investor_name,
+      principal_amount: a.principal_amount,
+      maturity_date: a.maturity_date,
+      reference_id: a.reference_id,
+    })),
+  }
+}
+
+export async function getQuarterlyForecast(quarterLabel?: string): Promise<QuarterlyForecast> {
+  const supabase = createAdminClient()
+  const now = new Date()
+  const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(now)
+  const label = quarterLabel ?? getQuarterLabel(now)
+
+  const { data: payouts } = await supabase
+    .from('payout_schedule')
+    .select(`
+      id, agreement_id, due_by, gross_interest, tds_amount, net_interest,
+      is_principal_repayment, status,
+      agreements!inner(investor_name, reference_id, payout_frequency, status)
+    `)
+    .gte('due_by', format(qStart, 'yyyy-MM-dd'))
+    .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
+    .eq('agreements.status', 'active')
+    .eq('is_principal_repayment', false)
+    .order('due_by')
+
+  const { data: maturities } = await supabase
+    .from('agreements')
+    .select('id, investor_name, reference_id, principal_amount, maturity_date')
+    .eq('status', 'active')
+    .gte('maturity_date', format(qStart, 'yyyy-MM-dd'))
+    .lte('maturity_date', format(qEnd, 'yyyy-MM-dd'))
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payoutList = (payouts ?? [] as any[]).map((p: { agreement_id: string; due_by: string; gross_interest: number; tds_amount: number; net_interest: number; is_principal_repayment: boolean; status: string; agreements: { investor_name: string; reference_id: string; payout_frequency: string } }) => ({
+    agreement_id: p.agreement_id,
+    investor_name: p.agreements.investor_name,
+    reference_id: p.agreements.reference_id,
+    payout_frequency: p.agreements.payout_frequency,
+    due_by: p.due_by,
+    gross_interest: p.gross_interest,
+    tds_amount: p.tds_amount,
+    net_interest: p.net_interest,
+    is_principal_repayment: p.is_principal_repayment,
+    status: p.status,
+  }))
+
+  const maturityList = (maturities ?? []).map(a => ({
+    agreement_id: a.id,
+    investor_name: a.investor_name,
+    reference_id: a.reference_id,
+    principal_amount: a.principal_amount,
+    maturity_date: a.maturity_date,
+  }))
+
+  return {
+    quarter: label,
+    quarterStart: qStart,
+    quarterEnd: qEnd,
+    payouts: payoutList,
+    maturities: maturityList,
+    totals: {
+      gross_interest: payoutList.reduce((s, p) => s + p.gross_interest, 0),
+      tds_amount: payoutList.reduce((s, p) => s + p.tds_amount, 0),
+      net_interest: payoutList.reduce((s, p) => s + p.net_interest, 0),
+      principal_maturing: maturityList.reduce((s, a) => s + a.principal_amount, 0),
+    },
+  }
+}
+
+export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
+  const supabase = createAdminClient()
+
+  const { data: agreements } = await supabase
+    .from('agreements')
+    .select('payout_frequency, principal_amount')
+    .eq('status', 'active')
+
+  const result: FrequencyBreakdown = {
+    quarterly: { count: 0, principal: 0, total_expected_interest: 0 },
+    annual: { count: 0, principal: 0, total_expected_interest: 0 },
+    cumulative: { count: 0, principal: 0, total_expected_interest: 0 },
+  }
+
+  for (const a of agreements ?? []) {
+    const freq = a.payout_frequency as keyof FrequencyBreakdown
+    if (result[freq]) {
+      result[freq].count++
+      result[freq].principal += a.principal_amount
+    }
+  }
+
+  // Get expected interest from payout_schedule for each frequency group
+  for (const freq of ['quarterly', 'annual', 'cumulative'] as const) {
+    const { data: payouts } = await supabase
+      .from('payout_schedule')
+      .select('net_interest, agreements!inner(payout_frequency, status)')
+      .eq('agreements.payout_frequency', freq)
+      .eq('agreements.status', 'active')
+      .eq('is_principal_repayment', false)
+
+    result[freq].total_expected_interest = (payouts ?? []).reduce(
+      (s: number, p: { net_interest: number }) => s + p.net_interest, 0
+    )
+  }
+
+  return result
+}
