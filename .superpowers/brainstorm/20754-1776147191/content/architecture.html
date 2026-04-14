@@ -1,0 +1,78 @@
+<h2>System Architecture</h2>
+<p class="subtitle">How the pieces connect — from document upload to email reminder</p>
+
+<div style="font-family: inherit; padding: 8px 0;">
+
+  <!-- Row 1: Input -->
+  <div style="display:flex; gap:16px; margin-bottom:12px; align-items:stretch;">
+    <div style="flex:1; background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px;">
+      <div class="label" style="color:#94a3b8; margin-bottom:6px;">INPUT</div>
+      <div style="font-size:1.1em; font-weight:600; color:#f1f5f9; margin-bottom:4px;">📄 Agreement Upload</div>
+      <div style="color:#94a3b8; font-size:0.85em;">PDF or scanned image of signed investment agreement</div>
+    </div>
+    <div style="display:flex; align-items:center; color:#64748b; font-size:1.5em;">→</div>
+    <div style="flex:1; background:#1e293b; border:1px solid #6366f1; border-radius:10px; padding:16px;">
+      <div class="label" style="color:#818cf8; margin-bottom:6px;">AI EXTRACTION</div>
+      <div style="font-size:1.1em; font-weight:600; color:#f1f5f9; margin-bottom:4px;">🤖 Claude AI</div>
+      <div style="color:#94a3b8; font-size:0.85em;">Reads agreement, extracts all key fields: parties, amount, rate, dates, payout schedule, TDS terms</div>
+    </div>
+    <div style="display:flex; align-items:center; color:#64748b; font-size:1.5em;">→</div>
+    <div style="flex:1; background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px;">
+      <div class="label" style="color:#94a3b8; margin-bottom:6px;">REVIEW</div>
+      <div style="font-size:1.1em; font-weight:600; color:#f1f5f9; margin-bottom:4px;">✏️ Confirm & Edit</div>
+      <div style="color:#94a3b8; font-size:0.85em;">You review extracted fields, fix anything, then confirm — agreement saved to database</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Storage + Schedule -->
+  <div style="display:flex; gap:16px; margin-bottom:12px; align-items:stretch;">
+    <div style="flex:1; background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px;">
+      <div class="label" style="color:#94a3b8; margin-bottom:6px;">STORAGE</div>
+      <div style="font-size:1.1em; font-weight:600; color:#f1f5f9; margin-bottom:4px;">🗄️ Supabase</div>
+      <div style="color:#94a3b8; font-size:0.85em;">
+        <strong style="color:#cbd5e1;">Database:</strong> All investment records, parties, terms<br>
+        <strong style="color:#cbd5e1;">File Storage:</strong> Original agreement PDFs<br>
+        <strong style="color:#cbd5e1;">Scheduler:</strong> Upcoming reminder queue
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; color:#64748b; font-size:1.5em;">→</div>
+    <div style="flex:1; background:#1e293b; border:1px solid #22c55e; border-radius:10px; padding:16px;">
+      <div class="label" style="color:#4ade80; margin-bottom:6px;">AUTO-SCHEDULE</div>
+      <div style="font-size:1.1em; font-weight:600; color:#f1f5f9; margin-bottom:4px;">📅 Reminder Engine</div>
+      <div style="color:#94a3b8; font-size:0.85em;">
+        On save, auto-generates reminder dates for every critical date:<br>
+        <span style="color:#4ade80;">3 months → 1 month → 2 weeks → 1 week before</span>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; color:#64748b; font-size:1.5em;">→</div>
+    <div style="flex:1; background:#1e293b; border:1px solid #f59e0b; border-radius:10px; padding:16px;">
+      <div class="label" style="color:#fbbf24; margin-bottom:6px;">DELIVERY</div>
+      <div style="font-size:1.1em; font-weight:600; color:#f1f5f9; margin-bottom:4px;">📧 Resend (Email)</div>
+      <div style="color:#94a3b8; font-size:0.85em;">Sends reminder emails automatically at the right time. WhatsApp added in Phase 2.</div>
+    </div>
+  </div>
+
+  <!-- Row 3: Views -->
+  <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px;">
+    <div class="label" style="color:#94a3b8; margin-bottom:10px;">WHAT YOU SEE</div>
+    <div style="display:flex; gap:12px;">
+      <div style="flex:1; background:#0f172a; border-radius:8px; padding:12px; border:1px solid #1e293b;">
+        <div style="font-weight:600; color:#f1f5f9; margin-bottom:4px;">📊 Dashboard</div>
+        <div style="color:#64748b; font-size:0.82em;">All investments at a glance — active, matured, upcoming payouts, TDS summary</div>
+      </div>
+      <div style="flex:1; background:#0f172a; border-radius:8px; padding:12px; border:1px solid #1e293b;">
+        <div style="font-weight:600; color:#f1f5f9; margin-bottom:4px;">📋 Agreement Detail</div>
+        <div style="color:#64748b; font-size:0.82em;">Full terms, payout schedule, TDS calculations, original scanned document</div>
+      </div>
+      <div style="flex:1; background:#0f172a; border-radius:8px; padding:12px; border:1px solid #1e293b;">
+        <div style="font-weight:600; color:#f1f5f9; margin-bottom:4px;">🗓️ Calendar View</div>
+        <div style="color:#64748b; font-size:0.82em;">Monthly calendar showing all critical dates across all agreements — colour-coded by type</div>
+      </div>
+      <div style="flex:1; background:#0f172a; border-radius:8px; padding:12px; border:1px solid #1e293b;">
+        <div style="font-weight:600; color:#f1f5f9; margin-bottom:4px;">🔔 Reminder Log</div>
+        <div style="color:#64748b; font-size:0.82em;">History of all reminders sent, upcoming reminders queued, ability to send manually</div>
+      </div>
+    </div>
+  </div>
+
+</div>

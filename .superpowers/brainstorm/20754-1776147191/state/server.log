@@ -1,0 +1,7 @@
+{"type":"server-started","port":51010,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:51010","screen_dir":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/content","state_dir":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/state"}
+{"type":"screen-added","file":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/content/approaches.html"}
+{"type":"screen-added","file":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/content/architecture.html"}
+{"type":"screen-added","file":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/content/data-model.html"}
+{"type":"screen-added","file":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/content/dashboard-wireframe.html"}
+{"type":"screen-added","file":"/Users/prashanthpalanisamy/geinv/.superpowers/brainstorm/20754-1776147191/content/payout-checklist.html"}
+{"type":"server-stopped","reason":"idle timeout"}

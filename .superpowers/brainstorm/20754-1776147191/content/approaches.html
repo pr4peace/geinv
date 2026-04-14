@@ -1,0 +1,43 @@
+<h2>How should we build this?</h2>
+<p class="subtitle">Three approaches for the Good Earth investment tracking platform — pick what feels right</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Lightweight Web App <span style="font-size:0.75em;color:#22c55e;font-weight:600;">★ Recommended</span></h3>
+      <p><strong>Stack:</strong> Next.js + Supabase (database &amp; file storage) + Claude AI + Resend (email)</p>
+      <p>Upload a scanned agreement → Claude extracts all fields → data saved → reminder schedule auto-generated → emails sent on schedule. Single deployable app, minimal infrastructure.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Fast to build and deploy</li><li>Low running cost</li><li>Easy to extend later (WhatsApp, multi-user)</li><li>Supabase handles auth, storage, DB in one</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Depends on Supabase (managed service)</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Custom Full-Stack App</h3>
+      <p><strong>Stack:</strong> React + Node.js/Express + PostgreSQL + cron jobs + SendGrid</p>
+      <p>Fully custom backend and database. More control over every layer — useful if you want self-hosted or have specific IT constraints.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Full control, self-hostable</li><li>No dependency on managed services</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Longer to build</li><li>More infrastructure to manage</li><li>Overkill for single-user tool</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>No-Code + AI Automation</h3>
+      <p><strong>Stack:</strong> Airtable (database) + Make.com (automation) + Claude API</p>
+      <p>Use existing no-code tools for data storage and automation. Good for a quick prototype but limited in customising the calendar and dashboard experience.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Fastest to get started</li><li>No coding needed for logic</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Limited custom UI (calendar, dashboard)</li><li>Gets expensive as data grows</li><li>Hard to extend meaningfully</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
