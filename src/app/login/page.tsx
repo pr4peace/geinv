@@ -2,6 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+const ERROR_MESSAGES: Record<string, string> = {
+  'Invalid login credentials': 'Incorrect email or password.',
+  'Email not confirmed': 'Please verify your email before signing in.',
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -15,14 +21,12 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    // Defer client creation to call time so env vars are available at runtime
-    const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError(error.message)
+      setError(ERROR_MESSAGES[error.message] ?? 'Sign in failed. Please try again.')
       setLoading(false)
     } else {
       router.push('/dashboard')
