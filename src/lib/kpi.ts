@@ -72,7 +72,7 @@ export function getIndianFinancialQuarterBounds(date: Date = new Date()): { star
   if (month >= 3 && month <= 5) return { start: new Date(year, 3, 1), end: new Date(year, 5, 30) }
   if (month >= 6 && month <= 8) return { start: new Date(year, 6, 1), end: new Date(year, 8, 30) }
   if (month >= 9 && month <= 11) return { start: new Date(year, 9, 1), end: new Date(year, 11, 31) }
-  return { start: new Date(year - 1, 12, 1), end: new Date(year, 2, 31) }
+  return { start: new Date(year - 1, 3, 1), end: new Date(year, 2, 31) }
 }
 
 export async function getDashboardKPIs(): Promise<DashboardKPIs> {
@@ -82,20 +82,22 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   const in90Days = addDays(now, 90)
 
   // Active agreements
-  const { data: agreements } = await supabase
+  const { data: agreements, error: agreementsError } = await supabase
     .from('agreements')
     .select('id, investor_name, principal_amount, maturity_date, reference_id, status')
     .eq('status', 'active')
+  if (agreementsError) throw new Error(`Failed to fetch agreements: ${agreementsError.message}`)
 
   const activeAgreements = agreements ?? []
   const totalPrincipal = activeAgreements.reduce((s, a) => s + a.principal_amount, 0)
 
   // Quarter payouts
-  const { data: quarterPayouts } = await supabase
+  const { data: quarterPayouts, error: quarterPayoutsError } = await supabase
     .from('payout_schedule')
     .select('gross_interest, tds_amount, net_interest, status, due_by')
     .gte('due_by', format(qStart, 'yyyy-MM-dd'))
     .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
+  if (quarterPayoutsError) throw new Error(`Failed to fetch quarter payouts: ${quarterPayoutsError.message}`)
 
   const qPayouts = quarterPayouts ?? []
   const quarterGross = qPayouts.reduce((s, p) => s + p.gross_interest, 0)
@@ -103,10 +105,11 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   const quarterNet = qPayouts.reduce((s, p) => s + p.net_interest, 0)
 
   // Overdue
-  const { data: overduePayouts } = await supabase
+  const { data: overduePayouts, error: overduePayoutsError } = await supabase
     .from('payout_schedule')
     .select('net_interest')
     .eq('status', 'overdue')
+  if (overduePayoutsError) throw new Error(`Failed to fetch overdue payouts: ${overduePayoutsError.message}`)
 
   const overdue = overduePayouts ?? []
 
@@ -139,7 +142,22 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
   const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(now)
   const label = quarterLabel ?? getQuarterLabel(now)
 
-  const { data: payouts } = await supabase
+  interface PayoutWithAgreement {
+    agreement_id: string
+    due_by: string
+    gross_interest: number
+    tds_amount: number
+    net_interest: number
+    is_principal_repayment: boolean
+    status: string
+    agreements: {
+      investor_name: string
+      reference_id: string
+      payout_frequency: string
+    }
+  }
+
+  const { data: payouts, error: payoutsError } = await supabase
     .from('payout_schedule')
     .select(`
       id, agreement_id, due_by, gross_interest, tds_amount, net_interest,
@@ -151,16 +169,17 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
     .eq('agreements.status', 'active')
     .eq('is_principal_repayment', false)
     .order('due_by')
+  if (payoutsError) throw new Error(`Failed to fetch quarterly payouts: ${payoutsError.message}`)
 
-  const { data: maturities } = await supabase
+  const { data: maturities, error: maturitiesError } = await supabase
     .from('agreements')
     .select('id, investor_name, reference_id, principal_amount, maturity_date')
     .eq('status', 'active')
     .gte('maturity_date', format(qStart, 'yyyy-MM-dd'))
     .lte('maturity_date', format(qEnd, 'yyyy-MM-dd'))
+  if (maturitiesError) throw new Error(`Failed to fetch maturities: ${maturitiesError.message}`)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payoutList = (payouts ?? [] as any[]).map((p: { agreement_id: string; due_by: string; gross_interest: number; tds_amount: number; net_interest: number; is_principal_repayment: boolean; status: string; agreements: { investor_name: string; reference_id: string; payout_frequency: string } }) => ({
+  const payoutList = (payouts as unknown as PayoutWithAgreement[] ?? []).map((p) => ({
     agreement_id: p.agreement_id,
     investor_name: p.agreements.investor_name,
     reference_id: p.agreements.reference_id,
@@ -199,10 +218,11 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
 export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
   const supabase = createAdminClient()
 
-  const { data: agreements } = await supabase
+  const { data: agreements, error: agreementsError } = await supabase
     .from('agreements')
     .select('payout_frequency, principal_amount')
     .eq('status', 'active')
+  if (agreementsError) throw new Error(`Failed to fetch agreements: ${agreementsError.message}`)
 
   const result: FrequencyBreakdown = {
     quarterly: { count: 0, principal: 0, total_expected_interest: 0 },
@@ -220,14 +240,15 @@ export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
 
   // Get expected interest from payout_schedule for each frequency group
   for (const freq of ['quarterly', 'annual', 'cumulative'] as const) {
-    const { data: payouts } = await supabase
+    const { data: freqPayouts, error: freqPayoutsError } = await supabase
       .from('payout_schedule')
       .select('net_interest, agreements!inner(payout_frequency, status)')
       .eq('agreements.payout_frequency', freq)
       .eq('agreements.status', 'active')
       .eq('is_principal_repayment', false)
+    if (freqPayoutsError) throw new Error(`Failed to fetch ${freq} payouts: ${freqPayoutsError.message}`)
 
-    result[freq].total_expected_interest = (payouts ?? []).reduce(
+    result[freq].total_expected_interest = (freqPayouts ?? []).reduce(
       (s: number, p: { net_interest: number }) => s + p.net_interest, 0
     )
   }

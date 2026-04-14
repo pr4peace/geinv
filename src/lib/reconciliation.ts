@@ -57,26 +57,45 @@ export function parseTDSExcel(buffer: Buffer): TDSEntry[] {
 
 export function reconcileIncomingFunds(
   payments: IncomingPayment[],
-  agreements: Agreement[]
+  agreements: Agreement[],
+  quarterStart?: Date,
+  quarterEnd?: Date
 ): ReconciliationResult {
   const matched: ReconciliationEntry[] = []
   const missing: ReconciliationEntry[] = []  // in system, not in Tally
   const extra: ReconciliationEntry[] = []    // in Tally, not in system
   const mismatched: ReconciliationEntry[] = []
 
+  const filteredAgreements = (quarterStart && quarterEnd)
+    ? agreements.filter(a => {
+        const startDate = parseISO(a.investment_start_date)
+        return isWithinInterval(startDate, { start: quarterStart, end: quarterEnd })
+      })
+    : agreements
+
   const usedPaymentIndices = new Set<number>()
 
-  for (const agreement of agreements) {
+  for (const agreement of filteredAgreements) {
     const principal = agreement.principal_amount
     const investorName = agreement.investor_name.toLowerCase()
 
-    // Find matching payment: name similarity + amount within ₹100
+    // Find matching payment: name similarity + amount within ₹100 + date ±7 days
     const matchIdx = payments.findIndex((p, i) => {
       if (usedPaymentIndices.has(i)) return false
       const nameMatch = p.party_name.toLowerCase().includes(investorName.split(' ')[0]) ||
         investorName.includes(p.party_name.toLowerCase().split(' ')[0])
       const amountMatch = Math.abs(p.amount - principal) <= 100
-      return nameMatch && amountMatch
+      // Date match: ±7 days from investment_start_date (if date available)
+      let dateMatch = true
+      if (p.date && agreement.investment_start_date) {
+        try {
+          const paymentDate = new Date(p.date)
+          const investmentDate = parseISO(agreement.investment_start_date)
+          const diffDays = Math.abs((paymentDate.getTime() - investmentDate.getTime()) / (1000 * 60 * 60 * 24))
+          dateMatch = diffDays <= 7
+        } catch { dateMatch = true } // if date parsing fails, don't filter on date
+      }
+      return nameMatch && amountMatch && dateMatch
     })
 
     if (matchIdx === -1) {

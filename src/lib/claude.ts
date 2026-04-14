@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  maxRetries: 2,
 })
 
 export interface ExtractedPayoutRow {
@@ -104,12 +105,17 @@ export async function extractAgreementData(
     ]
   }
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
-    system: EXTRACTION_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content }],
-  })
+  let response: Awaited<ReturnType<typeof anthropic.messages.create>>
+  try {
+    response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system: EXTRACTION_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content }],
+    })
+  } catch (err) {
+    throw new Error(`Claude API call failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
 
   const textContent = response.content.find(c => c.type === 'text')
   if (!textContent || textContent.type !== 'text') {
@@ -122,6 +128,34 @@ export async function extractAgreementData(
     .replace(/\n?```$/m, '')
     .trim()
 
-  const extracted = JSON.parse(json) as ExtractedAgreement
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    throw new Error(`Claude returned invalid JSON. Response: ${json.slice(0, 300)}`)
+  }
+
+  const extracted = parsed as ExtractedAgreement
+
+  // Validate critical numeric fields (LLM may return strings despite instructions)
+  const numericFields = ['principal_amount', 'roi_percentage', 'lock_in_years'] as const
+  for (const field of numericFields) {
+    if (typeof extracted[field] !== 'number') {
+      throw new Error(`Extracted field '${field}' is not a number: ${JSON.stringify(extracted[field])}`)
+    }
+  }
+
+  // Validate payout schedule rows
+  if (!Array.isArray(extracted.payout_schedule)) {
+    throw new Error('Extracted payout_schedule is not an array')
+  }
+  for (const row of extracted.payout_schedule) {
+    for (const f of ['gross_interest', 'tds_amount', 'net_interest'] as const) {
+      if (typeof row[f] !== 'number') {
+        throw new Error(`Payout row field '${f}' is not a number: ${JSON.stringify(row[f])}`)
+      }
+    }
+  }
+
   return extracted
 }

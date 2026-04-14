@@ -1,6 +1,8 @@
 import { addDays, subDays, isBefore, startOfDay } from 'date-fns'
 import type { Agreement, PayoutSchedule, Reminder } from '@/types/database'
 
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 export interface ReminderInput {
   agreement_id: string
   payout_schedule_id?: string
@@ -79,26 +81,35 @@ export function generateMaturityReminders(
   return reminders
 }
 
-export function generateDocReturnReminder(
+export function generateDocReturnReminders(
   agreement: Agreement,
   internalEmail: string,
   salespersonEmail: string | null
-): ReminderInput | null {
-  if (!agreement.doc_sent_to_client_date) return null
+): ReminderInput[] {
+  if (!agreement.doc_sent_to_client_date) return []
 
   const sentDate = new Date(agreement.doc_sent_to_client_date)
-  const scheduledAt = addDays(sentDate, agreement.doc_return_reminder_days)
   const emailTo = [internalEmail, salespersonEmail].filter(Boolean) as string[]
+  const reminders: ReminderInput[] = []
 
-  return {
-    agreement_id: agreement.id,
-    reminder_type: 'doc_return',
-    lead_days: null,
-    scheduled_at: scheduledAt,
-    email_to: emailTo,
-    email_subject: `Document Not Returned: ${agreement.investor_name} — ${agreement.doc_return_reminder_days} days since dispatch`,
-    email_body: buildDocReturnReminderBody(agreement),
+  // Initial reminder after configured days, then repeat every 7 days for up to 5 total
+  for (let i = 0; i < 5; i++) {
+    const daysOffset = agreement.doc_return_reminder_days + (i * REMINDER_CONFIG.doc_return_repeat)
+    const scheduledAt = addDays(sentDate, daysOffset)
+    const daysSinceSent = daysOffset
+
+    reminders.push({
+      agreement_id: agreement.id,
+      reminder_type: 'doc_return',
+      lead_days: null,
+      scheduled_at: scheduledAt,
+      email_to: emailTo,
+      email_subject: `Follow-up ${i + 1}: Agreement not returned — ${agreement.investor_name} (${daysSinceSent} days since dispatch)`,
+      email_body: buildDocReturnReminderBody(agreement, daysSinceSent),
+    })
   }
+
+  return reminders
 }
 
 function buildPayoutReminderBody(agreement: Agreement, payout: PayoutSchedule, leadDays: number): string {
@@ -106,10 +117,10 @@ function buildPayoutReminderBody(agreement: Agreement, payout: PayoutSchedule, l
     <h2>Interest Payout Reminder</h2>
     <p>This is a reminder that an interest payout is due in <strong>${leadDays} days</strong>.</p>
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
-      <tr><td><strong>Investor</strong></td><td>${agreement.investor_name}</td></tr>
-      <tr><td><strong>Agreement Ref</strong></td><td>${agreement.reference_id}</td></tr>
-      <tr><td><strong>Period</strong></td><td>${payout.period_from} to ${payout.period_to}</td></tr>
-      <tr><td><strong>Due By</strong></td><td>${payout.due_by}</td></tr>
+      <tr><td><strong>Investor</strong></td><td>${esc(agreement.investor_name)}</td></tr>
+      <tr><td><strong>Agreement Ref</strong></td><td>${esc(agreement.reference_id)}</td></tr>
+      <tr><td><strong>Period</strong></td><td>${esc(payout.period_from)} to ${esc(payout.period_to)}</td></tr>
+      <tr><td><strong>Due By</strong></td><td>${esc(payout.due_by)}</td></tr>
       <tr><td><strong>Gross Interest</strong></td><td>₹${payout.gross_interest.toLocaleString('en-IN')}</td></tr>
       <tr><td><strong>TDS (10%)</strong></td><td>₹${payout.tds_amount.toLocaleString('en-IN')}</td></tr>
       <tr><td><strong>Net Payable</strong></td><td>₹${payout.net_interest.toLocaleString('en-IN')}</td></tr>
@@ -123,19 +134,19 @@ function buildMaturityReminderBody(agreement: Agreement, leadDays: number): stri
     <h2>Investment Maturity Notice</h2>
     <p>The following investment agreement matures in <strong>${leadDays} days</strong>.</p>
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
-      <tr><td><strong>Investor</strong></td><td>${agreement.investor_name}</td></tr>
-      <tr><td><strong>Agreement Ref</strong></td><td>${agreement.reference_id}</td></tr>
+      <tr><td><strong>Investor</strong></td><td>${esc(agreement.investor_name)}</td></tr>
+      <tr><td><strong>Agreement Ref</strong></td><td>${esc(agreement.reference_id)}</td></tr>
       <tr><td><strong>Principal Amount</strong></td><td>₹${agreement.principal_amount.toLocaleString('en-IN')}</td></tr>
-      <tr><td><strong>Maturity Date</strong></td><td>${agreement.maturity_date}</td></tr>
+      <tr><td><strong>Maturity Date</strong></td><td>${esc(agreement.maturity_date)}</td></tr>
     </table>
     <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/agreements/${agreement.id}">View in Investment Tracker →</a></p>
   `.trim()
 }
 
-function buildDocReturnReminderBody(agreement: Agreement): string {
+function buildDocReturnReminderBody(agreement: Agreement, daysSinceSent: number): string {
   return `
-    <h2>Agreement Document Not Yet Returned</h2>
-    <p>The signed agreement for <strong>${agreement.investor_name}</strong> was sent to the client on ${agreement.doc_sent_to_client_date} but has not been returned yet.</p>
+    <h2>Agreement Document Not Yet Returned (Follow-up)</h2>
+    <p>The signed agreement for <strong>${esc(agreement.investor_name)}</strong> was sent to the client on ${esc(agreement.doc_sent_to_client_date ?? '')} and has not been returned after <strong>${daysSinceSent} days</strong>.</p>
     <p>Please follow up with the salesperson to collect the signed document.</p>
     <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/agreements/${agreement.id}">View Agreement →</a></p>
   `.trim()

@@ -1,6 +1,8 @@
 import { Resend } from 'resend'
 import type { Agreement, PayoutSchedule } from '@/types/database'
 
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey || apiKey === 'your-resend-api-key') return null
@@ -51,11 +53,11 @@ export async function sendAccountsNotification(params: {
     <h2>Interest Payout Action Required</h2>
     <p>Please process the following interest payout:</p>
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
-      <tr><td><strong>Investor</strong></td><td>${agreement.investor_name}</td></tr>
-      <tr><td><strong>PAN</strong></td><td>${agreement.investor_pan || 'N/A'}</td></tr>
-      <tr><td><strong>Agreement Ref</strong></td><td>${agreement.reference_id}</td></tr>
-      <tr><td><strong>Period</strong></td><td>${payout.period_from} to ${payout.period_to}</td></tr>
-      <tr><td><strong>Due By</strong></td><td>${payout.due_by}</td></tr>
+      <tr><td><strong>Investor</strong></td><td>${esc(agreement.investor_name)}</td></tr>
+      <tr><td><strong>PAN</strong></td><td>${agreement.investor_pan ? esc(agreement.investor_pan) : 'N/A'}</td></tr>
+      <tr><td><strong>Agreement Ref</strong></td><td>${esc(agreement.reference_id)}</td></tr>
+      <tr><td><strong>Period</strong></td><td>${esc(payout.period_from)} to ${esc(payout.period_to)}</td></tr>
+      <tr><td><strong>Due By</strong></td><td>${esc(payout.due_by)}</td></tr>
       <tr><td><strong>Gross Interest</strong></td><td>₹${payout.gross_interest.toLocaleString('en-IN')}</td></tr>
       <tr><td><strong>TDS (10%)</strong></td><td>₹${payout.tds_amount.toLocaleString('en-IN')}</td></tr>
       <tr><td><strong>Net Payable</strong></td><td><strong>₹${payout.net_interest.toLocaleString('en-IN')}</strong></td></tr>
@@ -84,8 +86,8 @@ export async function sendQuarterlyForecast(params: {
 
   const rows = payouts.map(({ agreement, payout }) => `
     <tr>
-      <td>${agreement.investor_name}</td>
-      <td>${payout.due_by}</td>
+      <td>${esc(agreement.investor_name)}</td>
+      <td>${esc(payout.due_by)}</td>
       <td style="text-align:right">₹${payout.gross_interest.toLocaleString('en-IN')}</td>
       <td style="text-align:right">₹${payout.tds_amount.toLocaleString('en-IN')}</td>
       <td style="text-align:right"><strong>₹${payout.net_interest.toLocaleString('en-IN')}</strong></td>
@@ -94,8 +96,8 @@ export async function sendQuarterlyForecast(params: {
 
   const maturityRows = maturities.map(a => `
     <tr>
-      <td>${a.investor_name}</td>
-      <td>${a.maturity_date}</td>
+      <td>${esc(a.investor_name)}</td>
+      <td>${esc(a.maturity_date)}</td>
       <td colspan="3" style="text-align:right"><strong>₹${a.principal_amount.toLocaleString('en-IN')} (Principal)</strong></td>
     </tr>
   `).join('')
