@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Download, ChevronLeft } from 'lucide-react'
+import { AlertTriangle, Download, ChevronLeft, Plus, X } from 'lucide-react'
 import type { ExtractedAgreement } from '@/lib/claude'
 import PayoutScheduleTable from './PayoutScheduleTable'
 
@@ -14,10 +14,18 @@ interface TeamMember {
   is_active: boolean
 }
 
+interface NomineeRow {
+  name: string
+  relationship: string
+  share: string
+  pan: string
+}
+
 interface ExtractionReviewProps {
   extracted: ExtractedAgreement
   fileUrl: string
   fileName: string
+  file: File
   isDraft: boolean
   salespersonId: string | null
   salespersonCustom: string | null
@@ -39,7 +47,7 @@ interface FormState {
   investor_address: string
   investor_relationship: string
   investor_parent_name: string
-  nominees_json: string
+  nominees: NomineeRow[]
   principal_amount: string
   roi_percentage: string
   payout_frequency: PayoutFrequency
@@ -106,6 +114,7 @@ export default function ExtractionReview({
   extracted,
   fileUrl,
   fileName,
+  file,
   isDraft,
   salespersonId,
   salespersonCustom,
@@ -126,7 +135,12 @@ export default function ExtractionReview({
     investor_address: extracted.investor_address ?? '',
     investor_relationship: extracted.investor_relationship ?? '',
     investor_parent_name: extracted.investor_parent_name ?? '',
-    nominees_json: JSON.stringify(extracted.nominees ?? [], null, 2),
+    nominees: (extracted.nominees ?? []).map(n => ({
+      name: n.name ?? '',
+      relationship: '',
+      share: '',
+      pan: n.pan ?? '',
+    })),
     principal_amount: extracted.principal_amount != null ? String(extracted.principal_amount) : '',
     roi_percentage: extracted.roi_percentage != null ? String(extracted.roi_percentage) : '',
     payout_frequency: extracted.payout_frequency ?? 'quarterly',
@@ -144,9 +158,60 @@ export default function ExtractionReview({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [docxHtml, setDocxHtml] = useState<string | null>(null)
+  const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
+
+  // For PDF: create a local object URL so the iframe works without auth headers
+  // For DOCX: convert to HTML via mammoth in the browser
+  useEffect(() => {
+    const isDocx = fileName.toLowerCase().endsWith('.docx')
+    const isPdfFile = fileName.toLowerCase().endsWith('.pdf')
+
+    if (isPdfFile) {
+      const url = URL.createObjectURL(file)
+      setPdfObjectUrl(url)
+      return () => URL.revokeObjectURL(url)
+    } else if (isDocx) {
+      let cancelled = false
+      file.arrayBuffer().then(async (buf) => {
+        if (cancelled) return
+        try {
+          const mammoth = await import('mammoth')
+          const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+          if (!cancelled) setDocxHtml(result.value)
+        } catch {
+          if (!cancelled) setDocxHtml('<p style="color:#94a3b8">Could not render DOCX preview.</p>')
+        }
+      })
+      return () => { cancelled = true }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  function updateNominee(idx: number, field: keyof NomineeRow, value: string) {
+    setForm(prev => {
+      const nominees = [...prev.nominees]
+      nominees[idx] = { ...nominees[idx], [field]: value }
+      return { ...prev, nominees }
+    })
+  }
+
+  function addNominee() {
+    setForm(prev => ({
+      ...prev,
+      nominees: [...prev.nominees, { name: '', relationship: '', share: '', pan: '' }],
+    }))
+  }
+
+  function removeNominee(idx: number) {
+    setForm(prev => ({
+      ...prev,
+      nominees: prev.nominees.filter((_, i) => i !== idx),
+    }))
   }
 
   function fieldClass(field: keyof FormState, base: string = ''): string {
@@ -171,19 +236,15 @@ export default function ExtractionReview({
       return
     }
 
-    // Parse nominees JSON
-    let nominees: unknown[] = []
-    try {
-      nominees = JSON.parse(form.nominees_json)
-    } catch {
-      setSaveError('Nominees JSON is invalid. Please fix it before saving.')
-      return
-    }
-
-    if (!Array.isArray(nominees)) {
-      setSaveError('Nominees must be a JSON array (e.g. []). Please fix it before saving.')
-      return
-    }
+    // Build nominees array from structured rows (drop empty-name rows)
+    const nominees = form.nominees
+      .filter(n => n.name.trim())
+      .map(n => ({
+        name: n.name.trim(),
+        ...(n.relationship.trim() ? { relationship: n.relationship.trim() } : {}),
+        ...(n.pan.trim() ? { pan: n.pan.trim() } : {}),
+        ...(n.share.trim() && !isNaN(parseFloat(n.share)) ? { share: parseFloat(n.share) } : {}),
+      }))
 
     // Validate numeric fields before POST
     const principalVal = parseFloat(form.principal_amount)
@@ -247,6 +308,7 @@ export default function ExtractionReview({
   }
 
   const isPdf = fileName.toLowerCase().endsWith('.pdf')
+  const isDocx = fileName.toLowerCase().endsWith('.docx')
   const salespersonOptions = teamMembers.filter(m => m.role === 'salesperson' && m.is_active)
 
   return (
@@ -404,15 +466,83 @@ export default function ExtractionReview({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Nominees (JSON)</label>
-              <textarea
-                rows={4}
-                value={form.nominees_json}
-                onChange={e => update('nominees_json', e.target.value)}
-                className={fieldClass('nominees_json', 'w-full resize-none font-mono text-xs')}
-                spellCheck={false}
-              />
+            {/* Nominees */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-400">Nominees</label>
+                <button
+                  type="button"
+                  onClick={addNominee}
+                  className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Nominee
+                </button>
+              </div>
+
+              {form.nominees.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">No nominees — click "Add Nominee" to add one.</p>
+              ) : (
+                <div className="space-y-3">
+                  {form.nominees.map((nominee, idx) => (
+                    <div key={idx} className="relative bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => removeNominee(idx)}
+                        className="absolute top-2 right-2 text-slate-500 hover:text-red-400 transition-colors"
+                        title="Remove nominee"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <p className="text-xs font-medium text-slate-400">Nominee {idx + 1}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-slate-500 mb-0.5 block">Name</label>
+                          <input
+                            type="text"
+                            value={nominee.name}
+                            onChange={e => updateNominee(idx, 'name', e.target.value)}
+                            placeholder="Full name"
+                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500 mb-0.5 block">PAN</label>
+                          <input
+                            type="text"
+                            value={nominee.pan}
+                            onChange={e => updateNominee(idx, 'pan', e.target.value)}
+                            placeholder="PAN number"
+                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500 mb-0.5 block">Relationship</label>
+                          <input
+                            type="text"
+                            value={nominee.relationship}
+                            onChange={e => updateNominee(idx, 'relationship', e.target.value)}
+                            placeholder="e.g. Spouse, Son"
+                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500 mb-0.5 block">Share %</label>
+                          <input
+                            type="number"
+                            value={nominee.share}
+                            onChange={e => updateNominee(idx, 'share', e.target.value)}
+                            placeholder="e.g. 100"
+                            min={0}
+                            max={100}
+                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -602,19 +732,24 @@ export default function ExtractionReview({
 
             {isPdf ? (
               <iframe
-                src={fileUrl}
+                src={pdfObjectUrl ?? fileUrl}
                 title="Agreement document preview"
                 className="w-full rounded-lg bg-slate-900"
                 style={{ height: '600px', border: 'none' }}
               />
-            ) : (
+            ) : isDocx && docxHtml ? (
+              <div
+                className="w-full rounded-lg bg-white text-slate-900 overflow-auto p-4 text-sm"
+                style={{ height: '600px' }}
+                dangerouslySetInnerHTML={{ __html: docxHtml }}
+              />
+            ) : isDocx ? (
               <div className="flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700 py-16 text-center">
                 <div>
-                  <p className="text-slate-400 text-sm">DOCX preview not available</p>
-                  <p className="text-slate-500 text-xs mt-1">Extraction complete</p>
+                  <p className="text-slate-400 text-sm">Rendering DOCX preview…</p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             <a
               href={fileUrl}

@@ -160,6 +160,7 @@ export default function NewAgreementPage() {
           extracted={extractResult.extracted}
           fileUrl={extractResult.file_url}
           fileName={file.name}
+          file={file}
           isDraft={isDraft}
           salespersonId={salespersonId}
           salespersonCustom={salespersonCustom}
