@@ -481,7 +481,7 @@ export default function ExtractionReview({
               </div>
 
               {form.nominees.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">No nominees — click "Add Nominee" to add one.</p>
+                <p className="text-xs text-slate-500 italic">No nominees — click &ldquo;Add Nominee&rdquo; to add one.</p>
               ) : (
                 <div className="space-y-3">
                   {form.nominees.map((nominee, idx) => (
