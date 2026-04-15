@@ -79,6 +79,35 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 400 })
     }
 
+    // Audit log — record what changed
+    const changeType =
+      body.status && body.status !== existing.status
+        ? 'status_changed'
+        : body.doc_status && body.doc_status !== existing.doc_status
+          ? 'doc_status_changed'
+          : 'updated'
+
+    // Build diff: only include keys that actually changed
+    const oldValues: Record<string, unknown> = {}
+    const newValues: Record<string, unknown> = {}
+    for (const key of Object.keys(body)) {
+      if (key === 'updated_at') continue
+      const existingVal = (existing as Record<string, unknown>)[key]
+      const newVal = (body as Record<string, unknown>)[key]
+      if (JSON.stringify(existingVal) !== JSON.stringify(newVal)) {
+        oldValues[key] = existingVal
+        newValues[key] = newVal
+      }
+    }
+    if (Object.keys(newValues).length > 0) {
+      await supabase.from('agreement_audit_log').insert({
+        agreement_id: id,
+        change_type: changeType,
+        old_values: oldValues,
+        new_values: newValues,
+      })
+    }
+
     // If doc_status changed to 'sent_to_client' and doc_sent_to_client_date is set,
     // generate doc_return reminders
     const docStatusChanged =
@@ -135,6 +164,40 @@ export async function PATCH(
     }
 
     return NextResponse.json(updated)
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = createAdminClient()
+
+    // Soft delete — sets deleted_at, record can be restored
+    const deletedAt = new Date().toISOString()
+    const { error } = await supabase
+      .from('agreements')
+      .update({ deleted_at: deletedAt })
+      .eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    await supabase.from('agreement_audit_log').insert({
+      agreement_id: id,
+      change_type: 'deleted',
+      new_values: { deleted_at: deletedAt },
+    })
+
+    return NextResponse.json({ success: true })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },

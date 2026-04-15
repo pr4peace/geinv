@@ -1,11 +1,21 @@
 export type TeamMemberRole = 'coordinator' | 'accountant' | 'financial_analyst' | 'salesperson'
-export type AgreementStatus = 'active' | 'matured' | 'cancelled'
-export type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative'
+export type AgreementStatus = 'active' | 'matured' | 'cancelled' | 'combined'
+export type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' | 'biannual'
 export type InterestType = 'simple' | 'compound'
 export type DocStatus = 'draft' | 'partner_signed' | 'sent_to_client' | 'returned' | 'uploaded'
 export type PayoutStatus = 'pending' | 'notified' | 'paid' | 'overdue'
 export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_forecast'
 export type ReminderStatus = 'pending' | 'sent' | 'failed'
+
+export interface Investor {
+  id: string
+  name: string
+  pan: string | null
+  aadhaar: string | null
+  address: string | null
+  birth_year: number | null
+  created_at: string
+}
 
 export interface TeamMember {
   id: string
@@ -47,10 +57,19 @@ export interface Agreement {
   doc_sent_to_client_date: string | null
   doc_returned_date: string | null
   doc_return_reminder_days: number
+  investor_id: string | null
+  investor_birth_year: number | null
+  investor2_name: string | null
+  investor2_pan: string | null
+  investor2_aadhaar: string | null
+  investor2_address: string | null
+  investor2_birth_year: number | null
+  deleted_at: string | null
   created_at: string
   updated_at: string
   // Joined
   salesperson?: TeamMember
+  investor?: Investor
 }
 
 export interface PayoutSchedule {

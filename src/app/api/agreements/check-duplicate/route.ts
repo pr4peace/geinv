@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     .from('agreements')
     .select('id, reference_id, investor_name, agreement_date, principal_amount, status')
     .neq('status', 'cancelled')
+    .is('deleted_at', null)
     .or(orFilter)
     .order('created_at', { ascending: false })
 

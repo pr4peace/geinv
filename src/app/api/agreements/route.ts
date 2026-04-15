@@ -8,6 +8,7 @@ import {
   type ReminderInput,
 } from '@/lib/reminders'
 import type { ExtractedPayoutRow } from '@/lib/claude'
+import { findOrCreateInvestor } from '@/lib/investors'
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,10 +26,18 @@ export async function GET(request: NextRequest) {
     const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at'
     const ascending = sortOrder === 'asc'
 
+    const showDeleted = searchParams.get('deleted') === 'true'
+
     let query = supabase
       .from('agreements')
       .select('*, salesperson:team_members!salesperson_id(*)')
       .order(safeSortBy, { ascending })
+
+    if (showDeleted) {
+      query = query.not('deleted_at', 'is', null)
+    } else {
+      query = query.is('deleted_at', null)
+    }
 
     if (status) query = query.eq('status', status)
     if (payoutFrequency) query = query.eq('payout_frequency', payoutFrequency)
@@ -76,6 +85,7 @@ export async function POST(request: NextRequest) {
         .from('agreements')
         .select('id, reference_id, investor_name, agreement_date, principal_amount, status')
         .neq('status', 'cancelled')
+        .is('deleted_at', null)
         .or(orFilter)
 
       if (dups && dups.length > 0) {
@@ -86,10 +96,26 @@ export async function POST(request: NextRequest) {
     // Generate reference_id
     const reference_id = await generateReferenceId()
 
+    // Find or create investor profile
+    let investor_id: string | null = null
+    const investorName = (agreementFields.investor_name as string) ?? ''
+    if (investorName) {
+      try {
+        investor_id = await findOrCreateInvestor(supabase, {
+          name: investorName,
+          pan: (agreementFields.investor_pan as string | null) ?? null,
+          aadhaar: (agreementFields.investor_aadhaar as string | null) ?? null,
+          address: (agreementFields.investor_address as string | null) ?? null,
+        })
+      } catch {
+        // Non-fatal — agreement still saves, just without investor link
+      }
+    }
+
     // Insert agreement
     const { data: agreement, error: agreementError } = await supabase
       .from('agreements')
-      .insert({ ...agreementFields, reference_id })
+      .insert({ ...agreementFields, reference_id, investor_id })
       .select()
       .single()
 

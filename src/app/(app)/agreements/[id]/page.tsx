@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bell, FileText } from 'lucide-react'
+import { ArrowLeft, Bell, FileText, User } from 'lucide-react'
 import type {
   Agreement,
   PayoutSchedule,
@@ -9,6 +9,8 @@ import type {
 } from '@/types/database'
 import DocLifecycleStepper from '@/components/agreements/DocLifecycleStepper'
 import UploadSignedButton from '@/components/agreements/UploadSignedButton'
+import DeleteAgreementButton from '@/components/agreements/DeleteAgreementButton'
+import AuditLog from '@/components/agreements/AuditLog'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -160,6 +162,7 @@ export default async function AgreementDetailPage({
     .select(`
       *,
       salesperson:team_members!salesperson_id(*),
+      investor:investors!investor_id(*),
       payout_schedule(*),
       reminders(*)
     `)
@@ -170,9 +173,15 @@ export default async function AgreementDetailPage({
     notFound()
   }
 
+  const { data: auditEntries } = await supabase
+    .from('agreement_audit_log')
+    .select('*')
+    .eq('agreement_id', id)
+    .order('created_at', { ascending: false })
+
   const agreement = rawAgreement as unknown as AgreementDetail
 
-  const { payout_schedule, reminders, salesperson } = agreement
+  const { payout_schedule, reminders, salesperson, investor } = agreement as AgreementDetail & { investor?: { id: string; name: string } }
 
   const salespersonName =
     salesperson?.name ?? agreement.salesperson_custom ?? '—'
@@ -186,6 +195,7 @@ export default async function AgreementDetailPage({
     active: { label: 'Active', cls: 'bg-green-900/40 text-green-400' },
     matured: { label: 'Matured', cls: 'bg-slate-700 text-slate-300' },
     cancelled: { label: 'Cancelled', cls: 'bg-red-900/40 text-red-400' },
+    combined: { label: 'Combined', cls: 'bg-purple-900/40 text-purple-400' },
   }
   const statusStyle = statusMap[agreement.status] ?? {
     label: agreement.status,
@@ -209,9 +219,21 @@ export default async function AgreementDetailPage({
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
           <div className="flex flex-wrap items-start gap-4 justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-100">
-                {agreement.investor_name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-slate-100">
+                  {agreement.investor_name}
+                </h1>
+                {investor?.id && (
+                  <Link
+                    href={`/investors/${investor.id}`}
+                    className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-800 rounded-full px-2 py-0.5 transition-colors"
+                    title="View investor profile"
+                  >
+                    <User className="w-3 h-3" />
+                    Profile
+                  </Link>
+                )}
+              </div>
               <p className="mt-0.5 text-sm text-slate-500 font-mono">
                 {agreement.reference_id}
               </p>
@@ -230,6 +252,10 @@ export default async function AgreementDetailPage({
               {agreement.is_draft && (
                 <UploadSignedButton agreementId={agreement.id} />
               )}
+              <DeleteAgreementButton
+                agreementId={agreement.id}
+                investorName={agreement.investor_name}
+              />
             </div>
           </div>
         </div>
@@ -460,6 +486,9 @@ export default async function AgreementDetailPage({
             )}
           </SectionCard>
         )}
+
+        {/* ── Audit Log ── */}
+        <AuditLog entries={(auditEntries ?? []) as Parameters<typeof AuditLog>[0]['entries']} />
 
       </div>
     </div>
