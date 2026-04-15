@@ -6,6 +6,7 @@ export interface QuarterlyForecast {
   quarterStart: Date
   quarterEnd: Date
   payouts: Array<{
+    id: string
     agreement_id: string
     investor_name: string
     reference_id: string
@@ -16,6 +17,7 @@ export interface QuarterlyForecast {
     net_interest: number
     is_principal_repayment: boolean
     status: string
+    is_draft: boolean
   }>
   maturities: Array<{
     agreement_id: string
@@ -136,13 +138,28 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   }
 }
 
+export function quarterLabelToDate(label: string): Date {
+  // Format: Q{1|2|3|4}-{YYYY}-{YY}, e.g. Q4-2025-26, Q1-2026-27
+  const match = label.match(/^Q([1-4])-(\d{4})-(\d{2})$/)
+  if (!match) return new Date()
+  const quarter = parseInt(match[1], 10)
+  const firstYear = parseInt(match[2], 10)
+  // Q4 spans Jan–Mar of the second year in the label
+  if (quarter === 1) return new Date(firstYear, 4, 15)   // May 15
+  if (quarter === 2) return new Date(firstYear, 7, 15)   // Aug 15
+  if (quarter === 3) return new Date(firstYear, 10, 15)  // Nov 15
+  return new Date(firstYear + 1, 1, 15)                  // Feb 15 of second year
+}
+
 export async function getQuarterlyForecast(quarterLabel?: string): Promise<QuarterlyForecast> {
   const supabase = createAdminClient()
   const now = new Date()
-  const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(now)
   const label = quarterLabel ?? getQuarterLabel(now)
+  const refDate = quarterLabel ? quarterLabelToDate(quarterLabel) : now
+  const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(refDate)
 
   interface PayoutWithAgreement {
+    id: string
     agreement_id: string
     due_by: string
     gross_interest: number
@@ -154,6 +171,7 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
       investor_name: string
       reference_id: string
       payout_frequency: string
+      status: string
     }
   }
 
@@ -166,7 +184,7 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
     `)
     .gte('due_by', format(qStart, 'yyyy-MM-dd'))
     .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
-    .eq('agreements.status', 'active')
+    .in('agreements.status', ['active', 'draft'])
     .eq('is_principal_repayment', false)
     .order('due_by')
   if (payoutsError) throw new Error(`Failed to fetch quarterly payouts: ${payoutsError.message}`)
@@ -180,6 +198,7 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
   if (maturitiesError) throw new Error(`Failed to fetch maturities: ${maturitiesError.message}`)
 
   const payoutList = (payouts as unknown as PayoutWithAgreement[] ?? []).map((p) => ({
+    id: p.id,
     agreement_id: p.agreement_id,
     investor_name: p.agreements.investor_name,
     reference_id: p.agreements.reference_id,
@@ -190,6 +209,7 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
     net_interest: p.net_interest,
     is_principal_repayment: p.is_principal_repayment,
     status: p.status,
+    is_draft: p.agreements.status === 'draft',
   }))
 
   const maturityList = (maturities ?? []).map(a => ({

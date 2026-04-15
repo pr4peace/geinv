@@ -37,6 +37,7 @@ export interface ExtractedAgreement {
   payment_mode: string | null
   payment_bank: string | null
   payout_schedule: ExtractedPayoutRow[]
+  confidence_warnings?: string[]
 }
 
 const EXTRACTION_SYSTEM_PROMPT = `You are an expert at extracting structured data from Indian investment agreement documents.

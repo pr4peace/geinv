@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import {
   parseIncomingFundsExcel,
   parseTDSExcel,
@@ -18,15 +19,15 @@ async function downloadFileFromUrl(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
+// UI-accessible reconcile endpoint
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Internal endpoint — require Bearer token matching CRON_SECRET
-    const auth = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
+    const authClient = await createServerClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -72,7 +73,6 @@ export async function POST(
       const fileBuffer = await downloadFileFromUrl(review.incoming_funds_doc_url)
       const payments = parseIncomingFundsExcel(fileBuffer)
 
-      // Fetch all active agreements
       const { data: agreements, error: agreementsError } = await supabase
         .from('agreements')
         .select('*')
@@ -102,7 +102,6 @@ export async function POST(
       const fileBuffer = await downloadFileFromUrl(review.tds_doc_url)
       const tdsEntries = parseTDSExcel(fileBuffer)
 
-      // Fetch paid payouts and their agreements
       const { data: payouts, error: payoutsError } = await supabase
         .from('payout_schedule')
         .select('*, agreement:agreements(*)')
@@ -142,7 +141,6 @@ export async function POST(
       updates.tds_status = 'completed'
     }
 
-    // If both are now completed (either this run or previously), mark overall status completed
     const incomingComplete =
       type === 'incoming_funds' || type === 'both'
         ? true

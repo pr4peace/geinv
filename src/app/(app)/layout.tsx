@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
+  FileText,
   Calendar,
   BarChart3,
   Settings,
@@ -12,6 +13,7 @@ import {
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/agreements', label: 'Agreements', icon: FileText },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/quarterly-review', label: 'Quarterly Review', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },

@@ -45,8 +45,14 @@ export async function POST(
       return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
     }
 
-    const { data: urlData } = supabase.storage.from('agreements').getPublicUrl(filePath)
-    const documentUrl = urlData.publicUrl
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('agreements')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365) // 1 year
+
+    if (signedError || !signedData) {
+      return NextResponse.json({ error: 'Failed to generate document URL' }, { status: 500 })
+    }
+    const documentUrl = signedData.signedUrl
 
     const { data: updated, error: updateError } = await supabase
       .from('agreements')

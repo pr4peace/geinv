@@ -31,7 +31,7 @@ export interface Agreement {
   investor_address: string | null
   investor_relationship: string | null
   investor_parent_name: string | null
-  nominees: Array<{ name: string; pan: string }>
+  nominees: Array<{ name: string; relationship?: string; share?: number; pan?: string }>
   principal_amount: number
   roi_percentage: number
   payout_frequency: PayoutFrequency

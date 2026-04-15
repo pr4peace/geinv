@@ -31,6 +31,7 @@ export function generatePayoutReminders(
   const reminders: ReminderInput[] = []
   const dueDate = new Date(payoutRow.due_by)
   const emailTo = [internalEmail, salespersonEmail].filter(Boolean) as string[]
+  if (emailTo.length === 0) return []
 
   const subject = `Payout Reminder: ${agreement.investor_name} — ₹${payoutRow.net_interest.toLocaleString('en-IN')} due ${payoutRow.due_by}`
 
@@ -58,9 +59,11 @@ export function generateMaturityReminders(
   internalEmail: string,
   salespersonEmail: string | null
 ): ReminderInput[] {
-  const reminders: ReminderInput[] = []
   const maturityDate = new Date(agreement.maturity_date)
   const emailTo = [internalEmail, salespersonEmail].filter(Boolean) as string[]
+  if (emailTo.length === 0) return []
+
+  const reminders: ReminderInput[] = []
 
   for (const leadDays of REMINDER_CONFIG.maturity) {
     const scheduledAt = subDays(maturityDate, leadDays)
@@ -90,6 +93,8 @@ export function generateDocReturnReminders(
 
   const sentDate = new Date(agreement.doc_sent_to_client_date)
   const emailTo = [internalEmail, salespersonEmail].filter(Boolean) as string[]
+  if (emailTo.length === 0) return []
+
   const reminders: ReminderInput[] = []
 
   // Initial reminder after configured days, then repeat every 7 days for up to 5 total

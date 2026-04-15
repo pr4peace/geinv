@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient()
 
-    const { data, error } = await supabase
-      .from('team_members')
-      .select('*')
-      .eq('is_active', true)
-      .order('name', { ascending: true })
+    const { searchParams } = new URL(request.url)
+    const showAll = searchParams.get('all') === 'true'
+
+    let query = supabase.from('team_members').select('*').order('name', { ascending: true })
+    if (!showAll) {
+      query = query.eq('is_active', true)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -40,6 +44,11 @@ export async function POST(request: NextRequest) {
         { error: 'name, email, and role are required' },
         { status: 400 }
       )
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
     const { data, error } = await supabase

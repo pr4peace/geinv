@@ -61,8 +61,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: urlData } = supabase.storage.from('agreements').getPublicUrl(tempPath)
-    const fileUrl = urlData.publicUrl
+    // Signed URL valid for 24 hours — long enough to confirm & save the agreement.
+    // Temp files are not auto-purged; run a periodic cleanup job on the temp/ prefix if storage grows.
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('agreements')
+      .createSignedUrl(tempPath, 60 * 60 * 24) // 24 hours
+
+    if (signedError || !signedData) {
+      return NextResponse.json({ error: 'Failed to generate file URL' }, { status: 500 })
+    }
+    const fileUrl = signedData.signedUrl
 
     return NextResponse.json({ extracted, file_url: fileUrl })
   } catch (err) {
