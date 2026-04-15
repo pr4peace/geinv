@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Download, ChevronLeft, Plus, X } from 'lucide-react'
+import { AlertTriangle, Download, ChevronLeft, Plus, X, ExternalLink } from 'lucide-react'
 import type { ExtractedAgreement } from '@/lib/claude'
 import PayoutScheduleTable from './PayoutScheduleTable'
 
@@ -12,6 +12,15 @@ interface TeamMember {
   email: string
   role: string
   is_active: boolean
+}
+
+interface DuplicateMatch {
+  id: string
+  reference_id: string
+  investor_name: string
+  agreement_date: string
+  principal_amount: number
+  status: string
 }
 
 interface NomineeRow {
@@ -160,6 +169,8 @@ export default function ExtractionReview({
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [docxHtml, setDocxHtml] = useState<string | null>(null)
   const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([])
+  const [bypassDuplicate, setBypassDuplicate] = useState(false)
 
   // For PDF: create a local object URL so the iframe works without auth headers
   // For DOCX: convert to HTML via mammoth in the browser
@@ -185,6 +196,26 @@ export default function ExtractionReview({
       })
       return () => { cancelled = true }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Check for duplicate agreements on mount
+  useEffect(() => {
+    const name = extracted.investor_name?.trim()
+    const date = extracted.agreement_date?.trim()
+    if (!name || !date) return
+
+    const params = new URLSearchParams({ investor_name: name, agreement_date: date })
+    if (extracted.investor_pan?.trim()) {
+      params.set('investor_pan', extracted.investor_pan.trim())
+    }
+
+    fetch(`/api/agreements/check-duplicate?${params}`)
+      .then(r => r.json())
+      .then((d: { duplicates?: DuplicateMatch[] }) => {
+        if (d.duplicates && d.duplicates.length > 0) setDuplicates(d.duplicates)
+      })
+      .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -236,6 +267,12 @@ export default function ExtractionReview({
       return
     }
 
+    // Require duplicate confirmation before saving
+    if (duplicates.length > 0 && !bypassDuplicate) {
+      setSaveError('Possible duplicate detected. Please check the box below to confirm this is a new agreement.')
+      return
+    }
+
     // Build nominees array from structured rows (drop empty-name rows)
     const nominees = form.nominees
       .filter(n => n.name.trim())
@@ -259,6 +296,7 @@ export default function ExtractionReview({
     setSaving(true)
     try {
       const body = {
+        force: bypassDuplicate,
         reference_id: form.reference_id,
         agreement_date: form.agreement_date,
         investment_start_date: form.investment_start_date,
@@ -291,6 +329,13 @@ export default function ExtractionReview({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}))
+        if (data.duplicates?.length) setDuplicates(data.duplicates)
+        setSaveError('Possible duplicate detected. Please check the box below to confirm this is a new agreement.')
+        return
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -337,6 +382,55 @@ export default function ExtractionReview({
               ))}
             </ul>
           </div>
+        </div>
+      )}
+
+      {/* Duplicate warning banner */}
+      {duplicates.length > 0 && (
+        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 space-y-3">
+          <div className="flex gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-300 mb-1">
+                Possible duplicate — this investor already has an agreement on this date
+              </p>
+              <div className="space-y-1">
+                {duplicates.map(d => (
+                  <div key={d.id} className="flex items-center gap-2 text-xs text-red-200/80">
+                    <span className="font-mono">{d.reference_id}</span>
+                    <span>—</span>
+                    <span>{d.investor_name}</span>
+                    <span>·</span>
+                    <span>{d.agreement_date}</span>
+                    <span>·</span>
+                    <span>₹{Number(d.principal_amount).toLocaleString('en-IN')}</span>
+                    <a
+                      href={`/agreements/${d.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1 inline-flex items-center gap-0.5 text-red-300 hover:text-red-100 transition-colors"
+                    >
+                      View <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer pl-8">
+            <input
+              type="checkbox"
+              checked={bypassDuplicate}
+              onChange={e => {
+                setBypassDuplicate(e.target.checked)
+                if (e.target.checked) setSaveError(null)
+              }}
+              className="accent-red-400 w-4 h-4 flex-shrink-0"
+            />
+            <span className="text-xs text-red-200">
+              I confirm this is a new agreement and not a duplicate of the above
+            </span>
+          </label>
         </div>
       )}
 
@@ -721,7 +815,11 @@ export default function ExtractionReview({
             disabled={saving}
             className="w-full py-3 px-6 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
           >
-            {saving ? 'Saving...' : 'Save Agreement'}
+            {saving
+              ? 'Saving...'
+              : duplicates.length > 0 && !bypassDuplicate
+              ? 'Duplicate Detected — Confirm Below First'
+              : 'Save Agreement'}
           </button>
         </div>
 

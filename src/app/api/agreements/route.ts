@@ -55,9 +55,32 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const body = await request.json()
 
-    const { payout_schedule: payoutScheduleRows, ...agreementFields } = body as {
+    const { payout_schedule: payoutScheduleRows, force, ...agreementFields } = body as {
       payout_schedule: ExtractedPayoutRow[]
+      force?: boolean
       [key: string]: unknown
+    }
+
+    // Duplicate check — skip only if caller explicitly sets force: true
+    if (!force) {
+      const investorName = (agreementFields.investor_name as string) ?? ''
+      const agreementDate = (agreementFields.agreement_date as string) ?? ''
+      const investorPan = (agreementFields.investor_pan as string | null) ?? null
+
+      let orFilter = `and(investor_name.ilike.${investorName},agreement_date.eq.${agreementDate})`
+      if (investorPan) {
+        orFilter += `,and(investor_pan.eq.${investorPan},agreement_date.eq.${agreementDate})`
+      }
+
+      const { data: dups } = await supabase
+        .from('agreements')
+        .select('id, reference_id, investor_name, agreement_date, principal_amount, status')
+        .neq('status', 'cancelled')
+        .or(orFilter)
+
+      if (dups && dups.length > 0) {
+        return NextResponse.json({ duplicates: dups }, { status: 409 })
+      }
     }
 
     // Generate reference_id
