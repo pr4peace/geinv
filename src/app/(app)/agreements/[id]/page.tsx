@@ -9,6 +9,7 @@ import type {
 } from '@/types/database'
 import DocLifecycleStepper from '@/components/agreements/DocLifecycleStepper'
 import UploadSignedButton from '@/components/agreements/UploadSignedButton'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -152,24 +153,24 @@ export default async function AgreementDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const supabase = createAdminClient()
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/agreements/${id}`,
-    { cache: 'no-store' }
-  )
+  const { data: rawAgreement, error } = await supabase
+    .from('agreements')
+    .select(`
+      *,
+      salesperson:team_members!salesperson_id(*),
+      payout_schedule(*),
+      reminders(*)
+    `)
+    .eq('id', id)
+    .single()
 
-  if (res.status === 404) {
+  if (error || !rawAgreement) {
     notFound()
   }
-  if (!res.ok) {
-    throw new Error(`Failed to load agreement (${res.status})`)
-  }
 
-  const agreement: AgreementDetail = await res.json()
-
-  if (!agreement || agreement.id == null) {
-    notFound()
-  }
+  const agreement = rawAgreement as unknown as AgreementDetail
 
   const { payout_schedule, reminders, salesperson } = agreement
 
