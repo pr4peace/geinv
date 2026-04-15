@@ -125,15 +125,23 @@ export async function POST(request: NextRequest) {
 
     // Insert payout schedule rows
     if (Array.isArray(payoutScheduleRows) && payoutScheduleRows.length > 0) {
-      const rows = payoutScheduleRows.map((row) => ({
-        ...row,
-        agreement_id: agreement.id,
-      }))
+      const rows = payoutScheduleRows
+        .map((row) => ({
+          ...row,
+          agreement_id: agreement.id,
+          // Fall back to due_by if period dates are missing
+          period_from: row.period_from ?? row.due_by ?? null,
+          period_to: row.period_to ?? row.due_by ?? null,
+        }))
+        .filter((row) => row.period_from && row.period_to && row.due_by)
 
-      const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
+      if (rows.length > 0) {
+        const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
 
-      if (payoutError) {
-        return NextResponse.json({ error: `Failed to insert payout schedule: ${payoutError.message}` }, { status: 400 })
+        if (payoutError) {
+          console.error('Failed to insert payout schedule:', payoutError.message)
+          // Non-fatal — agreement saved, payout rows can be added manually
+        }
       }
     }
 
