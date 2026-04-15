@@ -249,8 +249,11 @@ export default async function AgreementDetailPage({
                   DRAFT
                 </span>
               )}
-              {agreement.is_draft && (
-                <UploadSignedButton agreementId={agreement.id} />
+              {(agreement.is_draft || !agreement.document_url) && (
+                <UploadSignedButton
+                  agreementId={agreement.id}
+                  label={agreement.document_url ? 'Replace Document' : 'Upload Document'}
+                />
               )}
               <DeleteAgreementButton
                 agreementId={agreement.id}
@@ -461,6 +464,17 @@ export default async function AgreementDetailPage({
         </SectionCard>
 
         {/* ── Original Document ── */}
+        {!agreement.document_url && (
+          <SectionCard title="Document">
+            <div className="flex items-center gap-4 py-2">
+              <FileText className="w-8 h-8 text-slate-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-slate-400">No document uploaded yet.</p>
+                <p className="text-xs text-slate-500 mt-0.5">Use the &ldquo;Upload Document&rdquo; button above to attach the signed agreement.</p>
+              </div>
+            </div>
+          </SectionCard>
+        )}
         {agreement.document_url && (
           <SectionCard title="Original Document">
             {agreement.document_url.toLowerCase().includes('.pdf') ||
