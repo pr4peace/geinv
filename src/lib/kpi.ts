@@ -35,8 +35,10 @@ export interface QuarterlyForecast {
 }
 
 export interface DashboardKPIs {
-  total_principal: number
+  active_principal: number
   active_agreements: number
+  matured_principal: number
+  matured_agreements: number
   quarter_gross_interest: number
   quarter_tds: number
   quarter_net_interest: number
@@ -83,15 +85,19 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(now)
   const in90Days = addDays(now, 90)
 
-  // Active agreements
+  // Active + matured agreements
   const { data: agreements, error: agreementsError } = await supabase
     .from('agreements')
     .select('id, investor_name, principal_amount, maturity_date, reference_id, status')
-    .eq('status', 'active')
+    .in('status', ['active', 'matured'])
+    .is('deleted_at', null)
   if (agreementsError) throw new Error(`Failed to fetch agreements: ${agreementsError.message}`)
 
-  const activeAgreements = agreements ?? []
-  const totalPrincipal = activeAgreements.reduce((s, a) => s + a.principal_amount, 0)
+  const allAgreements = agreements ?? []
+  const activeAgreements = allAgreements.filter(a => a.status === 'active')
+  const maturedAgreements = allAgreements.filter(a => a.status === 'matured')
+  const activePrincipal = activeAgreements.reduce((s, a) => s + a.principal_amount, 0)
+  const maturedPrincipal = maturedAgreements.reduce((s, a) => s + a.principal_amount, 0)
 
   // Quarter payouts
   const { data: quarterPayouts, error: quarterPayoutsError } = await supabase
@@ -122,8 +128,10 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   })
 
   return {
-    total_principal: totalPrincipal,
+    active_principal: activePrincipal,
     active_agreements: activeAgreements.length,
+    matured_principal: maturedPrincipal,
+    matured_agreements: maturedAgreements.length,
     quarter_gross_interest: quarterGross,
     quarter_tds: quarterTds,
     quarter_net_interest: quarterNet,

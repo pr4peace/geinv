@@ -40,9 +40,10 @@ type SortKey = 'investor_name' | 'principal_amount' | 'roi_percentage' | 'payout
 interface Props {
   agreements: Agreement[]
   initialStatus?: AgreementStatus | 'all'
+  readOnly?: boolean
 }
 
-export default function AgreementsTable({ agreements, initialStatus = 'all' }: Props) {
+export default function AgreementsTable({ agreements, initialStatus = 'all', readOnly = false }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
 
@@ -210,13 +211,13 @@ export default function AgreementsTable({ agreements, initialStatus = 'all' }: P
         </select>
       </div>
 
-      {/* Bulk action bar — shown when rows are selected */}
-      {deleteError && (
+      {/* Bulk action bar — shown when rows are selected (not in readOnly mode) */}
+      {!readOnly && deleteError && (
         <div className="mb-3 px-4 py-2 bg-red-900/20 border border-red-800 rounded-lg text-xs text-red-400">
           {deleteError}
         </div>
       )}
-      {someSelected && (
+      {!readOnly && someSelected && (
         <div className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg">
           <span className="text-sm text-slate-300 font-medium">{selected.size} selected</span>
           <div className="flex-1" />
@@ -257,15 +258,17 @@ export default function AgreementsTable({ agreements, initialStatus = 'all' }: P
         <table className="w-full text-xs">
           <thead className="border-b border-slate-700">
             <tr>
-              <th className="pb-2 pl-3 pr-2 w-8">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={(e) => toggleAll(e.target.checked)}
-                  className="rounded border-slate-600 bg-slate-700 text-indigo-500"
-                  title="Select all visible"
-                />
-              </th>
+              {!readOnly && (
+                <th className="pb-2 pl-3 pr-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={(e) => toggleAll(e.target.checked)}
+                    className="rounded border-slate-600 bg-slate-700 text-indigo-500"
+                    title="Select all visible"
+                  />
+                </th>
+              )}
               <Th label="Investor" k="investor_name" />
               <Th label="Principal" k="principal_amount" />
               <Th label="Rate %" k="roi_percentage" />
@@ -280,7 +283,7 @@ export default function AgreementsTable({ agreements, initialStatus = 'all' }: P
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={10} className="py-8 text-center text-slate-500">No agreements match the selected filters.</td>
+                <td colSpan={readOnly ? 9 : 10} className="py-8 text-center text-slate-500">No agreements match the selected filters.</td>
               </tr>
             )}
             {sorted.map((a) => (
@@ -288,14 +291,16 @@ export default function AgreementsTable({ agreements, initialStatus = 'all' }: P
                 key={a.id}
                 className={`border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors ${a.is_draft ? 'border-l-2 border-l-amber-500' : ''} ${selected.has(a.id) ? 'bg-indigo-900/10' : ''}`}
               >
-                <td className="py-2.5 pl-3 pr-2 w-8">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(a.id)}
-                    onChange={() => toggleOne(a.id)}
-                    className="rounded border-slate-600 bg-slate-700 text-indigo-500"
-                  />
-                </td>
+                {!readOnly && (
+                  <td className="py-2.5 pl-3 pr-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(a.id)}
+                      onChange={() => toggleOne(a.id)}
+                      className="rounded border-slate-600 bg-slate-700 text-indigo-500"
+                    />
+                  </td>
+                )}
                 <td className="py-2.5 pr-4">
                   <div className="flex items-center gap-2">
                     <Link href={`/agreements/${a.id}`} className="font-medium text-slate-100 hover:text-indigo-400 transition-colors">
@@ -321,10 +326,10 @@ export default function AgreementsTable({ agreements, initialStatus = 'all' }: P
           {/* Footer totals */}
           <tfoot className="border-t border-slate-700 bg-slate-900/50">
             <tr>
-              <td className="py-2 pl-3" />
+              {!readOnly && <td className="py-2 pl-3" />}
               <td className="py-2 pr-4 text-slate-400 font-medium">{filtered.length} agreement{filtered.length !== 1 ? 's' : ''}</td>
               <td className="py-2 pr-4 font-semibold text-slate-100">{fmt(totalPrincipal)}</td>
-              <td colSpan={7} />
+              <td colSpan={readOnly ? 7 : 7} />
             </tr>
           </tfoot>
         </table>

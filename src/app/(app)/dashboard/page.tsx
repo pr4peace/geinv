@@ -14,6 +14,7 @@ async function getAgreements(): Promise<Agreement[]> {
   const { data, error } = await supabase
     .from('agreements')
     .select('*, salesperson:team_members!salesperson_id(*)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
   if (error) {
     console.error('Failed to fetch agreements:', error.message)
@@ -69,7 +70,7 @@ export default async function DashboardPage() {
       ) : null}
 
       {/* 5e. Agreements Table */}
-      <AgreementsTable agreements={agreements} />
+      <AgreementsTable agreements={agreements} readOnly />
     </div>
   )
 }
