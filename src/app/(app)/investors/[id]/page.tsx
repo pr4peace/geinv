@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft, User } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import InvestorNotes from '@/components/investors/InvestorNotes'
+import MergeInvestorButton from '@/components/investors/MergeInvestorButton'
 import type { Agreement } from '@/types/database'
 
 type InvestorWithAgreements = {
@@ -73,11 +74,10 @@ export default async function InvestorProfilePage({
 
   if (error || !investor) notFound()
 
-  const { data: notes } = await supabase
-    .from('investor_notes')
-    .select('*')
-    .eq('investor_id', id)
-    .order('created_at', { ascending: false })
+  const [{ data: notes }, { data: allInvestors }] = await Promise.all([
+    supabase.from('investor_notes').select('*').eq('investor_id', id).order('created_at', { ascending: false }),
+    supabase.from('investors').select('id, name').order('name', { ascending: true }),
+  ])
 
   const { data: agreements } = await supabase
     .from('agreements')
@@ -123,6 +123,15 @@ export default async function InvestorProfilePage({
                 <p className="mt-1 text-sm text-slate-400">{inv.address}</p>
               )}
             </div>
+          </div>
+
+          {/* Merge */}
+          <div className="mt-4">
+            <MergeInvestorButton
+              investorId={id}
+              investorName={inv.name}
+              allInvestors={(allInvestors ?? []) as { id: string; name: string }[]}
+            />
           </div>
 
           {/* Stats */}
