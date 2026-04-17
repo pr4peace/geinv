@@ -7,6 +7,7 @@ import {
   FileText,
   Calendar,
   BarChart3,
+  FileBarChart,
   Settings,
   Leaf,
   Users,
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/investors', label: 'Investors', icon: Users },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/quarterly-review', label: 'Quarterly Review', icon: BarChart3 },
+  { href: '/quarterly-reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
