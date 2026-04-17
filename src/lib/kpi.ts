@@ -102,9 +102,12 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   // Quarter payouts
   const { data: quarterPayouts, error: quarterPayoutsError } = await supabase
     .from('payout_schedule')
-    .select('gross_interest, tds_amount, net_interest, status, due_by')
+    .select('gross_interest, tds_amount, net_interest, status, due_by, agreements!inner(status, deleted_at)')
     .gte('due_by', format(qStart, 'yyyy-MM-dd'))
     .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
+    .eq('is_principal_repayment', false)
   if (quarterPayoutsError) throw new Error(`Failed to fetch quarter payouts: ${quarterPayoutsError.message}`)
 
   const qPayouts = quarterPayouts ?? []
@@ -250,6 +253,7 @@ export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
     .from('agreements')
     .select('payout_frequency, principal_amount')
     .eq('status', 'active')
+    .is('deleted_at', null)
   if (agreementsError) throw new Error(`Failed to fetch agreements: ${agreementsError.message}`)
 
   const result: FrequencyBreakdown = {
