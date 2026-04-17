@@ -11,6 +11,7 @@ import DocLifecycleStepper from '@/components/agreements/DocLifecycleStepper'
 import UploadSignedButton from '@/components/agreements/UploadSignedButton'
 import DeleteAgreementButton from '@/components/agreements/DeleteAgreementButton'
 import AuditLog from '@/components/agreements/AuditLog'
+import PayoutScheduleSection from '@/components/agreements/PayoutScheduleSection'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -333,59 +334,10 @@ export default async function AgreementDetailPage({
 
         {/* ── Payout Schedule ── */}
         <SectionCard title="Payout Schedule">
-          {payout_schedule.length === 0 ? (
-            <p className="text-slate-500 text-sm italic">No payout schedule available.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm text-slate-300">
-                <thead>
-                  <tr className="border-b border-slate-700 text-xs text-slate-400">
-                    <th className="pb-2 text-left pr-3 whitespace-nowrap">Period</th>
-                    <th className="pb-2 text-right pr-3 whitespace-nowrap">Days</th>
-                    <th className="pb-2 text-left pr-3 whitespace-nowrap">Due By</th>
-                    <th className="pb-2 text-right pr-3 whitespace-nowrap">Gross Interest</th>
-                    <th className="pb-2 text-right pr-3 whitespace-nowrap">TDS</th>
-                    <th className="pb-2 text-right pr-3 whitespace-nowrap">Net Interest</th>
-                    <th className="pb-2 text-center pr-3 whitespace-nowrap">Principal</th>
-                    <th className="pb-2 text-center pr-3 whitespace-nowrap">Status</th>
-                    <th className="pb-2 text-left whitespace-nowrap">Paid Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payout_schedule.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-slate-700/40 hover:bg-slate-700/20"
-                    >
-                      <td className="py-2 pr-3 whitespace-nowrap text-slate-400 text-xs">
-                        {fmtDate(row.period_from)} → {fmtDate(row.period_to)}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{row.no_of_days ?? '—'}</td>
-                      <td className="py-2 pr-3 whitespace-nowrap">{fmtDate(row.due_by)}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{fmtCurrency(row.gross_interest)}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-red-400">{fmtCurrency(row.tds_amount)}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums font-medium text-green-400">{fmtCurrency(row.net_interest)}</td>
-                      <td className="py-2 pr-3 text-center">
-                        {row.is_principal_repayment ? (
-                          <span className="px-1.5 py-0.5 rounded bg-indigo-900/40 text-indigo-400 text-xs font-semibold">
-                            Yes
-                          </span>
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-center">
-                        <PayoutStatusBadge status={row.status} />
-                      </td>
-                      <td className="py-2 whitespace-nowrap text-slate-400">
-                        {fmtDate(row.paid_date)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <PayoutScheduleSection
+            agreementId={agreement.id}
+            payouts={payout_schedule}
+          />
         </SectionCard>
 
         {/* ── TDS Summary ── */}
