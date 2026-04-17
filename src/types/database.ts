@@ -4,7 +4,7 @@ export type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' 
 export type InterestType = 'simple' | 'compound'
 export type DocStatus = 'draft' | 'partner_signed' | 'sent_to_client' | 'returned' | 'uploaded'
 export type PayoutStatus = 'pending' | 'notified' | 'paid' | 'overdue'
-export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_forecast'
+export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_forecast' | 'payout_monthly_summary'
 export type ReminderStatus = 'pending' | 'sent' | 'failed'
 
 export interface Investor {
@@ -14,6 +14,9 @@ export interface Investor {
   aadhaar: string | null
   address: string | null
   birth_year: number | null
+  payout_bank_name: string | null
+  payout_bank_account: string | null
+  payout_bank_ifsc: string | null
   created_at: string
 }
 
@@ -53,6 +56,7 @@ export interface Agreement {
   payment_bank: string | null
   salesperson_id: string | null
   salesperson_custom: string | null
+  tds_filing_name: string | null
   doc_status: DocStatus
   doc_sent_to_client_date: string | null
   doc_returned_date: string | null
