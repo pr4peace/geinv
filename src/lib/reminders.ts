@@ -16,10 +16,10 @@ export interface ReminderInput {
 
 // Default lead days configuration
 export const REMINDER_CONFIG = {
-  payout: [14, 7],           // days before due_by
-  maturity: [90, 30, 14, 7], // days before maturity_date
-  doc_return: 14,            // days after sent_to_client before first reminder
-  doc_return_repeat: 7,      // repeat interval
+  payout: [0],            // day-of reminder only (monthly summary handled separately by cron)
+  maturity: [90, 30, 7],  // 3 months, 1 month, 1 week before maturity
+  doc_return: 14,         // days after sent_to_client before first reminder
+  doc_return_repeat: 7,   // repeat interval
 }
 
 export function generatePayoutReminders(
@@ -154,5 +154,58 @@ function buildDocReturnReminderBody(agreement: Agreement, daysSinceSent: number)
     <p>The signed agreement for <strong>${esc(agreement.investor_name)}</strong> was sent to the client on ${esc(agreement.doc_sent_to_client_date ?? '')} and has not been returned after <strong>${daysSinceSent} days</strong>.</p>
     <p>Please follow up with the salesperson to collect the signed document.</p>
     <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/agreements/${agreement.id}">View Agreement →</a></p>
+  `.trim()
+}
+
+export function buildMonthlyPayoutSummaryEmail(
+  month: string,
+  payouts: Array<{
+    investor_name: string
+    reference_id: string
+    due_by: string
+    gross_interest: number
+    tds_amount: number
+    net_interest: number
+  }>
+): string {
+  const rows = payouts.map(p => `
+    <tr>
+      <td style="padding:6px 12px;border-bottom:1px solid #334155">${esc(p.investor_name)}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #334155;font-family:monospace;font-size:12px">${esc(p.reference_id)}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #334155">${esc(p.due_by)}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #334155;text-align:right">₹${p.gross_interest.toLocaleString('en-IN')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #334155;text-align:right;color:#f87171">₹${p.tds_amount.toLocaleString('en-IN')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #334155;text-align:right;color:#34d399;font-weight:600">₹${p.net_interest.toLocaleString('en-IN')}</td>
+    </tr>`).join('')
+
+  const totalNet = payouts.reduce((s, p) => s + p.net_interest, 0)
+  const totalGross = payouts.reduce((s, p) => s + p.gross_interest, 0)
+  const totalTds = payouts.reduce((s, p) => s + p.tds_amount, 0)
+
+  return `
+    <h2>Payout Summary — ${esc(month)}</h2>
+    <p>The following interest payouts are due this month:</p>
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
+      <thead>
+        <tr style="background:#1e293b;color:#94a3b8;font-size:12px">
+          <th style="padding:8px 12px;text-align:left">Investor</th>
+          <th style="padding:8px 12px;text-align:left">Ref</th>
+          <th style="padding:8px 12px;text-align:left">Due By</th>
+          <th style="padding:8px 12px;text-align:right">Gross</th>
+          <th style="padding:8px 12px;text-align:right">TDS</th>
+          <th style="padding:8px 12px;text-align:right">Net Payable</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="font-weight:600">
+          <td colspan="3" style="padding:8px 12px">Total (${payouts.length} payout${payouts.length !== 1 ? 's' : ''})</td>
+          <td style="padding:8px 12px;text-align:right">₹${totalGross.toLocaleString('en-IN')}</td>
+          <td style="padding:8px 12px;text-align:right;color:#f87171">₹${totalTds.toLocaleString('en-IN')}</td>
+          <td style="padding:8px 12px;text-align:right;color:#34d399">₹${totalNet.toLocaleString('en-IN')}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <p style="margin-top:16px"><a href="${process.env.NEXT_PUBLIC_APP_URL}/calendar">View Calendar →</a></p>
   `.trim()
 }

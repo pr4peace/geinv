@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, sendQuarterlyForecast } from '@/lib/email'
 import { addDays, format, subDays } from 'date-fns'
-import { REMINDER_CONFIG } from '@/lib/reminders'
+import { REMINDER_CONFIG, buildMonthlyPayoutSummaryEmail } from '@/lib/reminders'
 import type { Agreement, PayoutSchedule } from '@/types/database'
 
 // ─── Quarter helpers ────────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ async function processReminders(): Promise<{
   escalations: number
   overdueMarked: number
   quarterlyForecastSent: boolean
+  monthly_summary_sent: boolean
 }> {
   const supabase = createAdminClient()
   const now = new Date()
@@ -287,7 +288,65 @@ async function processReminders(): Promise<{
 
   overdueMarked = overdueResult?.length ?? 0
 
-  return { processed, failed, escalations, overdueMarked, quarterlyForecastSent }
+  // ── Monthly payout summary (1st of each month) ──────────────────────────────
+  let monthlySummarySent = false
+  const todayDate = new Date()
+  if (todayDate.getDate() === 1) {
+    const monthStart = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1)
+    const monthEnd = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0)
+
+    const { data: monthPayouts } = await supabase
+      .from('payout_schedule')
+      .select(`
+        id, due_by, gross_interest, tds_amount, net_interest,
+        agreement:agreements!inner(investor_name, reference_id, status, deleted_at)
+      `)
+      .gte('due_by', format(monthStart, 'yyyy-MM-dd'))
+      .lte('due_by', format(monthEnd, 'yyyy-MM-dd'))
+      .eq('is_principal_repayment', false)
+      .eq('agreement.status', 'active')
+      .is('agreement.deleted_at', null)
+
+    if (monthPayouts && monthPayouts.length > 0) {
+      const monthLabel = todayDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+
+      const payoutList = (monthPayouts as unknown as Array<{
+        id: string
+        due_by: string
+        gross_interest: number
+        tds_amount: number
+        net_interest: number
+        agreement: { investor_name: string; reference_id: string }
+      }>).map(p => ({
+        investor_name: p.agreement.investor_name,
+        reference_id: p.agreement.reference_id,
+        due_by: p.due_by,
+        gross_interest: p.gross_interest,
+        tds_amount: p.tds_amount,
+        net_interest: p.net_interest,
+      }))
+
+      const { data: recipients } = await supabase
+        .from('team_members')
+        .select('email')
+        .in('role', ['coordinator', 'financial_analyst'])
+        .eq('is_active', true)
+
+      const emailTo = (recipients ?? []).map((m: { email: string }) => m.email).filter(Boolean)
+
+      if (emailTo.length > 0) {
+        const summaryBody = buildMonthlyPayoutSummaryEmail(monthLabel, payoutList)
+        await sendEmail({
+          to: emailTo,
+          subject: `Payout Summary — ${monthLabel}`,
+          html: summaryBody,
+        })
+        monthlySummarySent = true
+      }
+    }
+  }
+
+  return { processed, failed, escalations, overdueMarked, quarterlyForecastSent, monthly_summary_sent: monthlySummarySent }
 }
 
 // ─── Route handlers ──────────────────────────────────────────────────────────
