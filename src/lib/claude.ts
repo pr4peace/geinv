@@ -21,9 +21,8 @@ export interface ExtractedAgreement {
   investor_pan: string | null
   investor_aadhaar: string | null
   investor_address: string | null
-  investor_relationship: string | null  // S/o, D/o, W/o
-  investor_parent_name: string | null
   nominees: Array<{ name: string; pan: string }>
+  tds_filing_name: string | null   // name under which TDS should be filed
   principal_amount: number
   roi_percentage: number
   payout_frequency: 'quarterly' | 'annual' | 'cumulative'
@@ -50,7 +49,7 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
    - gross_interest (interest before TDS)
    - tds_amount (tax deducted at source, typically 10%)
    - net_interest (gross_interest minus tds_amount)
-   - is_principal_repayment: true ONLY for the final row if it represents principal return
+   - is_principal_repayment: true ONLY for the final row if it represents principal return (see rule 9)
 
 3. AMOUNTS: Return as plain numbers without commas or currency symbols (e.g., 10000000 not "1,00,00,000").
 
@@ -67,6 +66,13 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
 
 7. If a field is not present in the document, return null.
 
+8. TDS FILING NAME: Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the investor_name value.
+
+9. PRINCIPAL REPAYMENT ROW: The final row in the payment table often contains the principal return. Mark is_principal_repayment: true ONLY if:
+   - The row's gross_interest value equals or approximately equals the principal_amount, OR
+   - The row label/description contains words like "Principal", "Maturity Amount", or "Repayment"
+   Do NOT add extra rows beyond what appears in the document table. Do NOT mark a row as principal repayment if its amount matches a normal periodic interest payment.
+
 Return ONLY valid JSON matching this exact schema — no explanation, no markdown fences:
 {
   "agreement_date": "YYYY-MM-DD",
@@ -76,9 +82,8 @@ Return ONLY valid JSON matching this exact schema — no explanation, no markdow
   "investor_pan": "string or null",
   "investor_aadhaar": "string or null",
   "investor_address": "string or null",
-  "investor_relationship": "string or null",
-  "investor_parent_name": "string or null",
   "nominees": [],
+  "tds_filing_name": "string or null",
   "principal_amount": 0,
   "roi_percentage": 0,
   "payout_frequency": "quarterly|annual|cumulative",

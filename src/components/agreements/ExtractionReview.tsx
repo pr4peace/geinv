@@ -54,8 +54,7 @@ interface FormState {
   investor_pan: string
   investor_aadhaar: string
   investor_address: string
-  investor_relationship: string
-  investor_parent_name: string
+  tds_filing_name: string
   nominees: NomineeRow[]
   principal_amount: string
   roi_percentage: string
@@ -142,8 +141,7 @@ export default function ExtractionReview({
     investor_pan: extracted.investor_pan ?? '',
     investor_aadhaar: extracted.investor_aadhaar ?? '',
     investor_address: extracted.investor_address ?? '',
-    investor_relationship: extracted.investor_relationship ?? '',
-    investor_parent_name: extracted.investor_parent_name ?? '',
+    tds_filing_name: extracted.tds_filing_name ?? extracted.investor_name ?? '',
     nominees: (extracted.nominees ?? []).map(n => ({
       name: n.name ?? '',
       relationship: '',
@@ -306,8 +304,7 @@ export default function ExtractionReview({
         investor_pan: form.investor_pan || null,
         investor_aadhaar: form.investor_aadhaar || null,
         investor_address: form.investor_address || null,
-        investor_relationship: form.investor_relationship || null,
-        investor_parent_name: form.investor_parent_name || null,
+        tds_filing_name: form.tds_filing_name || null,
         nominees,
         principal_amount: principalVal,
         roi_percentage: roiVal,
@@ -539,25 +536,14 @@ export default function ExtractionReview({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Relationship (S/o, D/o, W/o)</label>
-                <input
-                  type="text"
-                  value={form.investor_relationship}
-                  onChange={e => update('investor_relationship', e.target.value)}
-                  className={fieldClass('investor_relationship', 'w-full')}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Parent / Guardian Name</label>
-                <input
-                  type="text"
-                  value={form.investor_parent_name}
-                  onChange={e => update('investor_parent_name', e.target.value)}
-                  className={fieldClass('investor_parent_name', 'w-full')}
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400">TDS Filing Name</label>
+              <input
+                type="text"
+                value={form.tds_filing_name}
+                onChange={e => update('tds_filing_name', e.target.value)}
+                className={fieldClass('tds_filing_name', 'w-full')}
+              />
             </div>
 
             {/* Nominees */}
