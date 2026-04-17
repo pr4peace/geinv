@@ -15,14 +15,18 @@ export default async function CalendarPage() {
   const { data: payouts } = await supabase
     .from('payout_schedule')
     .select(
-      'id, agreement_id, due_by, gross_interest, tds_amount, net_interest, status, is_principal_repayment, agreement:agreements(id, investor_name, reference_id, is_draft, maturity_date, status)'
+      'id, agreement_id, due_by, gross_interest, tds_amount, net_interest, status, is_principal_repayment, agreement:agreements!inner(id, investor_name, reference_id, is_draft, maturity_date, status, deleted_at)'
     )
+    .eq('is_principal_repayment', false)
+    .eq('agreement.status', 'active')
+    .is('agreement.deleted_at', null)
 
   // Fetch active agreements for maturity dates
   const { data: agreements } = await supabase
     .from('agreements')
     .select('id, investor_name, reference_id, maturity_date, is_draft, status')
-    .neq('status', 'cancelled')
+    .eq('status', 'active')
+    .is('deleted_at', null)
 
   const events: CalendarEvent[] = []
 
