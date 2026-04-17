@@ -133,19 +133,33 @@ function ReminderStatusBadge({ status }: { status: string }) {
 
 // ─── TDS Summary ─────────────────────────────────────────────────────────────
 
+function getIndianFYQuarterLabel(dateStr: string): string {
+  const date = new Date(dateStr)
+  const month = date.getMonth() // 0-indexed
+  const year = date.getFullYear()
+  if (month >= 3 && month <= 5) return `Q1 ${year}-${String(year + 1).slice(2)}`
+  if (month >= 6 && month <= 8) return `Q2 ${year}-${String(year + 1).slice(2)}`
+  if (month >= 9 && month <= 11) return `Q3 ${year}-${String(year + 1).slice(2)}`
+  return `Q4 ${year - 1}-${String(year).slice(2)}`
+}
+
 function buildTdsSummary(rows: PayoutSchedule[]) {
-  const byYear: Record<
-    string,
-    { gross: number; tds: number; net: number }
-  > = {}
+  const byQuarter: Record<string, { gross: number; tds: number; net: number; sortKey: string }> = {}
   for (const row of rows) {
-    const year = row.due_by ? new Date(row.due_by).getFullYear().toString() : 'Unknown'
-    if (!byYear[year]) byYear[year] = { gross: 0, tds: 0, net: 0 }
-    byYear[year].gross += row.gross_interest
-    byYear[year].tds += row.tds_amount
-    byYear[year].net += row.net_interest
+    if (!row.due_by || row.is_principal_repayment) continue
+    const label = getIndianFYQuarterLabel(row.due_by)
+    const parts = label.split(' ')
+    const qNum = parseInt(parts[0].slice(1), 10)
+    const fyYear = parseInt(parts[1].split('-')[0], 10)
+    const sortKey = `${fyYear}-${qNum}`
+    if (!byQuarter[label]) byQuarter[label] = { gross: 0, tds: 0, net: 0, sortKey }
+    byQuarter[label].gross += row.gross_interest
+    byQuarter[label].tds += row.tds_amount
+    byQuarter[label].net += row.net_interest
   }
-  return Object.entries(byYear).sort(([a], [b]) => a.localeCompare(b))
+  return Object.entries(byQuarter)
+    .sort(([, a], [, b]) => a.sortKey.localeCompare(b.sortKey))
+    .map(([label, totals]) => [label, totals] as [string, { gross: number; tds: number; net: number; sortKey: string }])
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -341,7 +355,7 @@ export default async function AgreementDetailPage({
         </SectionCard>
 
         {/* ── TDS Summary ── */}
-        <SectionCard title="TDS Summary by Year">
+        <SectionCard title="TDS Summary by Quarter">
           {tdsSummary.length === 0 ? (
             <p className="text-slate-500 text-sm italic">No payout data for TDS summary.</p>
           ) : (
@@ -349,7 +363,7 @@ export default async function AgreementDetailPage({
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 text-xs text-slate-400">
-                    <th className="pb-2 text-left pr-6">Year</th>
+                    <th className="pb-2 text-left pr-6">Quarter</th>
                     <th className="pb-2 text-right pr-6">Gross Interest</th>
                     <th className="pb-2 text-right pr-6">TDS</th>
                     <th className="pb-2 text-right">Net Interest</th>
