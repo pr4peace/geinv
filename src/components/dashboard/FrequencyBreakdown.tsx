@@ -31,10 +31,6 @@ export default function FrequencyBreakdownPanel({ frequency }: Props) {
                 <span className="text-xs text-slate-400">Total Principal</span>
                 <span className="text-sm font-medium text-slate-100">{fmt(data.principal)}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Expected Interest</span>
-                <span className="text-sm font-medium text-emerald-400">{fmt(data.total_expected_interest)}</span>
-              </div>
             </div>
           </div>
         )

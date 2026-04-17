@@ -1,34 +1,14 @@
-import { getDashboardKPIs, getQuarterlyForecast, getFrequencyBreakdown } from '@/lib/kpi'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getDashboardKPIs, getQuarterlyForecast } from '@/lib/kpi'
 import KPICards from '@/components/dashboard/KPICards'
-import FrequencyBreakdownPanel from '@/components/dashboard/FrequencyBreakdown'
 import ForecastPanel from '@/components/dashboard/ForecastPanel'
 import UpcomingPayouts from '@/components/dashboard/UpcomingPayouts'
-import AgreementsTable from '@/components/dashboard/AgreementsTable'
-import type { Agreement } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
-async function getAgreements(): Promise<Agreement[]> {
-  const supabase = createAdminClient()
-  const { data, error } = await supabase
-    .from('agreements')
-    .select('*, salesperson:team_members!salesperson_id(*)')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-  if (error) {
-    console.error('Failed to fetch agreements:', error.message)
-    return []
-  }
-  return (data ?? []) as Agreement[]
-}
-
 export default async function DashboardPage() {
-  const [kpis, forecast, frequency, agreements] = await Promise.all([
+  const [kpis, forecast] = await Promise.all([
     getDashboardKPIs().catch(() => null),
     getQuarterlyForecast().catch(() => null),
-    getFrequencyBreakdown().catch(() => null),
-    getAgreements().catch(() => [] as Agreement[]),
   ])
 
   return (
@@ -50,11 +30,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* 5c. Frequency Breakdown */}
-      {frequency ? (
-        <FrequencyBreakdownPanel frequency={frequency} />
-      ) : null}
-
       {/* 5b. Quarterly Forecast Panel */}
       {forecast ? (
         <ForecastPanel initialForecast={forecast} />
@@ -68,9 +43,6 @@ export default async function DashboardPage() {
       {forecast ? (
         <UpcomingPayouts payouts={forecast.payouts} />
       ) : null}
-
-      {/* 5e. Agreements Table */}
-      <AgreementsTable agreements={agreements} readOnly />
     </div>
   )
 }
