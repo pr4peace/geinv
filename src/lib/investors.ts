@@ -23,14 +23,23 @@ export async function findOrCreateInvestor(
   // Normalize name: trim and collapse internal whitespace
   const normalizedName = name.trim().replace(/\s+/g, ' ')
 
-  // 1. Match by PAN (most reliable)
+  // 1. Match by PAN (most reliable) — backfill any null KYC fields
   if (pan) {
-    const { data } = await supabase
+    const { data: existing } = await supabase
       .from('investors')
-      .select('id')
+      .select('id, aadhaar, address, birth_year')
       .eq('pan', pan)
       .single()
-    if (data?.id) return data.id
+    if (existing?.id) {
+      const updates: Record<string, unknown> = {}
+      if (!existing.aadhaar && aadhaar) updates.aadhaar = aadhaar
+      if (!existing.address && address) updates.address = address
+      if (!existing.birth_year && birth_year) updates.birth_year = birth_year
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('investors').update(updates).eq('id', existing.id)
+      }
+      return existing.id
+    }
   }
 
   // 2. Match by normalized name (case-insensitive)

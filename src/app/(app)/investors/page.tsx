@@ -13,7 +13,11 @@ type InvestorRow = {
   name: string
   pan: string | null
   aadhaar: string | null
+  address: string | null
   birth_year: number | null
+  payout_bank_name: string | null
+  payout_bank_account: string | null
+  payout_bank_ifsc: string | null
   created_at: string
   total_agreements: number
   active_agreements: number
@@ -25,7 +29,7 @@ async function getInvestors(): Promise<InvestorRow[]> {
 
   const { data: investors, error } = await supabase
     .from('investors')
-    .select('id, name, pan, aadhaar, birth_year, created_at')
+    .select('id, name, pan, aadhaar, address, birth_year, payout_bank_name, payout_bank_account, payout_bank_ifsc, created_at')
     .order('name', { ascending: true })
 
   if (error || !investors) return []
@@ -75,6 +79,12 @@ export default async function InvestorsPage() {
           <h1 className="text-xl font-bold text-slate-100">Investors</h1>
           <p className="text-xs text-slate-500 mt-0.5">{investors.length} investors · {activeInvestors} with active agreements</p>
         </div>
+        <a
+          href="/api/investors/download"
+          className="px-3 py-1.5 text-sm rounded-lg bg-slate-700 text-slate-200 hover:bg-slate-600 transition-colors"
+        >
+          Export CSV
+        </a>
       </div>
 
       {/* Summary cards */}
@@ -100,6 +110,9 @@ export default async function InvestorsPage() {
             <tr className="border-b border-slate-700 text-xs text-slate-500 uppercase tracking-wide">
               <th className="text-left px-5 py-3">Investor</th>
               <th className="text-left px-4 py-3">PAN</th>
+              <th className="text-left px-4 py-3">Aadhaar</th>
+              <th className="text-left px-4 py-3 hidden lg:table-cell">Address</th>
+              <th className="text-left px-4 py-3 hidden xl:table-cell">Payout Bank</th>
               <th className="text-center px-4 py-3">Agreements</th>
               <th className="text-center px-4 py-3">Active</th>
               <th className="text-right px-5 py-3">Total Principal</th>
@@ -108,7 +121,7 @@ export default async function InvestorsPage() {
           <tbody className="divide-y divide-slate-700/50">
             {investors.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-slate-500 text-sm">
+                <td colSpan={8} className="py-10 text-center text-slate-500 text-sm">
                   No investors found.
                 </td>
               </tr>
@@ -128,6 +141,17 @@ export default async function InvestorsPage() {
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">
                   {inv.pan ?? '—'}
                 </td>
+                <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                  {inv.aadhaar ?? '—'}
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-400 hidden lg:table-cell max-w-xs truncate">
+                  {inv.address ?? '—'}
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-400 hidden xl:table-cell">
+                  {inv.payout_bank_name
+                    ? `${inv.payout_bank_name} · ${inv.payout_bank_account ?? '—'}`
+                    : '—'}
+                </td>
                 <td className="px-4 py-3 text-center text-slate-300">{inv.total_agreements}</td>
                 <td className="px-4 py-3 text-center">
                   {inv.active_agreements > 0 ? (
@@ -146,7 +170,7 @@ export default async function InvestorsPage() {
           </tbody>
           <tfoot className="border-t border-slate-700 bg-slate-900/50">
             <tr>
-              <td colSpan={4} className="px-5 py-2 text-xs text-slate-500 font-medium">
+              <td colSpan={7} className="px-5 py-2 text-xs text-slate-500 font-medium">
                 {investors.length} investor{investors.length !== 1 ? 's' : ''}
               </td>
               <td className="px-5 py-2 text-right text-sm font-semibold text-slate-100">
