@@ -294,17 +294,16 @@ export default async function AgreementDetailPage({
             <Field label="Payment Mode" value={fmt(agreement.payment_mode)} />
             <Field label="Payment Bank" value={fmt(agreement.payment_bank)} />
             <Field label="Salesperson" value={salespersonName} />
+            <Field label="TDS Filing Name" value={fmt(agreement.tds_filing_name)} />
           </div>
         </SectionCard>
 
-        {/* ── Investor Details ── */}
-        <SectionCard title="Investor Details">
+        {/* ── First Applicant ── */}
+        <SectionCard title="First Applicant">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
             <Field label="Name" value={fmt(agreement.investor_name)} />
             <Field label="PAN" value={fmt(agreement.investor_pan)} />
             <Field label="Aadhaar" value={fmt(agreement.investor_aadhaar)} />
-            <Field label="Relationship" value={fmt(agreement.investor_relationship)} />
-            <Field label="Parent / Guardian" value={fmt(agreement.investor_parent_name)} />
             <div className="sm:col-span-2">
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Address</p>
               <p className="text-sm text-slate-200 whitespace-pre-line">
@@ -323,18 +322,31 @@ export default async function AgreementDetailPage({
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-700 text-slate-200 text-xs"
                   >
                     <span className="font-medium">{n.name}</span>
-                    {n.relationship && (
-                      <span className="text-slate-400">{n.relationship}</span>
-                    )}
-                    {n.share != null && (
-                      <span className="text-slate-400">{n.share}%</span>
-                    )}
+                    {n.relationship && <span className="text-slate-400">{n.relationship}</span>}
+                    {n.share != null && <span className="text-slate-400">{n.share}%</span>}
                   </span>
                 ))}
               </div>
             </div>
           )}
         </SectionCard>
+
+        {/* ── Second Applicant (only shown if data exists) ── */}
+        {(agreement.investor2_name || agreement.investor2_pan) && (
+          <SectionCard title="Second Applicant">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+              <Field label="Name" value={fmt(agreement.investor2_name)} />
+              <Field label="PAN" value={fmt(agreement.investor2_pan)} />
+              <Field label="Aadhaar" value={fmt(agreement.investor2_aadhaar)} />
+              {agreement.investor2_address && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Address</p>
+                  <p className="text-sm text-slate-200 whitespace-pre-line">{agreement.investor2_address}</p>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
 
         {/* ── Document Lifecycle ── */}
         <SectionCard title="Document Lifecycle">
