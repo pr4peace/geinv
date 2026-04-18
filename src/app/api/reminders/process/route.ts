@@ -334,8 +334,32 @@ async function processReminders(): Promise<{
 
       const emailTo = (recipients ?? []).map((m: { email: string }) => m.email).filter(Boolean)
 
-      if (emailTo.length > 0) {
+      // Check if monthly summary already sent this month (idempotency guard)
+      const monthKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`
+      const { data: existingSummary } = await supabase
+        .from('reminders')
+        .select('id')
+        .eq('reminder_type', 'payout_monthly_summary')
+        .gte('scheduled_at', `${monthKey}-01`)
+        .lt('scheduled_at', todayDate.getMonth() === 11
+          ? `${todayDate.getFullYear() + 1}-01-01`
+          : `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 2).padStart(2, '0')}-01`)
+        .limit(1)
+
+      if (existingSummary && existingSummary.length > 0) {
+        // Already sent this month, skip
+      } else if (emailTo.length > 0) {
         const summaryBody = buildMonthlyPayoutSummaryEmail(monthLabel, payoutList)
+        // Record in reminders table before sending
+        await supabase.from('reminders').insert({
+          reminder_type: 'payout_monthly_summary',
+          scheduled_at: new Date().toISOString(),
+          status: 'sent',
+          email_to: emailTo,
+          email_subject: `Payout Summary — ${monthLabel}`,
+          email_body: summaryBody,
+        })
+        // Then send
         await sendEmail({
           to: emailTo,
           subject: `Payout Summary — ${monthLabel}`,
