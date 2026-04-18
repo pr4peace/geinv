@@ -118,8 +118,10 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   // Overdue
   const { data: overduePayouts, error: overduePayoutsError } = await supabase
     .from('payout_schedule')
-    .select('net_interest')
+    .select('net_interest, agreements!inner(status, deleted_at)')
     .eq('status', 'overdue')
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
   if (overduePayoutsError) throw new Error(`Failed to fetch overdue payouts: ${overduePayoutsError.message}`)
 
   const overdue = overduePayouts ?? []
