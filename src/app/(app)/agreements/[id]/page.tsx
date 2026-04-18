@@ -86,24 +86,6 @@ function SectionCard({
   )
 }
 
-// ─── Payout Status Badge ──────────────────────────────────────────────────────
-
-function PayoutStatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    pending: 'bg-slate-700 text-slate-300',
-    notified: 'bg-amber-900/40 text-amber-400',
-    paid: 'bg-green-900/40 text-green-400',
-    overdue: 'bg-red-900/40 text-red-400',
-  }
-  return (
-    <span
-      className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${map[status] ?? 'bg-slate-700 text-slate-300'}`}
-    >
-      {status}
-    </span>
-  )
-}
-
 // ─── Reminder type icon + label ───────────────────────────────────────────────
 
 function reminderTypeLabel(type: string): string {
