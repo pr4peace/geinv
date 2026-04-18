@@ -28,6 +28,15 @@ export default async function CalendarPage() {
     .eq('status', 'active')
     .is('deleted_at', null)
 
+  // Fetch pending reminders with agreement info
+  const { data: reminders } = await supabase
+    .from('reminders')
+    .select('id, agreement_id, reminder_type, scheduled_at, agreements!inner(investor_name, status, deleted_at)')
+    .eq('status', 'pending')
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
+    .gte('scheduled_at', new Date().toISOString())
+
   const events: CalendarEvent[] = []
 
   // Process payout events
@@ -78,6 +87,26 @@ export default async function CalendarPage() {
       type: 'maturity',
       agreementId: agreement.id,
       isDraft: agreement.is_draft ?? false,
+    })
+  }
+
+  // Process reminder events
+  for (const reminder of reminders ?? []) {
+    if (!reminder.scheduled_at) continue
+    const agreement = Array.isArray(reminder.agreements)
+      ? reminder.agreements[0]
+      : reminder.agreements
+    if (!agreement) continue
+
+    const dateStr = reminder.scheduled_at.slice(0, 10)
+    const typeLabel = reminder.reminder_type === 'maturity' ? 'Maturity reminder' : 'Payout reminder'
+    events.push({
+      id: `reminder-${reminder.id}`,
+      date: dateStr,
+      label: `${typeLabel}: ${agreement.investor_name}`,
+      type: 'reminder',
+      agreementId: reminder.agreement_id,
+      isDraft: false,
     })
   }
 

@@ -1,14 +1,16 @@
-import { getDashboardKPIs, getQuarterlyForecast } from '@/lib/kpi'
+import { getDashboardKPIs, getQuarterlyForecast, getFrequencyBreakdown } from '@/lib/kpi'
 import KPICards from '@/components/dashboard/KPICards'
 import ForecastPanel from '@/components/dashboard/ForecastPanel'
 import UpcomingPayouts from '@/components/dashboard/UpcomingPayouts'
+import FrequencyBreakdownPanel from '@/components/dashboard/FrequencyBreakdown'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const [kpis, forecast] = await Promise.all([
+  const [kpis, forecast, frequency] = await Promise.all([
     getDashboardKPIs().catch(() => null),
     getQuarterlyForecast().catch(() => null),
+    getFrequencyBreakdown().catch(() => null),
   ])
 
   return (
@@ -38,6 +40,11 @@ export default async function DashboardPage() {
           Could not load quarterly forecast.
         </div>
       )}
+
+      {/* 5c. Frequency Breakdown */}
+      {frequency ? (
+        <FrequencyBreakdownPanel frequency={frequency} />
+      ) : null}
 
       {/* 5d. Upcoming Payouts */}
       {forecast ? (

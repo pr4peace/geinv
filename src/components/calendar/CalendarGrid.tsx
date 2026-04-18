@@ -7,7 +7,7 @@ export type CalendarEvent = {
   id: string
   date: string        // YYYY-MM-DD
   label: string
-  type: 'payout_pending' | 'payout_overdue' | 'payout_paid' | 'maturity'
+  type: 'payout_pending' | 'payout_overdue' | 'payout_paid' | 'maturity' | 'reminder'
   agreementId: string
   isDraft: boolean
 }
@@ -24,6 +24,7 @@ const TYPE_COLORS: Record<CalendarEvent['type'], string> = {
   payout_overdue: 'bg-red-500 text-white',
   payout_paid: 'bg-green-500 text-white',
   maturity: 'bg-orange-500 text-white',
+  reminder: 'bg-blue-500 text-white',
 }
 
 const LEGEND_ITEMS = [
@@ -31,6 +32,7 @@ const LEGEND_ITEMS = [
   { type: 'payout_overdue' as const, label: 'Payout overdue', color: 'bg-red-500' },
   { type: 'payout_paid' as const, label: 'Payout paid', color: 'bg-green-500' },
   { type: 'maturity' as const, label: 'Maturity date', color: 'bg-orange-500' },
+  { type: 'reminder' as const, label: 'Reminder scheduled', color: 'bg-blue-500' },
 ]
 
 function truncate(str: string, max: number) {

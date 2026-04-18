@@ -29,8 +29,11 @@ interface Props {
 }
 
 export default function KPICards({ kpis }: Props) {
+  const maturingCount = kpis.maturing_in_90_days.length
+  const maturingPrincipal = kpis.maturing_in_90_days.reduce((s, a) => s + a.principal_amount, 0)
+
   return (
-    <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
       <Card
         label="Active Principal"
         value={fmt(kpis.active_principal)}
@@ -51,6 +54,12 @@ export default function KPICards({ kpis }: Props) {
         value={String(kpis.overdue_count)}
         sub={kpis.overdue_count > 0 ? fmt(kpis.overdue_amount) : undefined}
         accent={kpis.overdue_count > 0 ? 'text-red-400' : 'text-slate-100'}
+      />
+      <Card
+        label="Maturing (90 days)"
+        value={maturingCount > 0 ? fmt(maturingPrincipal) : '—'}
+        sub={maturingCount > 0 ? `${maturingCount} agreement${maturingCount > 1 ? 's' : ''}` : undefined}
+        accent={maturingCount > 0 ? 'text-amber-400' : 'text-slate-100'}
       />
     </div>
   )
