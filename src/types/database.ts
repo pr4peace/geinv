@@ -96,7 +96,7 @@ export interface PayoutSchedule {
 
 export interface Reminder {
   id: string
-  agreement_id: string
+  agreement_id: string | null
   payout_schedule_id: string | null
   reminder_type: ReminderType
   lead_days: number | null

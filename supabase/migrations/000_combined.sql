@@ -116,9 +116,9 @@ create index idx_payout_schedule_status on payout_schedule(status);
 -- ============================================================
 create table if not exists reminders (
   id uuid primary key default gen_random_uuid(),
-  agreement_id uuid not null references agreements(id) on delete cascade,
+  agreement_id uuid references agreements(id) on delete cascade,
   payout_schedule_id uuid references payout_schedule(id) on delete cascade,
-  reminder_type text not null check (reminder_type in ('payout', 'maturity', 'doc_return', 'quarterly_forecast')),
+  reminder_type text not null check (reminder_type in ('payout', 'maturity', 'doc_return', 'quarterly_forecast', 'payout_monthly_summary')),
   lead_days integer,
   scheduled_at timestamptz not null,
   status text default 'pending' check (status in ('pending', 'sent', 'failed')),

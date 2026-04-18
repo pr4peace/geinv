@@ -115,7 +115,7 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   const quarterTds = qPayouts.reduce((s, p) => s + p.tds_amount, 0)
   const quarterNet = qPayouts.reduce((s, p) => s + p.net_interest, 0)
 
-  // Overdue
+  // Overdue — join agreements to exclude deleted/inactive ones
   const { data: overduePayouts, error: overduePayoutsError } = await supabase
     .from('payout_schedule')
     .select('net_interest, agreements!inner(status, deleted_at)')
