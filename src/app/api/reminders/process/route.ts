@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, sendQuarterlyForecast } from '@/lib/email'
 import { addDays, format, subDays } from 'date-fns'
-import { REMINDER_CONFIG, buildMonthlyPayoutSummaryEmail } from '@/lib/reminders'
+import { REMINDER_CONFIG } from '@/lib/reminders'
 import { handleMonthlySummary } from '@/lib/reminders-monthly-summary'
 import type { Agreement, PayoutSchedule } from '@/types/database'
 
