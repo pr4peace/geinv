@@ -39,6 +39,7 @@ describe('getPayoutReminders', () => {
     const result = await getPayoutReminders()
     expect(result.overdue).toHaveLength(1)
     expect(result.overdue[0].id).toBe('1')
+    expect(result.overdue[0].agreement_id).toBe('a1') // must come from agreements.id, not payout_schedule.agreement_id
     expect(result.thisMonth).toHaveLength(1)
     expect(result.thisMonth[0].id).toBe('2')
     expect(result.netTotal).toBe(3000)
@@ -84,5 +85,7 @@ describe('getDocsPendingReturn', () => {
     const result = await getDocsPendingReturn()
     expect(result).toHaveLength(1)
     expect(result[0].reference_id).toBe('REF-001')
+    expect(result[0].daysSinceSent).toBeGreaterThanOrEqual(0)
+    expect(result[0].isOverdue).toBe(false) // 30 reminder days, doc sent 2026-04-02, today is 2026-04-24, so daysSinceSent = 22
   })
 })
