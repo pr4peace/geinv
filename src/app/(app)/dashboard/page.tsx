@@ -1,55 +1,57 @@
-import { getDashboardKPIs, getQuarterlyForecast, getFrequencyBreakdown } from '@/lib/kpi'
-import KPICards from '@/components/dashboard/KPICards'
-import ForecastPanel from '@/components/dashboard/ForecastPanel'
-import UpcomingPayouts from '@/components/dashboard/UpcomingPayouts'
-import FrequencyBreakdownPanel from '@/components/dashboard/FrequencyBreakdown'
+import { format } from 'date-fns'
+import {
+  getPayoutReminders,
+  getMaturingAgreements,
+  getDocsPendingReturn,
+} from '@/lib/dashboard-reminders'
+import PayoutReminders from '@/components/dashboard/PayoutReminders'
+import MaturingSection from '@/components/dashboard/MaturingSection'
+import DocReturnSection from '@/components/dashboard/DocReturnSection'
+import SendReminderSummaryButton from '@/components/dashboard/SendReminderSummaryButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const [kpis, forecast, frequency] = await Promise.all([
-    getDashboardKPIs().catch(() => null),
-    getQuarterlyForecast().catch(() => null),
-    getFrequencyBreakdown().catch(() => null),
+  const [payouts, maturing, docs] = await Promise.all([
+    getPayoutReminders().catch(() => ({ overdue: [], thisMonth: [], netTotal: 0 })),
+    getMaturingAgreements().catch(() => ({ agreements: [], totalPrincipal: 0 })),
+    getDocsPendingReturn().catch(() => []),
   ])
 
+  const monthLabel = format(new Date(), 'MMMM yyyy')
+
   return (
-    <div className="p-6 space-y-6 min-h-screen bg-slate-950">
-      {/* Page header */}
+    <div className="p-4 sm:p-6 space-y-8 min-h-screen bg-slate-950 max-w-3xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-100">Dashboard</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Good Earth Investment Tracker</p>
+          <p className="text-xs text-slate-500 mt-0.5">{monthLabel}</p>
         </div>
+        <SendReminderSummaryButton />
       </div>
 
-      {/* 5a. KPI Cards */}
-      {kpis ? (
-        <KPICards kpis={kpis} />
-      ) : (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-slate-400 text-sm">
-          Could not load KPIs.
-        </div>
-      )}
+      {/* Section 1: Interest Payouts */}
+      <PayoutReminders
+        overdue={payouts.overdue}
+        thisMonth={payouts.thisMonth}
+        netTotal={payouts.netTotal}
+        monthLabel={format(new Date(), 'MMMM')}
+      />
 
-      {/* 5b. Quarterly Forecast Panel */}
-      {forecast ? (
-        <ForecastPanel initialForecast={forecast} />
-      ) : (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-slate-400 text-sm">
-          Could not load quarterly forecast.
-        </div>
-      )}
+      <hr className="border-slate-800" />
 
-      {/* 5c. Frequency Breakdown */}
-      {frequency ? (
-        <FrequencyBreakdownPanel frequency={frequency} />
-      ) : null}
+      {/* Section 2: Maturing This Month */}
+      <MaturingSection
+        agreements={maturing.agreements}
+        totalPrincipal={maturing.totalPrincipal}
+        monthLabel={monthLabel}
+      />
 
-      {/* 5d. Upcoming Payouts */}
-      {forecast ? (
-        <UpcomingPayouts payouts={forecast.payouts} />
-      ) : null}
+      <hr className="border-slate-800" />
+
+      {/* Section 3: Docs Pending Return */}
+      <DocReturnSection docs={docs} />
     </div>
   )
 }
