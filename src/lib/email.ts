@@ -9,7 +9,11 @@ function getResendClient(): Resend | null {
   return new Resend(apiKey)
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Irene - Good Earth <irene@goodearth.org.in>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Irene Mariam - Good Earth <irene.mariam@goodearth.org.in>'
+
+// Comma-separated list of emails to always BCC (e.g. admin oversight)
+const BCC_EMAILS: string[] = (process.env.RESEND_BCC_EMAILS ?? '')
+  .split(',').map(e => e.trim()).filter(Boolean)
 
 export interface SendEmailResult {
   success: boolean
@@ -32,6 +36,7 @@ export async function sendEmail(params: {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: params.to,
+      bcc: BCC_EMAILS.length > 0 ? BCC_EMAILS : undefined,
       subject: params.subject,
       html: params.html,
     })
