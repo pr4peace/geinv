@@ -27,7 +27,7 @@ const SAMPLE_PAYOUTS = [
     gross_interest: 5000,
     tds_amount: 500,
     net_interest: 4500,
-    agreement: { investor_name: 'Alice', reference_id: 'REF-001', status: 'active', deleted_at: null },
+    agreements: { investor_name: 'Alice', reference_id: 'REF-001', status: 'active', deleted_at: null },
   },
 ]
 

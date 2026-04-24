@@ -37,7 +37,7 @@ export function generatePayoutReminders(
 
   for (const leadDays of REMINDER_CONFIG.payout) {
     const scheduledAt = subDays(dueDate, leadDays)
-    if (isBefore(startOfDay(new Date()), scheduledAt)) {
+    if (!isBefore(scheduledAt, startOfDay(new Date()))) {
       reminders.push({
         agreement_id: agreement.id,
         payout_schedule_id: payoutRow.id,

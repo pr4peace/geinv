@@ -30,13 +30,13 @@ export async function handleMonthlySummary(
     .from('payout_schedule')
     .select(`
       id, due_by, gross_interest, tds_amount, net_interest,
-      agreement:agreements!inner(investor_name, reference_id, status, deleted_at)
+      agreements!inner(investor_name, reference_id, status, deleted_at)
     `)
     .gte('due_by', monthStartStr)
     .lte('due_by', monthEndStr)
     .eq('is_principal_repayment', false)
-    .eq('agreement.status', 'active')
-    .is('agreement.deleted_at', null)
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
 
   if (!monthPayouts || monthPayouts.length === 0) return false
 
@@ -48,10 +48,10 @@ export async function handleMonthlySummary(
     gross_interest: number
     tds_amount: number
     net_interest: number
-    agreement: { investor_name: string; reference_id: string }
+    agreements: { investor_name: string; reference_id: string }
   }>).map(p => ({
-    investor_name: p.agreement.investor_name,
-    reference_id: p.agreement.reference_id,
+    investor_name: p.agreements.investor_name,
+    reference_id: p.agreements.reference_id,
     due_by: p.due_by,
     gross_interest: p.gross_interest,
     tds_amount: p.tds_amount,
