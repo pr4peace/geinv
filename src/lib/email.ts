@@ -9,7 +9,7 @@ function getResendClient(): Resend | null {
   return new Resend(apiKey)
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@goodearth.com'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Irene - Good Earth <irene@goodearth.org.in>'
 
 export interface SendEmailResult {
   success: boolean
