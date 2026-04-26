@@ -210,7 +210,9 @@ Prepare for session handoff.
 
 Do:
 - Update SESSION.md with "Work Completed", "Files Changed", and "Next Steps".
-- Ensure all changes are committed and pushed to the current branch.
+- Ensure all feature changes are committed and pushed to the current branch.
+- **Commit and push session files** (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) even if only SESSION.md changed — this keeps both devices (MacBook Pro and Mac Mini) in sync.
+- Check if the current feature branch meets the Stability Gate in AGENTS.md. If yes, propose merging to `main`.
 - Save core context to project memory.
 - Provide a summary and a "Resume Prompt" for the next session.
 
@@ -223,7 +225,8 @@ Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
 Resume the session based on the "Handoff State" in SESSION.md.
 
 Do:
-- Verify current branch and git status.
+- Run `git pull` first to ensure you have the latest session files.
+- Verify current branch matches `## Branch` in SESSION.md. If not, run `git checkout <branch>`.
 - Check "Next Steps" and "Next Agent Action" in SESSION.md.
 - Summarize the current state in 1-2 sentences.
 

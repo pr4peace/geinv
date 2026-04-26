@@ -14,6 +14,7 @@ All agents must read:
 - AGENTS.md → system rules (this file)
 - SESSION.md → current working state
 - BACKLOG.md → list of tasks
+- PROMPTS.md → copy-paste prompts for each agent role
 
 ---
 
@@ -25,6 +26,7 @@ All agents must read:
 - Plan before implementation
 - SESSION.md is the single source of truth for current work
 - BACKLOG.md is the source of tasks
+- Session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) are committed and pushed at the end of every session — they must always be in sync across devices
 
 ---
 
@@ -42,7 +44,7 @@ At the start of every session:
 4. Propose a descriptive, semantic branch name (e.g., `feature/activity-log-auth` instead of `feature/your-task-name`).
 5. **Create the branch immediately** before writing SESSION.md:
    ```bash
-   git checkout feature/investment-tracker
+   git checkout main
    git pull
    git checkout -b feature/<task-name>
    ```
@@ -133,8 +135,33 @@ Rules:
 ### Safety Mandates
 - **Post-Build Review:** Never deploy to production (Vercel --prod) without first running a full build (`npm run build`) and having the **Codex** agent review the final state and any build warnings/logs.
 - **Semantic Branching:** Propose descriptive, semantic branch names (e.g., `feature/activity-log-auth` instead of `feature/your-task-name`).
-- **Branch hygiene:** Every task gets its own branch cut from `feature/investment-tracker`. Claude creates the branch at planning time. Gemini verifies the branch before touching any code. Work never accumulates on a stale or misnamed branch.
-- **Merge before next task:** Before starting a new task, Claude merges the completed branch into `feature/investment-tracker` and deletes the old branch.
+- **Branch hygiene:** Every task gets its own branch cut from `main`. Claude creates the branch at planning time. Gemini verifies the branch before touching any code. Work never accumulates on a stale or misnamed branch.
+- **Merge before next task:** Before starting a new task, Claude merges the completed branch into `main` and deletes the old branch.
+- **Session file sync:** At the end of every session, all four session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) must be committed and pushed — to whichever branch is active. This keeps both devices (MacBook Pro and Mac Mini) in sync. Never leave a session with uncommitted session files.
+
+---
+
+## Stability Gate — When to Merge a Feature Branch to `main`
+
+A feature branch is ready to merge into `main` when ALL of the following are true:
+
+1. **Build passes** — `npm run build` completes with no errors
+2. **Tests pass** — `npm test` all green; no regressions
+3. **Codex review clean** — no blocking issues outstanding
+4. **SESSION.md is up to date** — Work Completed reflects what was actually done
+5. **User has approved** — explicit go-ahead from the user (never auto-merge)
+
+When these are met, Claude:
+```bash
+git checkout main
+git pull
+git merge --no-ff feature/<task-name> -m "feat: merge feature/<task-name> into main"
+git push origin main
+git branch -d feature/<task-name>
+git push origin --delete feature/<task-name>
+```
+
+Then update SESSION.md `## Branch` to `main` and push.
 
 ---
 
