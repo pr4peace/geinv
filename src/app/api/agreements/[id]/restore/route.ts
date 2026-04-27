@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole === 'salesperson') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const { id } = await params
     const supabase = createAdminClient()
 
