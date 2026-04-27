@@ -13,12 +13,25 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
+### 🚀 Pre-Launch Finalisation (after Batch C.1, before team onboarding)
+
+| Step | Notes |
+|---|---|
+| **Final Codex review** | Full review of all code on `main` after C.1 merges. Fix any blocking issues before real data goes in. |
+| **Data wipe** | Delete all test agreements, payout schedules, reminders, investors from the database. Start clean for real team use. Run via Supabase dashboard or a one-off script. |
+| **Vercel production branch → main** | Change Vercel project production branch from `feature/investment-tracker` to `main`. Settings → Git → Production Branch. Then delete `origin/feature/investment-tracker` and `origin/feature/sidebar-collapse`. |
+
+---
+
 ### 🩹 Batch C.1 — Extraction Fixes + Post-V1 Patch (branch: `feature/batch-c1-patch`)
 *Quick patch after V1. No migrations, no new features.*
 
 | Item | Notes |
 |---|---|
 | **Gemini extraction fixes** | `src/lib/claude.ts`: add `monthly`/`biannual` to frequency type + prompt rules, fix `investment_start_date` prompt, add `maxOutputTokens: 8192`, better truncation error, add frequency validation. |
+| **Sign out button** | Add to sidebar in `src/app/(app)/layout.tsx`. Call `supabase.auth.signOut()` then redirect to `/login`. |
+| **Sidebar collapse toggle — Apple style** | Move toggle to header bar (logo row), remove verbose bottom button. Done. |
+| **Dashboard layout fix** | Remove `max-w-3xl mx-auto` + `min-h-screen` — content was centering in the middle. Done. |
 | **Post-V1 bugs** | Any issues surfaced from real team usage after V1 ships. Tracked here as they come in. |
 
 ---

@@ -37,7 +37,7 @@ interface PaymentEntryRow {
   amount: number | null
 }
 
-type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative'
+type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' | 'biannual'
 type InterestType = 'simple' | 'compound'
 
 interface FormState {

@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   const monthLabel = format(new Date(), 'MMMM yyyy')
 
   return (
-    <div className="p-4 sm:p-6 space-y-8 min-h-screen bg-slate-950 max-w-3xl mx-auto">
+    <div className="p-6 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

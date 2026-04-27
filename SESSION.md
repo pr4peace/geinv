@@ -7,43 +7,36 @@
 - releasing
 
 ## Active Batch
-- Batch C — Agreement Data + Quick Polish (`feature/batch-c-agreement-data`)
+- Batch C.1 — Extraction Fixes + Post-V1 Patch (`feature/batch-c1-patch`)
 
 ## Items
-- [x] Migrations: `015_multiple_payments.sql` + `016_tds_only_payout.sql`
-- [x] Multiple payment entries (`payments jsonb[]`)
-- [x] Cumulative TDS-only row (`is_tds_only` + `tds_filed`)
-- [x] Splash screen
-- [x] Version number in sidebar (`v0.1.0`)
-- [x] Grey out Quarterly Review + Reports nav
-- [x] Collapsible sidebar (localStorage persistence + tooltips)
-- [x] Global search bar (agreements + investors)
-- [x] Sortable investors table
-- [x] Search sanitisation + AbortController stale-response fix
-- [x] mark-tds-filed returns 404 when no row matched
-- [x] Investor list scoped for salesperson role
-- [x] Investor detail page scoped for salesperson
-- [x] Investor CSV download scoped for salesperson
-- [x] Tests for both ^ above
+- [x] `src/lib/claude.ts`: add `monthly`/`biannual` to frequency type + prompt rules
+- [x] Fix `investment_start_date` prompt
+- [x] Add `maxOutputTokens: 8192`
+- [x] Better truncation error handling
+- [x] Add frequency validation
+- [x] **Sign out button** in sidebar (`src/app/(app)/layout.tsx`) — call `supabase.auth.signOut()` then redirect to `/login`
 - [x] Build + test clean, release to main
 
 ## Work Completed
-- Batch C features built, Codex-reviewed, and blocking fixes applied.
-- All tests pass, build is clean.
-- Merged to main.
+- Implemented all Gemini extraction fixes in `src/lib/claude.ts`.
+- Added Sign Out button and logic to `src/app/(app)/layout.tsx`.
+- Updated `PayoutFrequency` local types in `ManualAgreementForm.tsx` and `ExtractionReview.tsx` to match the expanded database types.
+- Verified build and tests pass cleanly.
+- Reviewed `Codex Review Notes`; no actionable issues were listed, so no additional code changes were applied in this pass.
 
 ## Files Changed
-- Multiple files in src/app, src/components, src/lib, src/__tests__, and supabase/migrations.
+- `src/lib/claude.ts`
+- `src/app/(app)/layout.tsx`
+- `src/components/agreements/ExtractionReview.tsx`
+- `src/components/agreements/ManualAgreementForm.tsx`
+- `SESSION.md`
 
 ## Codex Review Notes
-- All blocking issues from Batch C review resolved.
+- No actionable review notes were present in this session; previous entry was `TBD`.
 
 ## Decisions
-- `payments jsonb[]` entries: `{ date, mode, bank, amount }`
-- `is_tds_only` rows injected at API level for cumulative agreements
-- Client-side sort for investors table (small dataset)
-- RBAC via `x-user-role` / `x-user-team-id` headers set by middleware
-- Extracted investor detail access check to helper in `lib/investors-page.ts` for testability.
+- Patch only, ensuring type consistency across components for new frequencies.
 
 ## Next Agent Action
-- Batch C complete. Claude to select Batch D from BACKLOG.md.
+- Codex: review the changes.

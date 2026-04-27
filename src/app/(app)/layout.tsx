@@ -17,8 +17,10 @@ import {
   Search,
   X,
   Loader2,
+  LogOut,
 } from 'lucide-react'
 import { SplashScreen } from '@/components/SplashScreen'
+import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -136,6 +138,12 @@ export default function AppLayout({
     router.push(path)
   }
 
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
   if (!isMounted) return <div className="h-screen bg-slate-950" />
 
   return (
@@ -154,7 +162,7 @@ export default function AppLayout({
               <Leaf className="w-5 h-5 text-white" />
             </div>
             {!isCollapsed && (
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-white leading-tight truncate">Good Earth</p>
                 <div className="flex items-center gap-1.5">
                   <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Investments</p>
@@ -162,6 +170,13 @@ export default function AppLayout({
                 </div>
               </div>
             )}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="ml-auto p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all flex-shrink-0"
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
           </div>
 
           {/* Search Section */}
@@ -270,22 +285,29 @@ export default function AppLayout({
             })}
           </nav>
 
-          {/* Collapse Toggle */}
-          <div className="p-4 border-t border-slate-800">
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-700/50 ${
-                isCollapsed ? 'justify-center px-0' : ''
-              }`}
-            >
-              {isCollapsed ? <ChevronRight className="w-5 h-5" /> : (
-                <>
-                  <ChevronLeft className="w-5 h-5" />
-                  <span>Collapse Sidebar</span>
-                </>
+          {/* Sign Out Section */}
+          <div className="px-3 py-4 border-t border-slate-800/50">
+            <div className="relative group">
+              <button
+                onClick={handleSignOut}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-500 hover:text-red-400 hover:bg-red-500/10 ${
+                  isCollapsed ? 'justify-center px-0' : ''
+                }`}
+              >
+                <LogOut className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110`} />
+                {!isCollapsed && <span>Sign Out</span>}
+              </button>
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-3 px-3 py-2 bg-slate-800 text-white text-xs font-semibold rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-2xl border border-slate-700 ring-1 ring-white/5">
+                  Sign Out
+                  {/* Arrow */}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-slate-800" />
+                </div>
               )}
-            </button>
+            </div>
           </div>
+
         </aside>
 
         {/* Main content */}

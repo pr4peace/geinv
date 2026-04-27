@@ -25,7 +25,7 @@ export interface ExtractedAgreement {
   tds_filing_name: string | null   // name under which TDS should be filed
   principal_amount: number
   roi_percentage: number
-  payout_frequency: 'quarterly' | 'annual' | 'cumulative'
+  payout_frequency: 'quarterly' | 'annual' | 'cumulative' | 'monthly' | 'biannual'
   interest_type: 'simple' | 'compound'
   lock_in_years: number
   maturity_date: string            // ISO date
@@ -38,7 +38,9 @@ const EXTRACTION_PROMPT = `You are an expert at extracting structured data from 
 
 Extract ALL fields exactly as they appear in the document. Follow these rules:
 
-1. DATES: Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed. The investment_start_date is when the money was actually received/paid (may differ from agreement_date — look at the payment table).
+1. DATES: Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed. The investment_start_date is when the money was actually received/paid. 
+   - CRITICAL: Check the payment/funding table for the actual date(s) funds were received. If multiple tranches exist, use the date of the earliest tranche as investment_start_date.
+   - If no specific funding date is found, use the agreement_date.
 
 2. PAYOUT SCHEDULE: Extract EVERY row from the interest payout table. Each row has:
    - period_from and period_to (the interest accrual period)
@@ -52,7 +54,9 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
 3. AMOUNTS: Return as plain numbers without commas or currency symbols (e.g., 10000000 not "1,00,00,000").
 
 4. PAYOUT FREQUENCY:
+   - "monthly" if interest is paid every month
    - "quarterly" if interest is paid every quarter
+   - "biannual" if interest is paid every 6 months
    - "annual" if interest is paid annually
    - "cumulative" if interest is paid at maturity only
 
@@ -91,7 +95,7 @@ Return ONLY valid JSON matching this exact schema — no explanation, no markdow
   "tds_filing_name": "string or null",
   "principal_amount": 0,
   "roi_percentage": 0,
-  "payout_frequency": "quarterly|annual|cumulative",
+  "payout_frequency": "monthly|quarterly|biannual|annual|cumulative",
   "interest_type": "simple|compound",
   "lock_in_years": 0,
   "maturity_date": "YYYY-MM-DD",
@@ -108,7 +112,12 @@ export async function extractAgreementData(
     throw new Error('GEMINI_API_KEY is not set')
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ 
+    model: 'gemini-2.0-flash',
+    generationConfig: {
+      maxOutputTokens: 8192,
+    }
+  })
 
   let result: Awaited<ReturnType<typeof model.generateContent>>
 
@@ -135,7 +144,15 @@ export async function extractAgreementData(
     throw new Error(`Gemini API call failed: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  const text = result.response.text()
+  let text: string
+  try {
+    text = result.response.text()
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('finishReason: RECITATION')) {
+      throw new Error('Gemini failed to generate content due to safety filters (potential recitation). Please try a different document.')
+    }
+    throw err
+  }
 
   // Strip markdown code fences if present
   const json = text
@@ -158,6 +175,12 @@ export async function extractAgreementData(
     if (typeof data[field] !== 'number') {
       throw new Error(`Extracted field '${field}' is not a number: ${JSON.stringify(data[field])}`)
     }
+  }
+
+  // Validate payout_frequency
+  const allowedFrequencies = ['monthly', 'quarterly', 'biannual', 'annual', 'cumulative']
+  if (!allowedFrequencies.includes(data.payout_frequency)) {
+    throw new Error(`Extracted invalid payout_frequency: ${data.payout_frequency}`)
   }
 
   // Validate payout schedule
