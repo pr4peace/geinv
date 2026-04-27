@@ -1,91 +1,192 @@
 # SESSION
 
 ## Branch
-- main
+- feature/wave-2-remove-e2e  ← start here
+- feature/wave-2-calendar     ← after #0 is released
+- feature/wave-2-payments     ← after calendar is released
+- feature/wave-2-rbac         ← after payments is released
+- feature/wave-2-google-login ← after RBAC is released
 
 ## Current Task
-- Wave 1 release complete: permanent doc storage, doc lifecycle auto-advance, and safe investor deletion merged to main.
+- Wave 2 — five sequential tasks. Do one, release it, move to the next. Do NOT batch them.
 
 ---
 
-## TASK C — Doc lifecycle auto-advance
-When Irene uploads a scanned signed PDF and `is_draft = false`, `doc_status` should be set to `'uploaded'` automatically. Drafts and manual entries still start at `'draft'`.
+## TASK 0 — Remove E2E tests (branch: feature/wave-2-remove-e2e)
 
----
+### Goal
+E2E tests run against live prod, require credentials no agent has, and block every release with noise. Remove entirely. Rely on `npm run build` + `npm test` (Vitest) as the only gate.
 
-## RELEASE — Wave 1
+### Steps
+1. Delete `e2e/` directory entirely
+2. Delete `playwright.config.ts`
+3. Remove `"test:e2e": "playwright test"` from `package.json` scripts
+4. Remove `@playwright/test` and `dotenv` from `devDependencies` in `package.json` (run `npm uninstall @playwright/test dotenv --save-dev`)
+5. In `AGENTS.md`: remove all references to `npm run test:e2e` from the Gemini verification steps
+6. In `CLAUDE.md`: remove the E2E section that references `.env.test` and Playwright
+7. `npm run build` + `npm test` — must be clean
+8. Push: `git add -A && git commit -m "chore: remove E2E tests — rely on vitest unit tests only" && git push -u origin feature/wave-2-remove-e2e`
 
-Wave 1 release executed successfully.
-
-### Step 1 — Merge feature/investor-delete-safety → main
+### Release
 ```bash
 git checkout main && git pull
-git merge --no-ff feature/investor-delete-safety -m "feat: permanent doc storage, doc lifecycle auto-advance, safe investor deletion"
+git merge --no-ff feature/wave-2-remove-e2e -m "chore: remove E2E tests"
 git push origin main
-git branch -d feature/investor-delete-safety
-git push origin --delete feature/investor-delete-safety
+git branch -d feature/wave-2-remove-e2e
+git push origin --delete feature/wave-2-remove-e2e
 ```
 
-### Step 2 — Sync session files
-After merge, commit and push the session files:
+---
+
+## TASK D — Calendar rebuild (branch: feature/wave-2-calendar)
+
 ```bash
-git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
-git commit -m "chore: post-wave-1 release sync"
-git push
+git checkout main && git pull
+git checkout -b feature/wave-2-calendar
 ```
+
+### Goal
+Fix three data bugs and replace the custom monthly-only grid with `react-big-calendar` (already in `package.json`) for month/week/agenda views.
+
+### Bugs to fix in `src/app/(app)/calendar/page.tsx`
+1. **Phantom events** — `.eq('agreement.status', 'active')` is silently ignored on aliased Supabase join. Fix: fetch active non-draft agreement IDs first, then use `.in('agreement_id', ids)` to filter payout rows.
+2. **Draft payouts** — draft agreements' payout schedules show on calendar. Fix: include only `is_draft = false` agreements.
+3. **Cumulative double-count** — cumulative agreements show both a payout event AND a maturity event on the same day. Fix: skip payout events where `payout_frequency = 'cumulative'`.
+
+### Calendar component
+- Replace `src/components/calendar/CalendarGrid.tsx` with a new `react-big-calendar` implementation
+- Views: Month, Week, Agenda (no Day view needed)
+- Map existing `CalendarEvent` types to react-big-calendar's `Event` format: `{ title, start, end, resource }`
+- Theme to match dark slate UI — override react-big-calendar CSS variables or use inline styles
+- Keep the existing colour coding: amber=pending, red=overdue, green=paid, orange=maturity
+- Keep click-to-agreement navigation
+- Import react-big-calendar CSS: `import 'react-big-calendar/lib/css/react-big-calendar.css'` in the component
+
+### Steps
+1. Fix the three data bugs in `calendar/page.tsx`
+2. Rewrite `CalendarGrid.tsx` using react-big-calendar
+3. `npm run build` + `npm test` clean
+4. Push and release same pattern as Task 0
+
+---
+
+## TASK E — Multiple payment entries (branch: feature/wave-2-payments)
+
+```bash
+git checkout main && git pull
+git checkout -b feature/wave-2-payments
+```
+
+### Goal
+Replace single `payment_date / payment_mode / payment_bank` fields with a JSONB array supporting multiple payment tranches per agreement.
+
+### Steps
+1. **Migration** — create `supabase/migrations/013_multiple_payments.sql`:
+   ```sql
+   alter table agreements add column if not exists payments jsonb default '[]'::jsonb;
+   ```
+   Keep the old three columns — stop writing them, keep reading them for backwards compat.
+
+2. **Type** — add to `src/types/database.ts`:
+   ```ts
+   payments: Array<{ date: string; mode: string; bank: string; amount: number }>
+   ```
+
+3. **ExtractionReview.tsx** — replace the three single `payment_date / payment_mode / payment_bank` inputs with an add/remove row UI: `[{date, mode, bank, amount}]`. Add a "+ Add payment" button. Remove entries with a trash icon.
+
+4. **ManualAgreementForm.tsx** — same add/remove row UI for payments.
+
+5. **`POST /api/agreements/route.ts`** — include `payments` in the insert payload.
+
+6. **Agreement detail page** — display payments array instead of single fields.
+
+7. **Gemini extraction prompt** (`src/lib/claude.ts`) — update prompt to extract multiple payment rows instead of single `payment_date / payment_mode / payment_bank`.
+
+8. `npm run build` + `npm test` clean. Push and release.
+
+> Note: migration must be run manually in Supabase SQL Editor before or after deploy.
+
+---
+
+## TASK F — Role-based access control (branch: feature/wave-2-rbac)
+
+```bash
+git checkout main && git pull
+git checkout -b feature/wave-2-rbac
+```
+
+### Goal
+Block unknown users at the middleware level. Give coordinators, accountants, and salespersons role-appropriate views.
+
+### Steps
+1. **`src/middleware.ts`** — after the existing Supabase session check, query `team_members` by `session.user.email`. If no match or `is_active = false`, redirect to `/login?error=access_denied`. Pass role via a response header `x-user-role` for page-level use.
+
+2. **`src/app/login/page.tsx`** — show "You don't have access to this application." message when `?error=access_denied` is in the URL.
+
+3. **Agreements page** — salespersons see only agreements where `salesperson_id` matches their `team_members` ID. Coordinators and accountants see all.
+
+4. **Settings page** — visible to coordinators only. Show "Access denied" for other roles.
+
+5. `npm run build` + `npm test` clean. Push and release.
+
+---
+
+## TASK G — Google login (branch: feature/wave-2-google-login)
+
+```bash
+git checkout main && git pull
+git checkout -b feature/wave-2-google-login
+```
+
+### Goal
+Add "Sign in with Google" button to the login page. OAuth callback already exists.
+
+### Pre-requisite (user does this manually before Gemini builds)
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID
+2. Authorized redirect URI: `https://[your-supabase-project].supabase.co/auth/v1/callback`
+3. Copy client ID + secret → Supabase dashboard → Authentication → Providers → Google → enable
+4. Confirm with user that this config is done before starting the code step
+
+### Steps (Gemini)
+1. **`src/app/login/page.tsx`** — add "Sign in with Google" button below the existing form:
+   ```ts
+   await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })
+   ```
+2. Style the button to match the dark slate UI (white background, Google icon or text)
+3. `npm run build` + `npm test` clean. Push and release.
 
 ---
 
 ## Todos
-- [x] Task C: add `doc_status` auto-advance to `POST /api/agreements`
-- [x] Fix: Update `DeleteInvestorButton` to allow viewing blocking agreements (blocking)
-- [x] Fix: `DELETE /api/investors/[id]` should return 404 if not found (minor)
-- [x] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
-- [x] Add unit tests for investor deletion API
-- [x] `npm run build` + `npm test` + push
-- [x] Release: merge `feature/investor-delete-safety` → `main`
-- [x] Release: sync session files + push `main`
+- [ ] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
+- [ ] Task 0: build + test + push + release to main
+- [ ] Task D: fix 3 calendar data bugs in calendar/page.tsx
+- [ ] Task D: rebuild CalendarGrid with react-big-calendar (month/week/agenda)
+- [ ] Task D: build + test + push + release to main
+- [ ] Task E: migration 013_multiple_payments.sql
+- [ ] Task E: update types, ExtractionReview, ManualAgreementForm, API route, detail page, extraction prompt
+- [ ] Task E: build + test + push + release to main
+- [ ] Task F: middleware role check + access denied redirect
+- [ ] Task F: salesperson agreement filter + settings page guard
+- [ ] Task F: build + test + push + release to main
+- [ ] Task G: confirm Google OAuth config done (user) then add button
+- [ ] Task G: build + test + push + release to main
 
 ## Work Completed
-- **Task 1: Document URL Expiry Fix** (Merged from feature/doc-url-fix)
-  - Updated `POST /api/extract` to return `temp_path`.
-  - Updated `POST /api/agreements` to move document to permanent path and store 1-year URL.
-- **Task 2: Investor Delete Safety**
-  - Added `DELETE /api/investors/[id]` route with guard.
-  - Created `DeleteInvestorButton` component.
-- **Task C: Doc lifecycle auto-advance**
-  - Updated `POST /api/agreements` to auto-set `doc_status: 'uploaded'` for scanned signed PDFs, but ONLY after successful storage move.
-- **Codex Fixes:**
-  - **Resolved Blocking:** Prevented destructive race condition in `DeleteInvestorButton` by adding `check_only` support to the `DELETE` endpoint.
-  - **Resolved Blocking:** `doc_status: 'uploaded'` is now only set after successful storage move AND database record update.
-  - **Resolved Minor:** `DeleteInvestorButton` now handles and displays errors for 404/500 responses during blocking checks.
-  - **Resolved Minor:** `DELETE` endpoint now returns 404 if investor is missing.
-  - **Resolved Minor:** Added unit test coverage for the new race-condition guard and post-move update failure paths.
-  - **E2E Status:** Attempted `npm run test:e2e`; failed on setup due to missing `E2E_USER_EMAIL` secret in CLI environment. Blockage is environmental.
+-
 
 ## Files Changed
-- `src/app/api/extract/route.ts`
-- `src/app/(app)/agreements/new/page.tsx`
-- `src/components/agreements/ExtractionReview.tsx`
-- `src/app/api/agreements/route.ts`
-- `src/app/api/investors/[id]/route.ts`
-- `src/components/investors/DeleteInvestorButton.tsx`
-- `src/__tests__/investors-api.test.ts`
-- `src/__tests__/agreements-api.test.ts`
+-
 
 ## Decisions
-- Unified development onto `feature/investor-delete-safety` after merging `feature/doc-url-fix` to resolve Codex's Task 1 consistency note.
-- `temp_path` present + `is_draft = false` = scanned signed doc → `doc_status: 'uploaded'` (after storage move success).
-- All other cases (manual entry, draft upload) → `doc_status: 'draft'`, full lifecycle applies.
-- **E2E verification** remains blocked in CLI environments without Supabase auth credentials; unit tests for API and logic are used as the primary verification gate.
-- **Race Condition Prevention:** The `DELETE` endpoint now supports a `check_only` query parameter to allow the UI to safely refresh blocking status.
+- Each task gets its own branch and release — do not batch
+- E2E removed permanently; Vitest unit tests + build are the gate
+- `payments` JSONB column added; old `payment_date/mode/bank` kept for backwards compat, not written
+- RBAC: middleware blocks unknown users; salespersons filtered at query level not UI level
+- Google login: code is trivial; Supabase + Google Cloud config must be done by user first
 
 ## Codex Review Notes
-- **Resolved** Destructive race condition: `DeleteInvestorButton` uses `check_only=true` and handles errors.
-- **Resolved** Doc-storage consistency: `doc_status` and `document_url` updates are now fatal if move succeeds but update fails.
-- **Resolved** Regression coverage: Tests added for new edge cases.
-- **Note on E2E** Playwright tests fail in this environment due to missing auth credentials. Verified by Gemini via expanded unit tests.
+-
 
 ## Next Agent Action
-- Awaiting release approval.
-
+- Gemini: Start with Task 0 on `feature/wave-2-remove-e2e`. Complete and release to main before moving to Task D. Follow the branch pattern for each task.
