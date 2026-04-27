@@ -112,6 +112,7 @@ Rules:
 - Distinguish severity: mark issues as **blocking** (real bug/security risk) or **minor** (polish/nice-to-have). Do not treat minor issues as blocking
 - A maximum of 5 issues per review. Prioritise the most impactful
 - May update SESSION.md ONLY in allowed section
+- **For every issue raised, include the exact fix** — the specific file path, the exact lines to change, and the replacement code. Vague descriptions like "add scoping" or "validate input" are not acceptable. Gemini must be able to apply the fix without interpretation.
 
 ---
 

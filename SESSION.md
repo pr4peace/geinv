@@ -4,90 +4,126 @@
 - feature/batch-c-agreement-data
 
 ## Phase
-- reviewing
+- building
 
 ## Active Batch
 - Batch C — Agreement Data + Quick Polish (`feature/batch-c-agreement-data`)
 
 ## Items
-- [x] Migrations: run `015_multiple_payments.sql` and `016_tds_only_payout.sql`
-- [x] Item 1: Multiple payment entries
-- [x] Item 2: Cumulative TDS-only row
-- [x] Item 3: Version number in sidebar
-- [x] Item 4: Sortable table headers (Investors)
-- [x] Item 5: Collapsible sidebar with localStorage persistence
-- [x] Item 6: Global search bar for agreements and investors
-- [x] Splash Screen
-- [x] Build + test clean, release to main
+- [x] Migrations: `015_multiple_payments.sql` + `016_tds_only_payout.sql`
+- [x] Multiple payment entries (`payments jsonb[]`)
+- [x] Cumulative TDS-only row (`is_tds_only` + `tds_filed`)
+- [x] Splash screen
+- [x] Version number in sidebar (`v0.1.0`)
+- [x] Grey out Quarterly Review + Reports nav
+- [x] Collapsible sidebar (localStorage persistence + tooltips)
+- [x] Global search bar (agreements + investors)
+- [x] Sortable investors table
+- [x] Search sanitisation + AbortController stale-response fix
+- [x] mark-tds-filed returns 404 when no row matched
+- [x] Investor list scoped for salesperson role
+- [ ] **Investor detail page scoped for salesperson** ← FIX THIS
+- [ ] **Investor CSV download scoped for salesperson** ← FIX THIS
+- [ ] Tests for both ^ above
+- [ ] Build + test clean, release to main
 
 ## Work Completed
-- Batch A released to main.
-- Implemented multiple payments support:
-  - Database schema updated with `payments jsonb[]`.
-  - Gemini extraction updated to extract all payment tranches.
-  - UI (Manual Form & Extraction Review) updated to manage multiple payments.
-  - Agreement detail page updated to display all payments.
-- Implemented TDS tracking for cumulative/compound agreements:
-  - `is_tds_only` flag added to `payout_schedule`.
-  - Payout calculator and API now inject internal TDS tracking rows.
-  - Added "TDS Filing" section to agreement details with "Mark Filed" capability.
-- UI/UX Polish:
-  - Added `SplashScreen` component for branded initial load.
-  - Added version number (v0.1.0) to sidebar.
-  - Rebuilt Investors table with client-side sortable headers (Name, PAN, Principal, Agreements).
-- Sidebar & Search:
-  - Implemented collapsible sidebar with `localStorage` persistence and tooltips for collapsed icons.
-  - Added global search bar for agreements (by reference ID or investor name) and investors (by name).
-- Fixed all build-time type errors and updated unit tests.
-- Applied Codex fixes:
-  - Filtered out `is_tds_only` rows from `getQuarterlyForecast`, `getDashboardKPIs`, `getFrequencyBreakdown`, `getPayoutReminders`, and automated reminder processing.
-  - Updated test fixtures in `src/__tests__/reminders.test.ts` to use the new `payments[]` data structure.
-  - Added test case to verify `is_tds_only` rows are skipped in reminder generation.
-  - Scoped investor results in `/api/search` for salespeople (only see investors from assigned agreements).
-  - Added "Escape" key handler to close global search results.
-  - Sanitized search query to prevent reserved PostgREST characters from breaking the `.or()` filter.
-  - Used `AbortController` in search UI to prevent stale responses from overwriting newer ones.
-  - Improved `mark-tds-filed` API to return 404 if no row was updated.
-  - Scoped `/investors` page data for salespeople (only see investors linked to assigned agreements).
-  - Improved `InvestorsTable` keyboard accessibility by using `<button>` for sorting.
-  - Added automated test coverage for `/api/search`, `mark-tds-filed`, and investor visibility scoping.
+- All Batch C features built and Codex-reviewed.
+- Two blocking issues remain (detail page + download scoping). See fixes below.
 
 ## Files Changed
-- `src/types/database.ts`
-- `src/lib/claude.ts`
-- `src/lib/payout-calculator.ts`
-- `src/lib/reminders.ts`
-- `src/lib/kpi.ts`
-- `src/lib/dashboard-reminders.ts`
-- `src/lib/investors-page.ts`
-- `src/app/api/reminders/process/route.ts`
-- `src/app/api/search/route.ts`
-- `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
-- `src/components/agreements/ExtractionReview.tsx`
-- `src/components/agreements/ManualAgreementForm.tsx`
-- `src/components/agreements/PayoutScheduleSection.tsx`
-- `src/components/investors/InvestorsTable.tsx`
-- `src/components/SplashScreen.tsx`
-- `src/app/(app)/agreements/[id]/page.tsx`
-- `src/app/(app)/investors/page.tsx`
-- `src/app/(app)/layout.tsx`
-- `src/app/api/agreements/route.ts`
-- `src/app/api/email/quarterly-forecast/route.ts`
-- `src/__tests__/payout-calculator.test.ts`
-- `src/__tests__/reminders.test.ts`
-- `src/__tests__/search-api.test.ts`
-- `src/__tests__/mark-tds-filed.test.ts`
-- `src/__tests__/agreements-api.test.ts`
-- `src/__tests__/investors-visibility.test.ts`
-- `supabase/migrations/015_multiple_payments.sql`
-- `supabase/migrations/016_tds_only_payout.sql`
+- See full list in git diff on `feature/batch-c-agreement-data`
+
 ## Codex Review Notes
--
+- **blocking**: `src/app/(app)/investors/[id]/page.tsx` — no salesperson scoping. Salesperson can open any investor URL directly.
+- **blocking**: `src/app/api/investors/download/route.ts` — exports full dataset, no role check.
+- **minor**: No tests for the two blocking issues above.
 
 ## Decisions
-- Used `jsonb[]` for payments to allow flexible growth without complex join tables.
-- Injected `is_tds_only` rows in API to bridge the gap between document extraction (which misses them) and system requirements.
-- Implemented client-side sorting for Investors table for instant feedback on the small dataset.
+- `payments jsonb[]` entries: `{ date, mode, bank, amount }`
+- `is_tds_only` rows injected at API level for cumulative agreements
+- Client-side sort for investors table (small dataset)
+- RBAC via `x-user-role` / `x-user-team-id` headers set by middleware
 
 ## Next Agent Action
-- Codex: Review the applied fixes for investor visibility scoping and keyboard accessibility in the investors table.
+- Gemini (fresh session): Apply these two exact fixes then release.
+
+### Fix 1 — `src/app/(app)/investors/[id]/page.tsx`
+Add after imports, at the top of the page function:
+```typescript
+import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
+
+const headersList = await headers()
+const userRole = headersList.get('x-user-role') ?? ''
+const userTeamId = headersList.get('x-user-team-id') ?? ''
+
+if (userRole === 'salesperson' && userTeamId) {
+  const supabase = createAdminClient()
+  const { count } = await supabase
+    .from('agreements')
+    .select('id', { count: 'exact', head: true })
+    .eq('investor_id', params.id)
+    .eq('salesperson_id', userTeamId)
+    .is('deleted_at', null)
+  if (!count) notFound()
+}
+```
+
+### Fix 2 — `src/app/api/investors/download/route.ts`
+Add at the top of the handler, before the main query:
+```typescript
+const userRole = request.headers.get('x-user-role') ?? ''
+const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+let investorIdFilter: string[] | null = null
+
+if (userRole === 'salesperson' && userTeamId) {
+  const { data: agreements } = await supabase
+    .from('agreements')
+    .select('investor_id')
+    .eq('salesperson_id', userTeamId)
+    .is('deleted_at', null)
+    .not('investor_id', 'is', null)
+
+  investorIdFilter = [
+    ...new Set((agreements ?? []).map(a => a.investor_id).filter(Boolean) as string[])
+  ]
+
+  if (investorIdFilter.length === 0) {
+    return new Response('Name,PAN,Aadhaar,Address\n', {
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="investors.csv"',
+      },
+    })
+  }
+}
+
+// Then add to the main query:
+// if (investorIdFilter !== null) query = query.in('id', investorIdFilter)
+```
+
+### Fix 3 — Tests
+Add to `src/__tests__/investors-visibility.test.ts`:
+- Salesperson cannot load `investors/[id]` for investor outside their portfolio → `notFound()` called
+- Salesperson download returns only their investors
+- Salesperson download with no agreements returns empty CSV
+
+### After fixes:
+```bash
+npm run build && npm test
+```
+Both must pass. Then release:
+```bash
+git checkout main && git pull
+git merge --no-ff feature/batch-c-agreement-data -m "feat: Batch C — V1 release"
+git push origin main
+git push origin main:feature/investment-tracker
+git branch -d feature/batch-c-agreement-data
+git push origin --delete feature/batch-c-agreement-data
+git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
+git commit -m "chore: post-release sync — Batch C V1"
+git push origin main
+git push origin main:feature/investment-tracker
+```

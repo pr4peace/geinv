@@ -29,6 +29,16 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
+### 🩹 Batch C.1 — Extraction Fixes + Post-V1 Patch (branch: `feature/batch-c1-patch`)
+*Quick patch after V1. No migrations, no new features.*
+
+| Item | Notes |
+|---|---|
+| **Gemini extraction fixes** | `src/lib/claude.ts`: add `monthly`/`biannual` to frequency type + prompt rules, fix `investment_start_date` prompt, add `maxOutputTokens: 8192`, better truncation error, add frequency validation. |
+| **Post-V1 bugs** | Any issues surfaced from real team usage after V1 ships. Tracked here as they come in. |
+
+---
+
 ### 🟠 Batch D — Offer Letter Flow · **V2 Release** (branch: `feature/batch-d-offer-letter`)
 *Comprehensive interest calculator → offer letter PDF → client magic link upload → converts to agreement.*
 
