@@ -74,11 +74,23 @@ export async function middleware(request: NextRequest) {
       }
 
       // Pass role and team ID downstream via request headers
-      supabaseResponse.headers.set('x-user-role', member.role)
-      supabaseResponse.headers.set('x-user-team-id', member.id)
+      // We must set them on a new headers object and pass it to NextResponse.next
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-user-role', member.role)
+      requestHeaders.set('x-user-team-id', member.id)
+
+      supabaseResponse = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
     } catch (err) {
-      // Log but fail open on DB/network errors to avoid locking out legitimate users
       console.error('RBAC middleware error:', err)
+      // Fail closed: if we can't verify membership, redirect to login
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'auth_callback_failed')
+      return NextResponse.redirect(url)
     }
   }
 
