@@ -10,11 +10,12 @@
 - Pre-Launch Finalisation
 
 ## Items
-- [ ] **Final Codex review** — full review of all code on `main`
+- [x] **Final Codex review** — full review of all code on `main`
+- [x] **Security fixes** — role gates, salesperson scoping, atomic reminder process
 - [ ] **Data wipe** — delete all test data (agreements, investors, payout_schedule, reminders) via Supabase dashboard
 - [ ] **Vercel production branch → main** — Settings → Git → Production Branch → `main`
 - [ ] Delete stale remote branches: `origin/feature/investment-tracker`, `origin/feature/sidebar-collapse`
-- [ ] Remove `git push origin main:feature/investment-tracker` lines from AGENTS.md and PROMPTS.md
+- [x] Remove `git push origin main:feature/investment-tracker` lines from AGENTS.md and PROMPTS.md
 
 ## Work Completed
 - Batch C.1 merged to main. Build + 45 tests pass.
@@ -38,6 +39,8 @@
 - `src/app/api/quarterly-review/[id]/reconcile-ui/route.ts`
 - `src/app/api/agreements/route.ts`
 - `src/__tests__/agreements-api.test.ts`
+- `PROMPTS.md`
+- `BACKLOG.md`
 
 ## Codex Review Notes
 - All blocking issues from the previous Codex review have been resolved.
@@ -48,4 +51,4 @@
 - Use atomic `update` with `sent_at` for claiming reminders in concurrent environments.
 
 ## Next Agent Action
-- Codex: do a final verification of the applied fixes.
+- Claude: select next task from Pre-Launch Finalisation in BACKLOG.md.
