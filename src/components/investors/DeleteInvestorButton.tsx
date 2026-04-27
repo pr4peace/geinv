@@ -56,21 +56,27 @@ export default function DeleteInvestorButton({
     }
   }
 
-  if (agreementCount > 0) {
-    return (
-      <div className="relative group">
-        <button
-          disabled
-          className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-500 rounded-lg cursor-not-allowed opacity-50"
-        >
-          <Trash2 className="w-4 h-4" />
-          <span>Delete Investor</span>
-        </button>
-        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-slate-900 border border-slate-700 text-slate-200 text-xs py-1.5 px-3 rounded shadow-xl whitespace-nowrap z-10">
-          Cannot delete — investor has {agreementCount} linked {agreementCount === 1 ? 'agreement' : 'agreements'}
-        </div>
-      </div>
-    )
+  // Pre-fetch/Show blocking if count > 0 and user clicks
+  async function handleShowBlocking() {
+    if (blockingAgreements.length > 0) {
+      setBlockingAgreements([])
+      setError(null)
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/investors/${investorId}`, { method: 'DELETE' })
+      if (res.status === 409) {
+        const data = await res.json()
+        setBlockingAgreements(data.agreements || [])
+        setError('Deletion blocked by the following agreements:')
+      }
+    } catch {
+      setError('Failed to fetch blocking agreements.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (confirming) {
@@ -102,24 +108,30 @@ export default function DeleteInvestorButton({
             )}
           </button>
         </div>
-        {error && (
-          <div className="text-[10px] text-red-400 mt-1 max-w-[200px] text-right">
-            {error}
-          </div>
-        )}
       </div>
     )
   }
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
-        onClick={() => setConfirming(true)}
-        className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-900/50 rounded-lg transition-all"
-      >
-        <Trash2 className="w-4 h-4" />
-        <span className="text-sm font-medium">Delete Investor</span>
-      </button>
+      {agreementCount > 0 ? (
+        <button
+          onClick={handleShowBlocking}
+          disabled={deleting}
+          className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 rounded-lg transition-all"
+        >
+          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 opacity-50" />}
+          <span className="text-sm font-medium">Delete Investor ({agreementCount})</span>
+        </button>
+      ) : (
+        <button
+          onClick={() => setConfirming(true)}
+          className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-900/50 rounded-lg transition-all"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span className="text-sm font-medium">Delete Investor</span>
+        </button>
+      )}
 
       {error && (
         <div className="flex flex-col items-end gap-1 mt-2">
@@ -128,10 +140,11 @@ export default function DeleteInvestorButton({
             {error}
           </div>
           {blockingAgreements.length > 0 && (
-            <div className="bg-red-900/10 border border-red-900/20 rounded-lg p-2 mt-1 space-y-1">
+            <div className="bg-red-900/10 border border-red-900/20 rounded-lg p-2 mt-1 space-y-1 w-full max-w-[250px]">
               {blockingAgreements.map(a => (
-                <div key={a.id} className="text-[10px] text-red-300 font-mono">
-                  {a.reference_id} ({a.status})
+                <div key={a.id} className="text-[10px] text-red-300 font-mono flex justify-between gap-4">
+                  <span>{a.reference_id}</span>
+                  <span className="opacity-70 capitalize">{a.status}</span>
                 </div>
               ))}
             </div>

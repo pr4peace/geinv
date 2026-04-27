@@ -33,6 +33,7 @@ interface NomineeRow {
 interface ExtractionReviewProps {
   extracted: ExtractedAgreement
   fileUrl: string
+  tempPath: string
   fileName: string
   file: File
   isDraft: boolean
@@ -121,6 +122,7 @@ function fieldMentionedInWarning(field: keyof FormState, warnings: string[]): bo
 export default function ExtractionReview({
   extracted,
   fileUrl,
+  tempPath,
   fileName,
   file,
   isDraft,
@@ -317,7 +319,7 @@ export default function ExtractionReview({
         payment_bank: form.payment_bank || null,
         salesperson_id: (form.salesperson_id === '' || form.salesperson_id === 'other') ? null : (form.salesperson_id || null),
         salesperson_custom: form.salesperson_custom || null,
-        document_url: fileUrl,
+        temp_path: tempPath,
         payout_schedule: extracted.payout_schedule ?? [],
       }
 

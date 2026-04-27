@@ -94,13 +94,17 @@ export async function DELETE(
     }
 
     // No agreements: safe to delete
-    const { error: deleteError } = await supabase
+    const { error: deleteError, count } = await supabase
       .from('investors')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id)
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 400 })
+    }
+
+    if (count === 0) {
+      return NextResponse.json({ error: 'Investor not found' }, { status: 404 })
     }
 
     return NextResponse.json({ success: true })
