@@ -29,9 +29,7 @@ export interface ExtractedAgreement {
   interest_type: 'simple' | 'compound'
   lock_in_years: number
   maturity_date: string            // ISO date
-  payment_date: string | null      // ISO date
-  payment_mode: string | null
-  payment_bank: string | null
+  payments: Array<{ date: string | null; mode: string | null; bank: string | null; amount: number | null }>
   payout_schedule: ExtractedPayoutRow[]
   confidence_warnings?: string[]
 }
@@ -73,6 +71,13 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
    - The row label/description contains words like "Principal", "Maturity Amount", or "Repayment"
    Do NOT add extra rows beyond what appears in the document table. Do NOT mark a row as principal repayment if its amount matches a normal periodic interest payment.
 
+10. PAYMENTS: Extract ALL payment entries from the document. An investment may be funded in multiple tranches. For each entry record:
+    - date: ISO date (YYYY-MM-DD) or null
+    - mode: payment method (e.g. "NEFT", "RTGS", "Cheque", "UPI", "Cash") or null
+    - bank: bank name or null
+    - amount: payment amount as a plain number, or null if not stated
+    If only one payment, return a single-element array. If no payment info found, return [].
+
 Return ONLY valid JSON matching this exact schema — no explanation, no markdown fences:
 {
   "agreement_date": "YYYY-MM-DD",
@@ -90,9 +95,7 @@ Return ONLY valid JSON matching this exact schema — no explanation, no markdow
   "interest_type": "simple|compound",
   "lock_in_years": 0,
   "maturity_date": "YYYY-MM-DD",
-  "payment_date": "YYYY-MM-DD or null",
-  "payment_mode": "string or null",
-  "payment_bank": "string or null",
+  "payments": [{"date": "YYYY-MM-DD or null", "mode": "string or null", "bank": "string or null", "amount": 0}],
   "payout_schedule": [],
   "confidence_warnings": []
 }`

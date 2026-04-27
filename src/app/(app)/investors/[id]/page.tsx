@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, User } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkInvestorAccess } from '@/lib/investors-page'
 import InvestorNotes from '@/components/investors/InvestorNotes'
 import MergeInvestorButton from '@/components/investors/MergeInvestorButton'
 import DeleteInvestorButton from '@/components/investors/DeleteInvestorButton'
@@ -65,6 +67,10 @@ export default async function InvestorProfilePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  if (!(await checkInvestorAccess(id))) {
+    notFound()
+  }
+
   const supabase = createAdminClient()
 
   const { data: investor, error } = await supabase

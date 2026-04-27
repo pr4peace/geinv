@@ -56,6 +56,7 @@ export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
     `)
     .neq('status', 'paid')
     .eq('is_principal_repayment', false)
+    .eq('is_tds_only', false)
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)   // PostgREST !inner join filter — excludes soft-deleted agreements
     .lte('period_to', monthEnd)

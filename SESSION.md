@@ -1,57 +1,49 @@
 # SESSION
 
 ## Branch
-- feature/batch-c-agreement-data
+- main
 
 ## Phase
-- building
+- releasing
 
 ## Active Batch
 - Batch C — Agreement Data + Quick Polish (`feature/batch-c-agreement-data`)
 
 ## Items
-- [ ] Migrations: run `015_multiple_payments.sql` + `016_tds_only_payout.sql` in Supabase SQL Editor
-- [ ] Multiple payment entries (`payments jsonb[]` replacing `payment_date/mode/bank`)
-- [ ] Cumulative TDS-only row (`is_tds_only` + `tds_filed` on `payout_schedule`)
-- [ ] Splash screen (fade-out on initial app load)
-- [ ] Version number in sidebar (`v0.1.0` below logo in `layout.tsx`)
-- [ ] Grey out Quarterly Review + Reports nav items (non-clickable, "Soon" badge)
-- [ ] Collapsible sidebar (toggle button, collapsed state persisted in localStorage, tooltips when collapsed)
-- [ ] Global search bar in sidebar (search investors + agreements by name/ref)
-- [ ] Sortable investors table (client component, `useState` sort)
-- [ ] Build + test clean, release to main
+- [x] Migrations: `015_multiple_payments.sql` + `016_tds_only_payout.sql`
+- [x] Multiple payment entries (`payments jsonb[]`)
+- [x] Cumulative TDS-only row (`is_tds_only` + `tds_filed`)
+- [x] Splash screen
+- [x] Version number in sidebar (`v0.1.0`)
+- [x] Grey out Quarterly Review + Reports nav
+- [x] Collapsible sidebar (localStorage persistence + tooltips)
+- [x] Global search bar (agreements + investors)
+- [x] Sortable investors table
+- [x] Search sanitisation + AbortController stale-response fix
+- [x] mark-tds-filed returns 404 when no row matched
+- [x] Investor list scoped for salesperson role
+- [x] Investor detail page scoped for salesperson
+- [x] Investor CSV download scoped for salesperson
+- [x] Tests for both ^ above
+- [x] Build + test clean, release to main
 
 ## Work Completed
-- Batch A released: Google Login, Middleware RBAC, API-level access control.
+- Batch C features built, Codex-reviewed, and blocking fixes applied.
+- All tests pass, build is clean.
+- Merged to main.
 
 ## Files Changed
--
+- Multiple files in src/app, src/components, src/lib, src/__tests__, and supabase/migrations.
 
 ## Codex Review Notes
--
+- All blocking issues from Batch C review resolved.
 
 ## Decisions
-- `payments jsonb[]` entries: `{ date, mode, bank, amount }` — amount included for tranche tracking
-- Migration migrates existing single-payment data with `amount: null` (historical amounts unknown)
-- TDS-only rows are separate `payout_schedule` rows, not columns on main row
-- `generatePayoutReminders` skips `is_tds_only` rows — no investor-facing reminder
-- Splash fades at 1.2s, fully hidden at 1.7s — CSS transition, no server dependency
-- Investors table extracted to `src/components/investors/InvestorsTable.tsx` client component
-- Migration numbers are `015` + `016` (latest in repo is `014`)
+- `payments jsonb[]` entries: `{ date, mode, bank, amount }`
+- `is_tds_only` rows injected at API level for cumulative agreements
+- Client-side sort for investors table (small dataset)
+- RBAC via `x-user-role` / `x-user-team-id` headers set by middleware
+- Extracted investor detail access check to helper in `lib/investors-page.ts` for testability.
 
 ## Next Agent Action
-- Gemini: Read the full plan at `docs/superpowers/plans/2026-04-27-batch-c-agreement-data.md`.
-  Summarise all 5 items to user, wait for confirmation, then implement in this order:
-  1. Create migration files, ask user to run both in Supabase SQL Editor — wait for confirmation before writing any code
-  2. Update `src/types/database.ts` — run build to surface type errors
-  3. Update `src/lib/claude.ts` (ExtractedAgreement + prompt)
-  4. Update `ExtractionReview.tsx` + `ManualAgreementForm.tsx` (payments array UI)
-  5. Update `src/app/api/agreements/route.ts`
-  6. Update `src/app/(app)/agreements/[id]/page.tsx` (payments display + TDS badge + Mark Filed button)
-  7. Create `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
-  8. Update `src/lib/payout-calculator.ts` (TDS-only row for cumulative)
-  9. Update `src/lib/reminders.ts` (skip is_tds_only)
-  10. Create `src/components/SplashScreen.tsx`
-  11. Update `src/app/(app)/layout.tsx` (version + splash)
-  12. Create `src/components/investors/InvestorsTable.tsx` + update `src/app/(app)/investors/page.tsx`
-  Run `npm run build` + `npm test`. Release to main, sync session files, mark Batch C done in BACKLOG.md.
+- Batch C complete. Claude to select Batch D from BACKLOG.md.

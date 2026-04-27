@@ -61,6 +61,8 @@ Find: bugs, unsafe assumptions, missing tests, edge cases, type issues, producti
 
 Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 5 bullets. Mark each as **blocking** or **minor**. Do NOT edit code.
 
+**Every issue MUST include the exact fix:** file path, line range, and the replacement code as a code block. Gemini applies it by copy-paste — no interpretation, no guessing. Vague fixes ("add scoping", "validate input", "handle the error") are not acceptable and will be sent back.
+
 ---
 
 ## GEMINI — RELEASE BATCH

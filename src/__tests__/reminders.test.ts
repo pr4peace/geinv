@@ -14,8 +14,7 @@ const BASE_AGREEMENT: Agreement = {
   investor_address: null, investor_relationship: null, investor_parent_name: null,
   nominees: [], principal_amount: 100000, roi_percentage: 12,
   payout_frequency: 'quarterly', interest_type: 'simple', lock_in_years: 1,
-  maturity_date: '2027-01-01', payment_date: null, payment_mode: null,
-  payment_bank: null, salesperson_id: null, salesperson_custom: null,
+  maturity_date: '2027-01-01', payments: [], salesperson_id: null, salesperson_custom: null,
   tds_filing_name: null, doc_status: 'draft', doc_sent_to_client_date: null,
   doc_returned_date: null, doc_return_reminder_days: 14, investor_id: null,
   investor_birth_year: null, investor2_name: null, investor2_pan: null,
@@ -29,8 +28,8 @@ const FUTURE_PAYOUT: PayoutSchedule = {
   period_to: '2026-06-30', no_of_days: 91,
   due_by: '2026-07-01', // 65 days ahead — both 7-day and day-of generate
   gross_interest: 3000, tds_amount: 300, net_interest: 2700,
-  is_principal_repayment: false, status: 'pending',
-  paid_date: null, created_at: '2026-01-01T00:00:00.000Z',
+  is_principal_repayment: false, is_tds_only: false, tds_filed: false,
+  status: 'pending', paid_date: null, created_at: '2026-01-01T00:00:00.000Z',
 }
 
 const NEAR_PAYOUT: PayoutSchedule = {
@@ -40,6 +39,10 @@ const NEAR_PAYOUT: PayoutSchedule = {
 
 const PAST_PAYOUT: PayoutSchedule = {
   ...FUTURE_PAYOUT, id: 'pay-past', due_by: '2026-04-01',
+}
+
+const TDS_ONLY_PAYOUT: PayoutSchedule = {
+  ...FUTURE_PAYOUT, id: 'pay-tds', is_tds_only: true,
 }
 
 describe('generatePayoutReminders', () => {
@@ -78,6 +81,11 @@ describe('generatePayoutReminders', () => {
 
   it('returns empty array when emailTo list is empty', () => {
     const reminders = generatePayoutReminders(BASE_AGREEMENT, FUTURE_PAYOUT, '', null)
+    expect(reminders).toHaveLength(0)
+  })
+
+  it('generates no reminders for TDS-only rows', () => {
+    const reminders = generatePayoutReminders(BASE_AGREEMENT, TDS_ONLY_PAYOUT, 'coord@example.com', null)
     expect(reminders).toHaveLength(0)
   })
 })

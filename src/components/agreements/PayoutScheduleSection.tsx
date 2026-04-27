@@ -35,14 +35,45 @@ function PayoutStatusBadge({ status }: { status: string }) {
   )
 }
 
+function MarkTdsFiledButton({ payoutId }: { payoutId: string }) {
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  async function handleClick() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/payout-schedule/${payoutId}/mark-tds-filed`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error ?? 'Failed to mark TDS as filed')
+      } else {
+        router.refresh()
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      className="text-[10px] px-2 py-0.5 rounded bg-violet-900/40 text-violet-300 hover:bg-violet-800/40 disabled:opacity-50 transition-colors border border-violet-800/50"
+    >
+      {loading ? 'Saving…' : 'Mark Filed'}
+    </button>
+  )
+}
+
 export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
 
   const interestRows = payouts
-    .filter(r => !r.is_principal_repayment)
+    .filter(r => !r.is_principal_repayment && !r.is_tds_only)
     .sort((a, b) => a.due_by.localeCompare(b.due_by))
   const principalRows = payouts.filter(r => r.is_principal_repayment)
+  const tdsOnlyRows = payouts.filter(r => r.is_tds_only).sort((a, b) => a.due_by.localeCompare(b.due_by))
 
   async function markAsPaid(payoutId: string) {
     setLoading(payoutId)
@@ -116,6 +147,41 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── TDS Only Payouts (Cumulative Tracking) ── */}
+      {tdsOnlyRows.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">TDS Filing Obligations</p>
+          <div className="grid grid-cols-1 gap-3">
+            {tdsOnlyRows.map((row) => (
+              <div key={row.id} className="bg-violet-900/10 border border-violet-800/30 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-900/40 text-violet-400 border border-violet-800/50">
+                    TDS FILING
+                  </span>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Due By</p>
+                    <p className="text-xs text-slate-200">{fmtDate(row.due_by)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">TDS Amount</p>
+                    <p className="text-xs text-violet-400 font-semibold">{fmtCurrency(row.tds_amount)}</p>
+                  </div>
+                </div>
+                <div>
+                  {row.tds_filed ? (
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-900/20 px-2 py-1 rounded border border-emerald-800/30">
+                      ✓ FILED
+                    </span>
+                  ) : (
+                    <MarkTdsFiledButton payoutId={row.id} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
