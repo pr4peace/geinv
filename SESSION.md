@@ -1,7 +1,7 @@
 # SESSION
 
 ## Branch
-- feature/digital-agreement-form
+- main
 
 ## Current Task
 - Add a "Create manually" path to the New Agreement flow so agreements can be created via form entry without uploading a PDF.
