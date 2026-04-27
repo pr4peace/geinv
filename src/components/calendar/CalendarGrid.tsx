@@ -68,10 +68,10 @@ export default function CalendarGrid({ events, initialYear, initialMonth }: Cale
 
   const rbcEvents = useMemo(() => {
     return events.map(ev => {
-      const start = new Date(ev.date)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(ev.date)
-      end.setHours(23, 59, 59, 999)
+      // Split YYYY-MM-DD to avoid UTC shift in new Date()
+      const [y, m, d] = ev.date.split('-').map(Number)
+      const start = new Date(y, m - 1, d, 0, 0, 0, 0)
+      const end = new Date(y, m - 1, d, 23, 59, 59, 999)
       
       return {
         id: ev.id,

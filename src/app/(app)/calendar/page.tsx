@@ -15,7 +15,7 @@ export default async function CalendarPage() {
   // This avoids the bug where joined filters are silently ignored
   const { data: activeAgreements } = await supabase
     .from('agreements')
-    .select('id, investor_name, reference_id, maturity_date, is_draft, status')
+    .select('id, investor_name, reference_id, maturity_date, is_draft, status, interest_type')
     .eq('status', 'active')
     .eq('is_draft', false)
     .is('deleted_at', null)
@@ -34,7 +34,7 @@ export default async function CalendarPage() {
   const { data: payouts } = await supabase
     .from('payout_schedule')
     .select(
-      'id, agreement_id, due_by, gross_interest, net_interest, status, is_principal_repayment, agreement:agreements(investor_name, payout_frequency)'
+      'id, agreement_id, due_by, gross_interest, net_interest, status, is_principal_repayment, agreement:agreements(investor_name, payout_frequency, interest_type)'
     )
     .in('agreement_id', activeIds)
     .eq('is_principal_repayment', false)
@@ -59,8 +59,9 @@ export default async function CalendarPage() {
 
     if (!agreement) continue
 
-    // SKIP payout events for cumulative agreements to avoid double-count with maturity event
-    if (agreement.payout_frequency === 'cumulative') continue
+    // SKIP payout events for cumulative or compound agreements to avoid double-count with maturity event
+    // Compound agreements collapse all interest into the maturity payout
+    if (agreement.payout_frequency === 'cumulative' || agreement.interest_type === 'compound') continue
 
     const status = payout.status as string
     let type: CalendarEvent['type']

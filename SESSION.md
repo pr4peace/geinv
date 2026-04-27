@@ -184,6 +184,9 @@ describe('generatePayoutReminders', () => {
 - Batch B Item 3: Added 7-day advance payout reminder. Created `src/__tests__/reminders.test.ts` to verify.
 - Batch B Item 4: Refactored `src/app/api/reminders/summary/route.ts` to support GET requests for cron jobs. Added weekly Monday cron to `vercel.json`.
 - Fixed ESLint and TypeScript errors in `src/components/calendar/CalendarGrid.tsx` that were blocking the production build.
+- Applied Codex fixes:
+  - Fixed timezone-sensitive date construction in `CalendarGrid.tsx` using local `new Date(y, m-1, d)`.
+  - Fixed double-counting of compound interest payouts in `calendar/page.tsx`.
 
 ## Files Changed
 - `e2e/` (deleted — on feature/wave-2-remove-e2e)
@@ -205,8 +208,10 @@ describe('generatePayoutReminders', () => {
 - Monthly summary trigger verified correct: fires at 2am UTC on day 1 = 7:30am IST, idempotent
 
 ## Codex Review Notes
--
+- **blocking** [src/components/calendar/CalendarGrid.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/components/calendar/CalendarGrid.tsx:78) parses `ev.date` with `new Date('YYYY-MM-DD')`. In browsers this is interpreted as UTC, so users in negative UTC offsets will see all-day events rendered on the previous day. The old grid compared date strings and did not have this shift. This needs local-date construction such as `new Date(year, monthIndex, day)`, plus a regression test around timezone-sensitive rendering.
+- **blocking** [src/app/(app)/calendar/page.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/app/(app)/calendar/page.tsx:37) tries to fix the cumulative double-count by skipping only `agreement.payout_frequency === 'cumulative'`, but the payout calculator also collapses any `interest_type === 'compound'` agreement into a single maturity payout. Compound agreements with `quarterly` or `annual` frequency will still show both a payout event and a maturity event on the same date.
+- **minor** No regression tests were added for the calendar data path or the new summary cron route. `npm test` and `npm run build` pass, but there is still no automated coverage for the active-agreement filtering/cumulative-skip behavior in [src/app/(app)/calendar/page.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/app/(app)/calendar/page.tsx:14) or for the `GET /api/reminders/summary` auth/send flow in [src/app/api/reminders/summary/route.ts](/Users/prashanthpalanisamy/Developer/geinv/src/app/api/reminders/summary/route.ts:220).
 
 ## Next Agent Action
-- Codex: Review the diff for Batch B (feature/wave-2-calendar merged into main).
+- Codex: Review the applied fixes for Batch B.
 - Claude: Select Batch A from BACKLOG.md and plan implementation.
