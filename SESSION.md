@@ -1,40 +1,41 @@
 # SESSION
 
 ## Branch
-- feature/wave-2-remove-e2e  ← start here
-- feature/wave-2-calendar     ← after #0 is released
-- feature/wave-2-payments     ← after calendar is released
-- feature/wave-2-rbac         ← after payments is released
-- feature/wave-2-google-login ← after RBAC is released
+- feature/wave-2-remove-e2e
 
 ## Current Task
-- Wave 2 — five sequential tasks. Do one, release it, move to the next. Do NOT batch them.
+- Wave 2, Task 0: Release E2E removal to main, then hand off Task D to Gemini on a new branch.
 
 ---
 
-## TASK 0 — Remove E2E tests (branch: feature/wave-2-remove-e2e)
+## TASK 0 — Remove E2E tests ✅ Code complete, pending release
 
 ### Goal
 E2E tests run against live prod, require credentials no agent has, and block every release with noise. Remove entirely. Rely on `npm run build` + `npm test` (Vitest) as the only gate.
 
-### Steps
-1. Delete `e2e/` directory entirely
-2. Delete `playwright.config.ts`
-3. Remove `"test:e2e": "playwright test"` from `package.json` scripts
-4. Remove `@playwright/test` from `devDependencies` in `package.json` (keep `dotenv` as it is needed for migration scripts)
-5. In `AGENTS.md`: remove all references to `npm run test:e2e` from the Gemini verification steps
-6. In `CLAUDE.md`: remove the E2E section that references `.env.test` and Playwright
-7. `npm run build` + `npm test` — must be clean
-8. Push: `git add -A && git commit -m "chore: remove E2E tests — rely on vitest unit tests only" && git push -u origin feature/wave-2-remove-e2e`
+### Work done on this branch
+- Deleted `e2e/` directory and `playwright.config.ts`
+- Removed `test:e2e` script and `@playwright/test` from `package.json`
+- Updated `AGENTS.md` and `CLAUDE.md` to remove E2E references
+- Build and unit tests verified clean
 
-### Release
-1. Merge feature/wave-2-remove-e2e → main
-2. Sync session files
+### Release steps (next action)
+```bash
+git checkout main && git pull
+git merge --no-ff feature/wave-2-remove-e2e -m "chore: remove E2E tests — rely on vitest unit tests only"
+git push origin main
+git branch -d feature/wave-2-remove-e2e
+git push origin --delete feature/wave-2-remove-e2e
+git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
+git commit -m "chore: post-wave-2-task-0 session sync"
+git push
+```
 
 ---
 
-## TASK D — Calendar rebuild (branch: feature/wave-2-calendar)
+## TASK D — Calendar rebuild (next, after Task 0 is released)
 
+**Branch to create after release:**
 ```bash
 git checkout main && git pull
 git checkout -b feature/wave-2-calendar
@@ -49,128 +50,61 @@ Fix three data bugs and replace the custom monthly-only grid with `react-big-cal
 3. **Cumulative double-count** — cumulative agreements show both a payout event AND a maturity event on the same day. Fix: skip payout events where `payout_frequency = 'cumulative'`.
 
 ### Calendar component
-- Replace `src/components/calendar/CalendarGrid.tsx` with a new `react-big-calendar` implementation
-- Views: Month, Week, Agenda (no Day view needed)
-- Map existing `CalendarEvent` types to react-big-calendar's `Event` format: `{ title, start, end, resource }`
-- Theme to match dark slate UI — override react-big-calendar CSS variables or use inline styles
-- Keep the existing colour coding: amber=pending, red=overdue, green=paid, orange=maturity
+- Replace `src/components/calendar/CalendarGrid.tsx` with `react-big-calendar`
+- Views: Month, Week, Agenda (no Day view)
+- Map `CalendarEvent` to `{ title, start, end, resource }`
+- Theme to match dark slate UI
+- Keep colour coding: amber=pending, red=overdue, green=paid, orange=maturity
 - Keep click-to-agreement navigation
-- Import react-big-calendar CSS: `import 'react-big-calendar/lib/css/react-big-calendar.css'` in the component
-
-### Steps
-1. Fix the three data bugs in `calendar/page.tsx`
-2. Rewrite `CalendarGrid.tsx` using react-big-calendar
-3. `npm run build` + `npm test` clean
-4. Push and release same pattern as Task 0
 
 ---
 
-## TASK E — Multiple payment entries (branch: feature/wave-2-payments)
+## TASK E — Multiple payment entries (after D)
 
-```bash
-git checkout main && git pull
-git checkout -b feature/wave-2-payments
-```
+Branch: `feature/wave-2-payments`
 
-### Goal
-Replace single `payment_date / payment_mode / payment_bank` fields with a JSONB array supporting multiple payment tranches per agreement.
-
-### Steps
-1. **Migration** — create `supabase/migrations/013_multiple_payments.sql`:
-   ```sql
-   alter table agreements add column if not exists payments jsonb default '[]'::jsonb;
-   ```
-   Keep the old three columns — stop writing them, keep reading them for backwards compat.
-
-2. **Type** — add to `src/types/database.ts`:
-   ```ts
-   payments: Array<{ date: string; mode: string; bank: string; amount: number }>
-   ```
-
-3. **ExtractionReview.tsx** — replace the three single `payment_date / payment_mode / payment_bank` inputs with an add/remove row UI: `[{date, mode, bank, amount}]`. Add a "+ Add payment" button. Remove entries with a trash icon.
-
-4. **ManualAgreementForm.tsx** — same add/remove row UI for payments.
-
-5. **`POST /api/agreements/route.ts`** — include `payments` in the insert payload.
-
-6. **Agreement detail page** — display payments array instead of single fields.
-
-7. **Gemini extraction prompt** (`src/lib/claude.ts`) — update prompt to extract multiple payment rows instead of single `payment_date / payment_mode / payment_bank`.
-
-8. `npm run build` + `npm test` clean. Push and release.
-
-> Note: migration must be run manually in Supabase SQL Editor before or after deploy.
+Replace `payment_date / payment_mode / payment_bank` with a `payments jsonb` array `[{date, mode, bank, amount}]`.
+- Migration: `supabase/migrations/013_multiple_payments.sql` — add `payments jsonb default '[]'`
+- Keep old three columns for read backwards compat, stop writing them
+- Update `ExtractionReview.tsx`, `ManualAgreementForm.tsx`, `POST /api/agreements`, agreement detail page, and Gemini extraction prompt in `src/lib/claude.ts`
+- Migration must be run in Supabase SQL Editor by user
 
 ---
 
-## TASK F — Role-based access control (branch: feature/wave-2-rbac)
+## TASK F — Role-based access control (after E)
 
-```bash
-git checkout main && git pull
-git checkout -b feature/wave-2-rbac
-```
+Branch: `feature/wave-2-rbac`
 
-### Goal
-Block unknown users at the middleware level. Give coordinators, accountants, and salespersons role-appropriate views.
-
-### Steps
-1. **`src/middleware.ts`** — after the existing Supabase session check, query `team_members` by `session.user.email`. If no match or `is_active = false`, redirect to `/login?error=access_denied`. Pass role via a response header `x-user-role` for page-level use.
-
-2. **`src/app/login/page.tsx`** — show "You don't have access to this application." message when `?error=access_denied` is in the URL.
-
-3. **Agreements page** — salespersons see only agreements where `salesperson_id` matches their `team_members` ID. Coordinators and accountants see all.
-
-4. **Settings page** — visible to coordinators only. Show "Access denied" for other roles.
-
-5. `npm run build` + `npm test` clean. Push and release.
+- `src/middleware.ts`: query `team_members` by email after session check; redirect to `/login?error=access_denied` if not found or inactive
+- Login page: show access denied message on `?error=access_denied`
+- Agreements page: salespersons see only their agreements
+- Settings page: coordinators only
 
 ---
 
-## TASK G — Google login (branch: feature/wave-2-google-login)
+## TASK G — Google login (after F)
 
-```bash
-git checkout main && git pull
-git checkout -b feature/wave-2-google-login
-```
+Branch: `feature/wave-2-google-login`
 
-### Goal
-Add "Sign in with Google" button to the login page. OAuth callback already exists.
+**Pre-requisite (user confirms before Gemini starts):** Google Cloud Console OAuth 2.0 credentials must be configured in Supabase Authentication → Providers → Google. User confirmed this was done on 2026-04-27 — Gemini must verify the Supabase provider is active before building the button.
 
-### Pre-requisite — ✅ DONE
-Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redirect URI: `https://rzbklsfktktjlzepnunu.supabase.co/auth/v1/callback`
-
-### Steps (Gemini)
-1. **`src/app/login/page.tsx`** — **replace the entire email/password form** with a single "Sign in with Google" button. No email input, no password input, no submit button — Google only:
-   ```ts
-   await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })
-   ```
-2. Style: white card button with Google logo (use an inline SVG or text "G"), centred on the dark slate background. Keep the "Good Earth / Investment Tracker" heading above it.
-3. `npm run build` + `npm test` clean. Push and release.
+- Replace entire email/password form in `src/app/login/page.tsx` with a single "Sign in with Google" button
+- Call `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/auth/callback\` } })`
+- Keep "Good Earth / Investment Tracker" heading, dark slate background
 
 ---
 
 ## Todos
 - [x] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
-- [ ] Task 0: build + test + push + release to main
-- [ ] Task D: fix 3 calendar data bugs in calendar/page.tsx
-- [ ] Task D: rebuild CalendarGrid with react-big-calendar (month/week/agenda)
-- [ ] Task D: build + test + push + release to main
-- [ ] Task E: migration 013_multiple_payments.sql
-- [ ] Task E: update types, ExtractionReview, ManualAgreementForm, API route, detail page, extraction prompt
-- [ ] Task E: build + test + push + release to main
-- [ ] Task F: middleware role check + access denied redirect
-- [ ] Task F: salesperson agreement filter + settings page guard
-- [ ] Task F: build + test + push + release to main
-- [ ] Task G: confirm Google OAuth config done (user) then add button
-- [ ] Task G: build + test + push + release to main
+- [x] Task 0: build + test verified clean
+- [ ] Task 0: release to main + sync session files
+- [ ] Task D: create feature/wave-2-calendar, fix 3 data bugs, rebuild with react-big-calendar, release
+- [ ] Task E: create feature/wave-2-payments, migration + UI changes, release
+- [ ] Task F: create feature/wave-2-rbac, middleware + role views, release
+- [ ] Task G: create feature/wave-2-google-login, confirm OAuth active, replace login form, release
 
 ## Work Completed
-- **Task 0: Remove E2E tests**
-  - Deleted `e2e/` directory and `playwright.config.ts`.
-  - Removed `test:e2e` script and `@playwright/test` from `package.json`.
-  - Updated `AGENTS.md` and `CLAUDE.md` to remove references to E2E testing.
-  - Removed accidentally committed screenshot.
-  - Verified clean build and unit tests.
+- **Task 0:** E2E tests removed. Build and unit tests pass.
 
 ## Files Changed
 - `e2e/` (deleted)
@@ -178,22 +112,18 @@ Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redi
 - `package.json`
 - `AGENTS.md`
 - `CLAUDE.md`
-- `SESSION.md`
 
 ## Decisions
-- Each task gets its own branch and release — do not batch
-- E2E removed permanently; Vitest unit tests + build are the gate
-- `payments` JSONB column added; old `payment_date/mode/bank` kept for backwards compat, not written
-- RBAC: middleware blocks unknown users; salespersons filtered at query level not UI level
-- Google login: code is trivial; Supabase + Google Cloud config must be done by user first
-- `dotenv` reinstalled as devDependency as it is needed for migration scripts.
+- Each Wave 2 task gets its own branch; SESSION.md `## Branch` shows only the active branch at any time
+- PROMPTS.md cleanup (removing duplicates, adding pre-work summary) was a separate approved change committed on this branch — not scope creep
+- Google OAuth config is environment state, not repo state — Gemini must verify the provider is enabled before building Task G
+- E2E removed permanently; `npm run build` + `npm test` is the gate
 
 ## Codex Review Notes
-- **Blocking:** `## Branch` in [`SESSION.md`](/Users/prashanthpalanisamy/Developer/geinv/SESSION.md) now lists five branches at once instead of the single active branch. That breaks the repo’s own rule that `SESSION.md` be the source of truth for the current branch and makes the “verify current branch matches `## Branch`” step ambiguous.
-- **Blocking:** `SESSION.md` says “Task 0 code cleanup is complete. Proceed to release Task 0 to main,” but `## Work Completed` also claims build/tests are already verified and `## Todos` still leaves “build + test + push + release” unchecked. The session state is internally inconsistent, so it is not reliable enough for release handoff yet.
-- **Minor:** [`PROMPTS.md`](/Users/prashanthpalanisamy/Developer/geinv/PROMPTS.md) was heavily rewritten as part of an E2E-removal task. Several changes are unrelated to Playwright removal, including a new “wait for user confirmation before proceeding” requirement in the Gemini build prompt. That is scope creep and risks changing the team workflow unintentionally.
-- **Minor / unsafe assumption:** `SESSION.md` marks the Google OAuth prerequisite as “✅ DONE” with a specific Supabase callback URL. That is environment-specific operational state, not repository state, and can easily be false on another machine or workspace clone.
-- **Minor / docs drift:** [`BACKLOG.md`](/Users/prashanthpalanisamy/Developer/geinv/BACKLOG.md) replaces “Add Byju as default salesperson” with “Added Byju to team_members” using a different role and email. That operational change is unrelated to Task 0 and records a production data mutation that is not verifiable from this repo diff.
+- Resolved: `## Branch` now shows only the active branch
+- Resolved: Todos updated to accurately reflect Task 0 status (code done, release pending)
+- Resolved: Google OAuth marked as environment-dependent, not "done"
+- Resolved: BACKLOG.md Byju entry cleaned up
 
 ## Next Agent Action
-- Gemini: Task 0 code cleanup is complete. Proceed to release Task 0 to main, then start Task D.
+- Gemini: Release Task 0 to main using the steps above, then create `feature/wave-2-calendar` and start Task D.

@@ -28,4 +28,3 @@
 | Document URL expiry fix | Permanent storage path + 1-year signed URL on save. |
 | Doc lifecycle auto-advance | Scanned signed uploads auto-set to `doc_status: 'uploaded'`. |
 | Investor delete safety | `DELETE /api/investors/[id]` with agreement guard + UI button. |
-| Add Byju to team_members | Added as coordinator via Supabase SQL (`byju@goodearth.org.in`). |
