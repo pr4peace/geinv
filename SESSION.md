@@ -42,29 +42,41 @@
 - `npm test` — no regressions
 
 ## Todos
-- [ ] Add two-path choice to `/agreements/new/page.tsx` ("Upload PDF" / "Create manually")
-- [ ] Create `ManualAgreementForm.tsx` with all form fields and empty initial state
-- [ ] Wire live payout calculator using `calculatePayoutSchedule` + `useMemo`
-- [ ] Render live schedule with `PayoutScheduleTable`
-- [ ] Save: POST to `/api/agreements` with calculated `payout_schedule`, handle 409, redirect on success
-- [ ] `npm run build` — clean
-- [ ] `npm test` — no regressions
+- [x] Add two-path choice to `/agreements/new/page.tsx` ("Upload PDF" / "Create manually")
+- [x] Create `ManualAgreementForm.tsx` with all form fields and empty initial state
+- [x] Wire live payout calculator using `calculatePayoutSchedule` + `useMemo`
+- [x] Render live schedule with `PayoutScheduleTable`
+- [x] Save: POST to `/api/agreements` with calculated `payout_schedule`, handle 409, redirect on success
+- [x] `npm run build` — clean
+- [x] `npm test` — no regressions
 
 ## Work Completed
--
+- Added a "Choice" screen to `/agreements/new` with two paths: "Upload PDF / DOCX" and "Create Manually".
+- Created `ManualAgreementForm.tsx` component providing a full form for manual agreement entry.
+- Integrated `calculatePayoutSchedule` in `ManualAgreementForm` using `useMemo` for live payout schedule preview.
+- Reused `PayoutScheduleTable` to display the computed schedule.
+- Implemented `handleSave` in `ManualAgreementForm` to POST to `/api/agreements` with calculated schedule.
+- Handled duplicate detection (409) in the manual flow with confirmation bypass.
+- Added `onBack` support to `UploadStep` for returning to the choice screen.
+- Fixed vitest config to exclude `e2e` directory.
+- Fixed lint errors in `ManualAgreementForm.tsx`.
+- Verified build with `npm run build` (success).
+- Verified unit tests with `npm test` (success).
+- Attempted E2E tests with `npx playwright test` (failed due to missing environment variables for auth, as expected in this environment).
 
 ## Files Changed
--
+- `src/app/(app)/agreements/new/page.tsx`: Added choice step and routing.
+- `src/components/agreements/ManualAgreementForm.tsx`: New component for manual entry.
+- `src/components/agreements/UploadStep.tsx`: Added back button.
+- `vitest.config.ts`: Excluded `e2e` directory from unit tests.
 
 ## Decisions
-- Offer letter generation is deferred — it requires template design and PDF rendering, a separate session
-- `document_url` is `null` for manually-created agreements — the API already supports this
-- Live payout schedule uses `useMemo` not `useEffect` — no async, pure calculation, no extra state
-- Reuse `PayoutScheduleTable` and `calculatePayoutSchedule` — no new calculation logic needed
-- Two-path entry replaces the old single upload page — cleaner than hiding/showing within the same component
+- Used `useMemo` for live payout schedule to ensure it updates whenever financial terms or dates change.
+- Explicitly mapped payout rows in `ManualAgreementForm` to remove the `status` field (which is set to 'paid' by the utility but should be 'pending' for new agreements), allowing the database default to take over.
+- Simplified `ManualAgreementForm` by removing PDF preview and extraction-specific logic.
 
 ## Codex Review Notes
 -
 
 ## Next Agent Action
-- Gemini: Implement the plan in SESSION.md. Confirm you are on branch `feature/digital-agreement-form` before writing any code. Verify with `npm run build` and `npm test` after implementation.
+- Codex: Review the changes and verify against the plan. Note that E2E tests were attempted but failed due to missing credentials in the environment.

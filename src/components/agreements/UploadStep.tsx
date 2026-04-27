@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { Upload, FileText, X } from 'lucide-react'
+import { Upload, FileText, X, ChevronLeft } from 'lucide-react'
 
 interface TeamMember {
   id: string
@@ -21,12 +21,13 @@ interface UploadStepProps {
   }) => void
   isLoading: boolean
   error: string | null
+  onBack?: () => void
 }
 
 const ACCEPTED_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const MAX_SIZE = 10 * 1024 * 1024
 
-export default function UploadStep({ teamMembers, onExtract, isLoading, error }: UploadStepProps) {
+export default function UploadStep({ teamMembers, onExtract, isLoading, error, onBack }: UploadStepProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isDraft, setIsDraft] = useState(false)
   const [salespersonId, setSalespersonId] = useState<string>('')
@@ -86,6 +87,17 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error }:
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-100 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back to Choice
+        </button>
+      )}
+
       {/* Drop zone */}
       <div
         className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${

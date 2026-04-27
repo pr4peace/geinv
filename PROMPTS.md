@@ -4,6 +4,11 @@
 
 ## CLAUDE — START SESSION (BACKLOG → PLAN)
 
+First — sync before anything else:
+```bash
+git pull
+```
+
 Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
 
 You are the primary planner.
@@ -32,6 +37,11 @@ Keep scope tight (one task only).
 ---
 
 ## CLAUDE — DIRECT TASK (OVERRIDE BACKLOG)
+
+First — sync before anything else:
+```bash
+git pull
+```
 
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
@@ -62,6 +72,11 @@ Keep scope tight.
 
 ## GEMINI — BUILD
 
+First — sync before anything else:
+```bash
+git pull
+```
+
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
 Follow the plan and todos.
@@ -77,6 +92,11 @@ After work, update SESSION.md:
 - Files Changed
 - Decisions
 - Next Agent Action → Codex
+
+Then — push before closing:
+```bash
+git add -A && git commit -m "wip: gemini build progress" && git push
+```
 
 ---
 
@@ -105,6 +125,11 @@ Do NOT edit code.
 
 ## GEMINI — FIX CODEX ISSUES
 
+First — sync before anything else:
+```bash
+git pull
+```
+
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
 Fix ONLY issues in "Codex Review Notes".
@@ -118,6 +143,11 @@ After fixing:
 - update Work Completed
 - update Files Changed
 - Next Agent Action → Codex
+
+Then — push before closing:
+```bash
+git add -A && git commit -m "fix: apply codex review fixes" && git push
+```
 
 ---
 
