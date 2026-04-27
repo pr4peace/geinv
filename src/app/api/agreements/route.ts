@@ -12,13 +12,22 @@ import { findOrCreateInvestor } from '@/lib/investors'
 
 export async function GET(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    const userTeamId = request.headers.get('x-user-team-id')
+
     const supabase = createAdminClient()
     const { searchParams } = new URL(request.url)
 
     const status = searchParams.get('status')
     const payoutFrequency = searchParams.get('payout_frequency')
     const isDraft = searchParams.get('is_draft')
-    const salespersonId = searchParams.get('salesperson_id')
+    let salespersonId = searchParams.get('salesperson_id')
+    
+    // RBAC: Salesperson can only see their own agreements
+    if (userRole === 'salesperson') {
+      salespersonId = userTeamId
+    }
+
     const sortBy = searchParams.get('sort_by') ?? 'created_at'
     const sortOrder = searchParams.get('sort_order') ?? 'desc'
 
@@ -61,6 +70,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole !== 'coordinator' && userRole !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
     const body = await request.json()
 

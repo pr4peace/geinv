@@ -165,6 +165,10 @@ Then update SESSION.md `## Branch` to `main` and push.
 ## Branch
 -
 
+## Phase
+- One of: planning | building | reviewing | releasing
+- Claude sets this to 'building' at the end of planning. Gemini sets it to 'reviewing' after completing the batch build. Gemini sets it to 'releasing' after Codex review is clean and all gates pass.
+
 ## Current Task
 -
 

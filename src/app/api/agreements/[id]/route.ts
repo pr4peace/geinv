@@ -6,10 +6,13 @@ import {
 } from '@/lib/reminders'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    const userTeamId = request.headers.get('x-user-team-id')
+
     const { id } = await params
     const supabase = createAdminClient()
 
@@ -21,6 +24,11 @@ export async function GET(
 
     if (error || !agreement) {
       return NextResponse.json({ error: 'Agreement not found' }, { status: 404 })
+    }
+
+    // RBAC: Salesperson can only see their own agreements
+    if (userRole === 'salesperson' && agreement.salesperson_id !== userTeamId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     const { data: payoutSchedule } = await supabase
@@ -53,6 +61,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole === 'salesperson') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const { id } = await params
     const supabase = createAdminClient()
     const body = await request.json()
@@ -173,10 +186,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole === 'salesperson') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const { id } = await params
     const supabase = createAdminClient()
 

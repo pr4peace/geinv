@@ -29,6 +29,11 @@ export interface ImportRow {
 
 export async function POST(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole !== 'coordinator' && userRole !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
     const { rows } = (await request.json()) as { rows: ImportRow[] }
 
@@ -160,8 +165,13 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE — soft-delete all agreements imported via CSV
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole !== 'coordinator' && userRole !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
 
     // Find all agreements tagged as csv_import in audit log
