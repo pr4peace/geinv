@@ -13,6 +13,16 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
+### 🚀 Pre-Launch Finalisation (after Batch C.1, before team onboarding)
+
+| Step | Notes |
+|---|---|
+| **Final Codex review** | Full review of all code on `main` after C.1 merges. Fix any blocking issues before real data goes in. |
+| **Data wipe** | Delete all test agreements, payout schedules, reminders, investors from the database. Start clean for real team use. Run via Supabase dashboard or a one-off script. |
+| **Vercel production branch → main** | Change Vercel project production branch from `feature/investment-tracker` to `main`. Settings → Git → Production Branch. Then delete `origin/feature/investment-tracker` and `origin/feature/sidebar-collapse`. |
+
+---
+
 ### 🩹 Batch C.1 — Extraction Fixes + Post-V1 Patch (branch: `feature/batch-c1-patch`)
 *Quick patch after V1. No migrations, no new features.*
 
