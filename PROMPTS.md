@@ -1,6 +1,6 @@
 # PROMPTS.md
 
-Copy-paste prompts for each agent. Use in order: Claude plans → Gemini builds → Codex reviews → Gemini fixes → Gemini releases.
+Copy-paste prompts for each agent. Workflow: Claude plans batch → Gemini builds all items in batch → Codex reviews → Gemini fixes → Gemini releases batch.
 
 ---
 
@@ -13,15 +13,16 @@ git pull
 
 Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
 
-You are the primary planner. Pick ONE high-impact task from BACKLOG.md (prefer High Priority), explain why, then:
-- Define goal
-- Create step-by-step plan
-- Create todos
-- Propose branch name and create it
+You are the primary planner. Pick the next unstarted **batch** from BACKLOG.md, explain why, then:
+- List all items in the batch with their goals
+- Define the branch name (already in BACKLOG.md)
+- Write step-by-step plan for each item
+- Create todos covering all items in the batch
+- Create the branch
 
-Update SESSION.md with Current Task, Goal, Plan, Todos, Next Agent Action → Gemini.
+Update SESSION.md: Branch, Current Task, Plan (per item), Todos, Next Agent Action → Gemini.
 
-Do NOT write code. Keep scope tight (one task only).
+Do NOT write code.
 
 ---
 
@@ -47,7 +48,7 @@ First — sync:
 git pull
 ```
 
-Read CLAUDE.md, AGENTS.md, and SESSION.md. Review current state. Propose next clean step or select from BACKLOG.md. Update Plan and Todos in SESSION.md. Then STOP and wait.
+Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md. Review current state. Identify which batch is active and what items remain. Update Plan and Todos in SESSION.md. Then STOP and wait.
 
 ---
 
@@ -61,21 +62,23 @@ git pull
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
 **Before writing any code — post a summary to the user:**
-- Which task you are working on
-- Which files you will create or modify
-- What each change does in one line
+- Which batch you are working on
+- All items in the batch and what each does
+- Which files you will create or modify per item
 - Any migrations or manual steps the user needs to do
 
 Wait for the user to confirm before proceeding.
 
+Work through ALL items in the current batch in sequence. Do not stop between items — complete the full batch, then update SESSION.md and push.
+
 Rules:
-- Implement only the current task
+- Implement only items in the current batch
 - Keep changes small, no unrelated refactor
 - Preserve architecture
 
-After work, update SESSION.md (Work Completed, Files Changed, Decisions, Next Agent Action → Codex). Then push:
+After completing the full batch, update SESSION.md (Work Completed, Files Changed, Decisions, Next Agent Action → Codex). Then push:
 ```bash
-git add -A && git commit -m "wip: gemini build progress" && git push
+git add -A && git commit -m "feat: [batch name] — all items complete" && git push
 ```
 
 ---
@@ -106,7 +109,7 @@ Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 5 bullets
 
 ---
 
-## GEMINI — RELEASE PREPARATION
+## GEMINI — RELEASE BATCH
 
 First — sync:
 ```bash
@@ -120,36 +123,25 @@ npm run build
 npm test
 ```
 
-Confirm all pass. Summarize what changed. Check for new Supabase migrations in `supabase/migrations/`. Verify no blocking Codex issues.
+Confirm all pass. Summarize what changed across all batch items. Check for new Supabase migrations in `supabase/migrations/` — list any that need to be run. Verify no blocking Codex issues.
 
-Propose release plan:
-1. Merge `feature/<branch>` → `main` (no-ff)
-2. Apply Supabase migration in SQL Editor (if needed — list the file)
-3. Vercel auto-deploys on push to main
-
-Do NOT execute. Update SESSION.md → Next Agent Action: "Awaiting release approval." Push SESSION.md.
-
----
-
-## GEMINI — EXECUTE RELEASE
-
-Read SESSION.md for the branch name. Run:
+Then execute the release:
 ```bash
 git checkout main && git pull
-git merge --no-ff feature/<branch> -m "feat: merge feature/<branch> into main"
+git merge --no-ff feature/<batch-branch> -m "feat: <batch name>"
 git push origin main
-git branch -d feature/<branch>
-git push origin --delete feature/<branch>
+git branch -d feature/<batch-branch>
+git push origin --delete feature/<batch-branch>
 ```
 
-Then sync session files:
+Then sync session files and update BACKLOG.md to mark the batch as done:
 ```bash
 git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
-git commit -m "chore: post-release session sync"
+git commit -m "chore: post-release sync — <batch name>"
 git push
 ```
 
-Report: branch merged, remote deleted, Vercel deploy triggered. If a migration is needed, list the file and instruct the user to run it in Supabase SQL Editor.
+If a migration is needed, list the file path and ask the user to run it in Supabase SQL Editor before confirming deploy success.
 
 ---
 
@@ -159,13 +151,13 @@ Report: branch merged, remote deleted, Vercel deploy triggered. If a migration i
 git pull
 ```
 
-Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md. Verify current branch matches `## Branch` in SESSION.md (switch if not). Check Next Agent Action. Summarize state in 1–2 sentences. Proceed.
+Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md. Verify current branch matches `## Branch` in SESSION.md (switch if not). Check Next Agent Action. Summarize batch status in 1–2 sentences. Proceed.
 
 ---
 
 ## ANY AGENT — PRE-CLOSE HANDOFF
 
-- Update SESSION.md: Work Completed, Files Changed, Next Steps
+- Update SESSION.md: Work Completed, Files Changed, which batch items are done vs pending
 - Commit and push all changes including session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md)
-- Check if Stability Gate in AGENTS.md is met — if yes, propose merging to `main`
+- If all batch items are done and build/tests pass, propose releasing the batch
 - Provide a one-paragraph summary and a copy-paste Resume Prompt for the next session

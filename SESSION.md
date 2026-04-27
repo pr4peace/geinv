@@ -1,10 +1,10 @@
 # SESSION
 
 ## Branch
-- feature/wave-2-remove-e2e
+- feature/wave-2-calendar
 
 ## Current Task
-- Release E2E removal to main, then start Batch A (Auth & Access) on `feature/batch-a-auth`.
+- TASK D: Calendar rebuild. Fix data bugs and replace custom grid with react-big-calendar.
 
 ---
 
@@ -85,7 +85,6 @@ Branch: `feature/batch-d-dashboard` — see BACKLOG.md for full item list.
 ## Todos
 - [x] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
 - [x] Task 0: build + test verified clean
-- [ ] Task 0: release to main + sync session files
 - [ ] Task 0: release to main + sync session files
 - [ ] Batch A: Google login + RBAC on `feature/batch-a-auth`, release
 - [ ] Batch B: Calendar bugs + rebuild + reminders on `feature/batch-b-calendar`, release
