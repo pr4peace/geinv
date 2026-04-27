@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
     const fileUrl = signedData.signedUrl
 
-    return NextResponse.json({ extracted, file_url: fileUrl })
+    return NextResponse.json({ extracted, file_url: fileUrl, temp_path: tempPath })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
