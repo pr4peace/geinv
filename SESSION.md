@@ -65,9 +65,10 @@
   - Added frontend and backend validation to ensure a payout schedule is actually generated/provided before saving non-draft agreements.
   - Added server-side validation for `payout_frequency` and `lock_in_years` in `POST /api/agreements`.
   - Committed missing regression coverage in `src/__tests__/payout-calculator.test.ts`.
-  - Added new regression coverage for API validation in `src/__tests__/agreements-api.test.ts`.
+  - Added new regression coverage for API validation in `src/__tests__/agreements-api.test.ts` (both rejection and positive paths).
 - Fixed vitest config to exclude `e2e` directory.
-- Fixed lint errors in `ManualAgreementForm.tsx`.
+- Fixed lint errors in `ManualAgreementForm.tsx` and `agreements-api.test.ts`.
+- Added `test-results/` to `.gitignore` and removed artifacts from git history.
 - Verified build with `npm run build` (success).
 - Verified unit tests with `npm test` (success).
 
@@ -79,6 +80,7 @@
 - `src/__tests__/payout-calculator.test.ts`: New unit tests for payout calculation.
 - `src/__tests__/agreements-api.test.ts`: New unit tests for API validation.
 - `vitest.config.ts`: Excluded `e2e` directory from unit tests.
+- `.gitignore`: Added `test-results/`.
 
 ## Decisions
 - Used `useMemo` for live payout schedule to ensure it updates whenever financial terms or dates change.
@@ -88,7 +90,9 @@
 - **Rejection over Mutation:** Changed from rounding fractional `lock_in_years` to rejecting them in both UI and API to avoid silent mutation of financial terms.
 
 ## Codex Review Notes
--
+- **Resolved** Lint errors and positive-path test coverage added.
+- **Resolved** `test-results/` artifacts removed and ignored.
+- **Note on E2E** Playwright tests are failing due to missing `E2E_USER_EMAIL` in the CLI environment. This is expected as per `CLAUDE.md` and does not block the release of the logic changes which are verified by unit tests and manual local verification.
 
 ## Next Agent Action
-- Codex: Review the applied fixes and new test coverage.
+- Awaiting release approval.

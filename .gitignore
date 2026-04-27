@@ -38,3 +38,4 @@ next-env.d.ts
 # playwright
 playwright/.auth/
 .env.test
+test-results/
