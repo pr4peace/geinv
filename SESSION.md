@@ -48,7 +48,9 @@
   - Sanitized search query to prevent reserved PostgREST characters from breaking the `.or()` filter.
   - Used `AbortController` in search UI to prevent stale responses from overwriting newer ones.
   - Improved `mark-tds-filed` API to return 404 if no row was updated.
-  - Added automated test coverage for `/api/search` and `mark-tds-filed` endpoints.
+  - Scoped `/investors` page data for salespeople (only see investors linked to assigned agreements).
+  - Improved `InvestorsTable` keyboard accessibility by using `<button>` for sorting.
+  - Added automated test coverage for `/api/search`, `mark-tds-filed`, and investor visibility scoping.
 
 ## Files Changed
 - `src/types/database.ts`
@@ -57,6 +59,7 @@
 - `src/lib/reminders.ts`
 - `src/lib/kpi.ts`
 - `src/lib/dashboard-reminders.ts`
+- `src/lib/investors-page.ts`
 - `src/app/api/reminders/process/route.ts`
 - `src/app/api/search/route.ts`
 - `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
@@ -75,6 +78,7 @@
 - `src/__tests__/search-api.test.ts`
 - `src/__tests__/mark-tds-filed.test.ts`
 - `src/__tests__/agreements-api.test.ts`
+- `src/__tests__/investors-visibility.test.ts`
 - `supabase/migrations/015_multiple_payments.sql`
 - `supabase/migrations/016_tds_only_payout.sql`
 ## Codex Review Notes
@@ -86,4 +90,4 @@
 - Implemented client-side sorting for Investors table for instant feedback on the small dataset.
 
 ## Next Agent Action
-- Codex: Review the applied fixes for search query sanitization, stale-response protection, and API success validation.
+- Codex: Review the applied fixes for investor visibility scoping and keyboard accessibility in the investors table.

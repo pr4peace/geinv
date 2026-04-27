@@ -29,16 +29,16 @@ function SortHeader({
 }) {
   const active = current === sortKey
   return (
-    <th
-      onClick={() => onSort(sortKey)}
-      className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer select-none hover:text-white transition-colors group"
-    >
-      <div className="flex items-center gap-1">
+    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider group">
+      <button
+        onClick={() => onSort(sortKey)}
+        className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none focus:text-indigo-400"
+      >
         {label}
         <span className={`${active ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400'} transition-colors`}>
           {active ? (dir === 'asc' ? '▲' : '▼') : '⇅'}
         </span>
-      </div>
+      </button>
     </th>
   )
 }

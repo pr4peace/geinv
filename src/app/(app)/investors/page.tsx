@@ -1,64 +1,10 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getInvestors, type InvestorRow } from '@/lib/investors-page'
 import { InvestorsTable } from '@/components/investors/InvestorsTable'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Investors — Good Earth Investment Tracker',
-}
-
-type InvestorRow = {
-  id: string
-  name: string
-  pan: string | null
-  aadhaar: string | null
-  address: string | null
-  birth_year: number | null
-  payout_bank_name: string | null
-  payout_bank_account: string | null
-  payout_bank_ifsc: string | null
-  created_at: string
-  total_agreements: number
-  active_agreements: number
-  total_principal: number
-}
-
-async function getInvestors(): Promise<InvestorRow[]> {
-  const supabase = createAdminClient()
-
-  const { data: investors, error } = await supabase
-    .from('investors')
-    .select('id, name, pan, aadhaar, address, birth_year, payout_bank_name, payout_bank_account, payout_bank_ifsc, created_at')
-    .order('name', { ascending: true })
-
-  if (error || !investors) return []
-
-  // Get agreement stats per investor
-  const { data: agreements } = await supabase
-    .from('agreements')
-    .select('investor_id, status, principal_amount')
-    .is('deleted_at', null)
-    .not('investor_id', 'is', null)
-
-  const statsMap = new Map<string, { total: number; active: number; principal: number }>()
-  for (const a of agreements ?? []) {
-    if (!a.investor_id) continue
-    const existing = statsMap.get(a.investor_id) ?? { total: 0, active: 0, principal: 0 }
-    existing.total++
-    if (a.status === 'active') existing.active++
-    existing.principal += a.principal_amount ?? 0
-    statsMap.set(a.investor_id, existing)
-  }
-
-  return investors.map((inv) => {
-    const stats = statsMap.get(inv.id) ?? { total: 0, active: 0, principal: 0 }
-    return {
-      ...inv,
-      total_agreements: stats.total,
-      active_agreements: stats.active,
-      total_principal: stats.principal,
-    }
-  })
 }
 
 function fmt(n: number) {
