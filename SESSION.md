@@ -18,22 +18,32 @@
 ## Work Completed
 - Replaced email/password login with a single Google OAuth button.
 - Added `<Suspense>` boundary for `useSearchParams` in login page to comply with Next.js 14 standards.
-- Implemented RBAC in middleware: checks `team_members` for active status and gates `/settings`.
+- Implemented RBAC in middleware: checks `team_members` for active status and gates `/settings`, `/agreements/new`, and `/agreements/import`.
 - Injected `x-user-role` and `x-user-team-id` headers for downstream data filtering (Fixed: now correctly propagating cookies when headers are set).
 - Updated Agreements page to filter by `salesperson_id` and hide administrative buttons for salespersons.
 - Fixed: RBAC middleware now fails closed on DB/network errors.
 - Fixed: Middleware now preserves auth cookies during redirects and when setting custom request headers, ensuring `signOut` and session refreshes are correctly propagated.
+- Added server-side RBAC to API routes:
+  - `GET /api/agreements`: forced salesperson scoping.
+  - `POST /api/agreements`: blocked for salespeople.
+  - `GET /api/agreements/[id]`: ownership check for salespeople.
+  - `PATCH/DELETE /api/agreements/[id]`: blocked for salespeople.
+  - `GET/POST /api/team`: blocked for salespeople.
 
 ## Files Changed
 - `src/app/login/page.tsx`
 - `src/middleware.ts`
 - `src/app/(app)/agreements/page.tsx`
+- `src/app/api/agreements/route.ts`
+- `src/app/api/agreements/[id]/route.ts`
+- `src/app/api/team/route.ts`
 - `SESSION.md`
 
+
 ## Codex Review Notes
-- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:73) rebuilds `supabaseResponse` with `NextResponse.next({ request: { headers: requestHeaders } })` after `supabase.auth.getUser()`. If Supabase refreshed auth cookies during `getUser()`, those `setAll()` cookie mutations were attached to the previous response object and are dropped here. That can leave refreshed sessions unsaved and cause flaky auth/logout behavior in production.
-- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:52) calls `supabase.auth.signOut()` for non-team members, but then immediately returns a fresh `NextResponse.redirect(url)`. The sign-out cookie clears are written to `supabaseResponse`, not the returned redirect response, so the session is not actually cleared. Because the RBAC check still runs on `/login` for authenticated users, an unauthorized user can get stuck in a redirect loop back to `/login?error=unauthorized`.
-- **minor** There is still no automated coverage for the new middleware auth path. `npm test` and `npm run build` pass, but there are no tests around cookie propagation after `getUser()`, unauthorized-user redirect/sign-out behavior, or the salesperson-scoped agreements flow, so the middleware regressions above are not protected.
+- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:79) only gates `/settings`. The branch hides `Import historical` and `+ New Agreement` for salespeople in [src/app/(app)/agreements/page.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/app/(app)/agreements/page.tsx:72), but [src/app/(app)/agreements/new/page.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/app/(app)/agreements/new/page.tsx:1) and [src/app/(app)/agreements/import/page.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/app/(app)/agreements/import/page.tsx:1) are still directly reachable by URL. A salesperson can bypass the UI restriction by navigating to those routes directly.
+- **blocking** [src/app/api/agreements/route.ts](/Users/prashanthpalanisamy/Developer/geinv/src/app/api/agreements/route.ts:12) and [src/app/api/team/route.ts](/Users/prashanthpalanisamy/Developer/geinv/src/app/api/team/route.ts:4) still use the admin Supabase client with no role validation. Any authenticated salesperson can call the agreements APIs directly to list unscoped records or create agreements, and can query the full team roster through `/api/team`, regardless of the page-level restrictions added in this batch.
+- **minor** There is still no automated coverage for the new RBAC behavior. `npm test` and `npm run build` pass, but there are no tests proving that salespeople are blocked from restricted routes/APIs or that agreements are consistently scoped server-side, so these authorization gaps can ship unnoticed.
 
 ## Decisions
 - Google OAuth only — no email/password
@@ -44,4 +54,4 @@
 - Settings: middleware blocks non-coordinators, no page-level code change needed
 
 ## Next Agent Action
-- Codex: Review the applied fixes for cookie propagation in middleware during redirects and header injection.
+- Codex: Review the applied fixes for route gating and API-level RBAC enforcement.

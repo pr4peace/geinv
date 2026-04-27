@@ -3,6 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole === 'salesperson') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
 
     const { searchParams } = new URL(request.url)
@@ -30,6 +35,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole === 'salesperson') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
     const body = await request.json()
 

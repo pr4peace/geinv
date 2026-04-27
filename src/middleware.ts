@@ -76,12 +76,11 @@ export async function middleware(request: NextRequest) {
         return createResponse('redirect', '/login', 'unauthorized')
       }
 
-      // Gate /settings to coordinator/admin only
-      if (
-        request.nextUrl.pathname.startsWith('/settings') &&
-        member.role !== 'coordinator' &&
-        member.role !== 'admin'
-      ) {
+      // Gate restricted routes to coordinator/admin only
+      const restrictedRoutes = ['/settings', '/agreements/new', '/agreements/import']
+      const isRestricted = restrictedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
+
+      if (isRestricted && member.role !== 'coordinator' && member.role !== 'admin') {
         return createResponse('redirect', '/dashboard')
       }
 
