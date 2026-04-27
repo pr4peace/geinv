@@ -37,14 +37,14 @@ git push
 ---
 
 ## Todos
-- [ ] Task C: add `doc_status` auto-advance to `POST /api/agreements`
-- [ ] Fix: Update `DeleteInvestorButton` to allow viewing blocking agreements (blocking)
-- [ ] Fix: `DELETE /api/investors/[id]` should return 404 if not found (minor)
-- [ ] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
-- [ ] Add unit tests for investor deletion API
-- [ ] `npm run build` + `npm test` + push
-- [ ] Release: merge `feature/investor-delete-safety` → `main`
-- [ ] Release: sync session files + push `main`
+- [x] Task C: add `doc_status` auto-advance to `POST /api/agreements`
+- [x] Fix: Update `DeleteInvestorButton` to allow viewing blocking agreements (blocking)
+- [x] Fix: `DELETE /api/investors/[id]` should return 404 if not found (minor)
+- [x] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
+- [x] Add unit tests for investor deletion API
+- [x] `npm run build` + `npm test` + push
+- [x] Release: merge `feature/investor-delete-safety` → `main`
+- [x] Release: sync session files + push `main`
 
 ## Work Completed
 - **Task 1: Document URL Expiry Fix** (Merged from feature/doc-url-fix)
@@ -56,12 +56,10 @@ git push
 - **Task C: Doc lifecycle auto-advance**
   - Updated `POST /api/agreements` to auto-set `doc_status: 'uploaded'` for scanned signed PDFs, but ONLY after successful storage move.
 - **Codex Fixes:**
-  - **Resolved Blocking:** `doc_status: 'uploaded'` is now only set AFTER the storage move and database update succeed. Agreements start as `'draft'` to prevent inconsistent states.
-  - **Resolved Blocking:** `DeleteInvestorButton` now allows viewing specific blocking agreements via a manual fetch path if count > 0.
-  - **Resolved Minor:** `DELETE /api/investors/[id]` now returns 404 if no row was deleted.
-  - **Resolved Minor:** Storage move failure logging now includes more context (`agreement.id`, `temp_path`) for easier recovery.
-  - **Resolved Minor:** Added automated unit tests for the doc-storage flow (success and failure paths) in `src/__tests__/agreements-api.test.ts`.
-  - Added unit tests for Investor Deletion API in `src/__tests__/investors-api.test.ts`.
+  - **Resolved Blocking:** Prevented destructive race condition in `DeleteInvestorButton` by adding `check_only` support to the `DELETE` endpoint. The UI now checks for blocking agreements without risk of accidental deletion.
+  - **Resolved Blocking:** `doc_status: 'uploaded'` is now set AFTER the storage move succeeds, even if signed URL generation fails, ensuring database accuracy regarding file location.
+  - **Resolved Minor:** Updated `DELETE` error message to "linked agreements" to be factually accurate for all agreement states.
+  - **Resolved Minor:** Added automated unit tests for `check_only` behavior and doc-storage failure paths (move success vs URL failure) in `src/__tests__/investors-api.test.ts` and `src/__tests__/agreements-api.test.ts`.
 
 ## Files Changed
 - `src/app/api/extract/route.ts`
@@ -71,23 +69,22 @@ git push
 - `src/app/api/investors/[id]/route.ts`
 - `src/components/investors/DeleteInvestorButton.tsx`
 - `src/app/(app)/investors/[id]/page.tsx`
-- `src/__tests__/investors-api.test.ts` (New)
-- `src/__tests__/agreements-api.test.ts` (Updated with doc-storage tests)
+- `src/__tests__/investors-api.test.ts`
+- `src/__tests__/agreements-api.test.ts`
 
 ## Decisions
 - Unified development onto `feature/investor-delete-safety` after merging `feature/doc-url-fix` to resolve Codex's Task 1 consistency note.
 - `temp_path` present + `is_draft = false` = scanned signed doc → `doc_status: 'uploaded'` (after storage move success).
 - All other cases (manual entry, draft upload) → `doc_status: 'draft'`, full lifecycle applies.
 - **E2E verification** remains blocked in CLI environments without Supabase auth credentials; unit tests for API and logic are used as the primary verification gate.
-- **UI Testing** for the blocked-delete interaction is deferred as the project currently lacks component-level testing libraries (like Testing Library) in `package.json`.
+- **Race Condition Prevention:** The `DELETE` endpoint now supports a `check_only` query parameter to allow the UI to safely refresh blocking status.
 
 ## Codex Review Notes
-- **Resolved** UI goal: Users can now click the Delete button when blocked to see the specific agreements preventing deletion.
-- **Resolved** `DELETE` status code: Endpoint returns 404 if investor ID is missing/invalid.
-- **Resolved** Traceability: Storage move failure logging now includes IDs for manual cleanup.
-- **Resolved** Regression coverage: Investor deletion API now has automated unit tests.
-- **Resolved** Doc-storage risk: `doc_status` no longer advances if the storage move fails.
-- **Note on E2E** Playwright tests fail in this environment due to missing auth credentials. Verified locally by Gemini.
+- **Resolved** Destructive race condition: `DeleteInvestorButton` now uses `check_only=true` to fetch blocking agreements safely.
+- **Resolved** Accuracy: `DELETE` error message updated to "linked agreements".
+- **Resolved** Doc-storage risk: `doc_status` now advances if move succeeds, even if URL generation fails (file is safe in permanent path).
+- **Resolved** Regression coverage: Added tests for the destructive race condition and doc-storage edge cases.
+- **Note on E2E** Playwright tests continue to fail in the CLI environment due to missing auth credentials. Gemini has verified the logic via expanded unit tests.
 
 ## Next Agent Action
-- Codex: Final validation of Wave 1 release fixes.
+- Codex: Final validation of Wave 1 unified release.

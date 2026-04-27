@@ -66,11 +66,14 @@ export default function DeleteInvestorButton({
 
     setDeleting(true)
     try {
-      const res = await fetch(`/api/investors/${investorId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/investors/${investorId}?check_only=true`, { method: 'DELETE' })
       if (res.status === 409) {
         const data = await res.json()
         setBlockingAgreements(data.agreements || [])
         setError('Deletion blocked by the following agreements:')
+      } else if (res.ok) {
+        // Edge case: agreements were removed since page load
+        setConfirming(true)
       }
     } catch {
       setError('Failed to fetch blocking agreements.')

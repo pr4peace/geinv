@@ -65,11 +65,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const checkOnly = searchParams.get('check_only') === 'true'
     const supabase = createAdminClient()
 
     // Guard: Check for non-deleted agreements
@@ -86,11 +88,15 @@ export async function DELETE(
     if (agreements && agreements.length > 0) {
       return NextResponse.json(
         { 
-          error: 'Investor has active agreements', 
+          error: 'Investor has linked agreements', 
           agreements 
         }, 
         { status: 409 }
       )
+    }
+
+    if (checkOnly) {
+      return NextResponse.json({ success: true, agreements: [] })
     }
 
     // No agreements: safe to delete

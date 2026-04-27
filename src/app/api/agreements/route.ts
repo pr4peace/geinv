@@ -176,21 +176,25 @@ export async function POST(request: NextRequest) {
         if (moveError) {
           console.error(`CRITICAL: Failed to move document to permanent path for agreement ${agreement.id}. Temp path: ${temp_path}. Error: ${moveError.message}`)
         } else {
-          // Generate 1-year signed URL
+          // If move succeeds, doc is now in its permanent path
+          const updatePayload: Record<string, unknown> = {}
+          if (!agreementFields.is_draft) {
+            updatePayload.doc_status = 'uploaded'
+          }
+
+          // Try to generate 1-year signed URL
           const { data: signedData, error: signedError } = await supabase.storage
             .from('agreements')
             .createSignedUrl(permanentPath, 60 * 60 * 24 * 365) // 1 year
 
           if (signedError || !signedData) {
             console.error('Failed to generate 1-year signed URL:', signedError?.message)
+            // Even if URL fails, move was successful, so we should still update doc_status if applicable
           } else {
-            // Update the agreement record with the permanent URL
-            // If it was a non-draft upload, auto-advance doc_status to 'uploaded'
-            const updatePayload: Record<string, unknown> = { document_url: signedData.signedUrl }
-            if (!agreementFields.is_draft) {
-              updatePayload.doc_status = 'uploaded'
-            }
+            updatePayload.document_url = signedData.signedUrl
+          }
 
+          if (Object.keys(updatePayload).length > 0) {
             const { data: updated, error: updateError } = await supabase
               .from('agreements')
               .update(updatePayload)
@@ -199,7 +203,7 @@ export async function POST(request: NextRequest) {
               .single()
 
             if (updateError) {
-              console.error('Failed to update agreement with permanent URL:', updateError.message)
+              console.error('Failed to update agreement with permanent document details:', updateError.message)
             } else if (updated) {
               finalAgreement = updated
             }

@@ -28,7 +28,7 @@ describe('Investors API DELETE', () => {
     const res = await DELETE(createReq(), { params: Promise.resolve({ id: 'inv-1' }) })
     expect(res.status).toBe(409)
     const data = await res.json()
-    expect(data.error).toContain('active agreements')
+    expect(data.error).toContain('linked agreements')
     expect(data.agreements).toHaveLength(1)
   })
 
@@ -80,5 +80,26 @@ describe('Investors API DELETE', () => {
 
     const res = await DELETE(createReq(), { params: Promise.resolve({ id: 'inv-1' }) })
     expect(res.status).toBe(404)
+  })
+
+  it('only checks for agreements if check_only is true', async () => {
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockResolvedValue({ data: [], error: null }),
+    })
+    
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+    } as unknown as ReturnType<typeof createAdminClient>)
+
+    const req = new NextRequest('http://localhost:3000/api/investors/inv-1?check_only=true', {
+      method: 'DELETE',
+    })
+    const res = await DELETE(req, { params: Promise.resolve({ id: 'inv-1' }) })
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.success).toBe(true)
+    expect(mockFrom).not.toHaveBeenCalledWith('investors') // Should not call delete
   })
 })
