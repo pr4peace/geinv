@@ -20,6 +20,7 @@ type Step = 'choice' | 'upload' | 'manual' | 'loading' | 'review'
 interface ExtractResult {
   extracted: ExtractedAgreement
   file_url: string
+  temp_path: string
 }
 
 export default function NewAgreementPage() {
@@ -214,6 +215,7 @@ export default function NewAgreementPage() {
         <ExtractionReview
           extracted={extractResult.extracted}
           fileUrl={extractResult.file_url}
+          tempPath={extractResult.temp_path}
           fileName={file.name}
           file={file}
           isDraft={isDraft}

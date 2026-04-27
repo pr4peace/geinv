@@ -1,98 +1,91 @@
 # SESSION
 
 ## Branch
-- main
+- feature/investor-delete-safety
 
 ## Current Task
-- Add a "Create manually" path to the New Agreement flow so agreements can be created via form entry without uploading a PDF.
+- Wave 1 release: add doc lifecycle auto-advance, fix Codex issues, then release both feature branches to `main`.
 
-## Goal
-- Users can create a new agreement by filling in a form directly (no PDF upload). The payout schedule is computed live from principal, ROI%, frequency, and dates using the existing `calculatePayoutSchedule` utility. On save, the agreement and payout schedule rows are written to the database using the existing `POST /api/agreements` endpoint. Offer letter generation is out of scope for this session.
+---
 
-## Plan
+## TASK C — Doc lifecycle auto-advance
+When Irene uploads a scanned signed PDF and `is_draft = false`, `doc_status` should be set to `'uploaded'` automatically. Drafts and manual entries still start at `'draft'`.
 
-### Step 1 — Entry point: two paths on /agreements/new
-**File:** `src/app/(app)/agreements/new/page.tsx`
-- Replace the current single-step (upload only) page with a choice screen: two cards — "Upload PDF" and "Create manually"
-- "Upload PDF" → existing flow (UploadStep → extract → ExtractionReview)
-- "Create manually" → renders the new `ManualAgreementForm` component directly
+---
 
-### Step 2 — Create ManualAgreementForm component
-**File:** `src/components/agreements/ManualAgreementForm.tsx`
-- `'use client'` component
-- Same `FormState` shape as `ExtractionReview` — all fields start empty (or sensible defaults: `reference_id` auto-generated, `payout_frequency: 'quarterly'`, `interest_type: 'simple'`)
-- Same field sections as ExtractionReview: investor details, financial terms, payment info, salesperson, nominees
-- No PDF preview pane, no extraction warnings
-- Salesperson dropdown loaded via `GET /api/team` (same fetch as ExtractionReview)
+## RELEASE — Wave 1
 
-### Step 3 — Live payout schedule preview
-- Import `calculatePayoutSchedule` from `@/lib/payout-calculator`
-- Use `useMemo` over `[principal, roi, frequency, interestType, startDate, maturityDate]` to compute the schedule whenever those fields change
-- Render the result using the existing `PayoutScheduleTable` component
-- Show the preview section only when all required numeric/date fields are filled
+After Task C and Codex fixes are pushed, execute the release:
 
-### Step 4 — Save
-- On submit: same validation as ExtractionReview (required fields, numeric checks)
-- POST to `/api/agreements` with `document_url: null` and `payout_schedule` from the live calculator
-- On success: `router.push('/agreements/' + created.id)`
-- Duplicate detection: same 409 handling as ExtractionReview
+### Step 1 — Merge feature/investor-delete-safety → main
+```bash
+git checkout main && git pull
+git merge --no-ff feature/investor-delete-safety -m "feat: permanent doc storage, doc lifecycle auto-advance, safe investor deletion"
+git push origin main
+git branch -d feature/investor-delete-safety
+git push origin --delete feature/investor-delete-safety
+```
 
-### Step 5 — Verify
-- `npm run build` — no errors
-- `npm test` — no regressions
+### Step 2 — Sync session files
+After merge, commit and push the session files:
+```bash
+git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
+git commit -m "chore: post-wave-1 release sync"
+git push
+```
+
+---
 
 ## Todos
-- [x] Add two-path choice to `/agreements/new/page.tsx` ("Upload PDF" / "Create manually")
-- [x] Create `ManualAgreementForm.tsx` with all form fields and empty initial state
-- [x] Wire live payout calculator using `calculatePayoutSchedule` + `useMemo`
-- [x] Render live schedule with `PayoutScheduleTable`
-- [x] Save: POST to `/api/agreements` with calculated `payout_schedule`, handle 409, redirect on success
-- [x] `npm run build` — clean
-- [x] `npm test` — no regressions
+- [x] Task C: add `doc_status` auto-advance to `POST /api/agreements`
+- [x] Fix: Update `DeleteInvestorButton` to allow viewing blocking agreements (blocking)
+- [x] Fix: `DELETE /api/investors/[id]` should return 404 if not found (minor)
+- [x] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
+- [x] Add unit tests for investor deletion API
+- [x] `npm run build` + `npm test` + push
+- [ ] Release: merge `feature/investor-delete-safety` → `main`
+- [ ] Release: sync session files + push `main`
 
 ## Work Completed
-- Added a "Choice" screen to `/agreements/new` with two paths: "Upload PDF / DOCX" and "Create Manually".
-- Created `ManualAgreementForm.tsx` component providing a full form for manual agreement entry.
-- Integrated `calculatePayoutSchedule` in `ManualAgreementForm` using `useMemo` for live payout schedule preview.
-- Reused `PayoutScheduleTable` to display the computed schedule.
-- Implemented `handleSave` in `ManualAgreementForm` to POST to `/api/agreements` with calculated schedule.
-- Handled duplicate detection (409) in the manual flow with confirmation bypass.
-- Added `onBack` support to `UploadStep` for returning to the choice screen.
-- **Fixed Codex blocking issues:**
-  - Restricted Payout Frequency to allowed DB values (`quarterly`, `annual`, `cumulative`).
-  - Forced Lock-in Years to be an integer in both frontend and backend.
-  - Added frontend and backend validation to ensure `maturity_date > investment_start_date`.
-  - Added frontend and backend validation to ensure a payout schedule is actually generated/provided before saving non-draft agreements.
-  - Added server-side validation for `payout_frequency` and `lock_in_years` in `POST /api/agreements`.
-  - Committed missing regression coverage in `src/__tests__/payout-calculator.test.ts`.
-  - Added new regression coverage for API validation in `src/__tests__/agreements-api.test.ts` (both rejection and positive paths).
-- Fixed vitest config to exclude `e2e` directory.
-- Fixed lint errors in `ManualAgreementForm.tsx` and `agreements-api.test.ts`.
-- Added `test-results/` to `.gitignore` and removed artifacts from git history.
-- Verified build with `npm run build` (success).
-- Verified unit tests with `npm test` (success).
+- **Task 1: Document URL Expiry Fix** (Merged from feature/doc-url-fix)
+  - Updated `POST /api/extract` to return `temp_path`.
+  - Updated `POST /api/agreements` to move document to permanent path and store 1-year URL.
+- **Task 2: Investor Delete Safety**
+  - Added `DELETE /api/investors/[id]` route with guard.
+  - Created `DeleteInvestorButton` component.
+- **Task C: Doc lifecycle auto-advance**
+  - Updated `POST /api/agreements` to auto-set `doc_status: 'uploaded'` for scanned signed PDFs, but ONLY after successful storage move.
+- **Codex Fixes:**
+  - **Resolved Blocking:** Prevented destructive race condition in `DeleteInvestorButton` by adding `check_only` support to the `DELETE` endpoint.
+  - **Resolved Blocking:** `doc_status: 'uploaded'` is now only set after successful storage move AND database record update.
+  - **Resolved Minor:** `DeleteInvestorButton` now handles and displays errors for 404/500 responses during blocking checks.
+  - **Resolved Minor:** `DELETE` endpoint now returns 404 if investor is missing.
+  - **Resolved Minor:** Added unit test coverage for the new race-condition guard and post-move update failure paths.
+  - **E2E Status:** Attempted `npm run test:e2e`; failed on setup due to missing `E2E_USER_EMAIL` secret in CLI environment. Blockage is environmental.
 
 ## Files Changed
-- `src/app/(app)/agreements/new/page.tsx`: Added choice step and routing.
-- `src/components/agreements/ManualAgreementForm.tsx`: New component for manual entry with validation.
-- `src/components/agreements/UploadStep.tsx`: Added back button.
-- `src/app/api/agreements/route.ts`: Added backend validation for manual/digital agreements.
-- `src/__tests__/payout-calculator.test.ts`: New unit tests for payout calculation.
-- `src/__tests__/agreements-api.test.ts`: New unit tests for API validation.
-- `vitest.config.ts`: Excluded `e2e` directory from unit tests.
-- `.gitignore`: Added `test-results/`.
+- `src/app/api/extract/route.ts`
+- `src/app/(app)/agreements/new/page.tsx`
+- `src/components/agreements/ExtractionReview.tsx`
+- `src/app/api/agreements/route.ts`
+- `src/app/api/investors/[id]/route.ts`
+- `src/components/investors/DeleteInvestorButton.tsx`
+- `src/__tests__/investors-api.test.ts`
+- `src/__tests__/agreements-api.test.ts`
 
 ## Decisions
-- Used `useMemo` for live payout schedule to ensure it updates whenever financial terms or dates change.
-- Explicitly mapped payout rows in `ManualAgreementForm` to remove the `status` field (which is set to 'paid' by the utility but should be 'pending' for new agreements), allowing the database default to take over.
-- Simplified `ManualAgreementForm` by removing PDF preview and extraction-specific logic.
-- **Local-Only Rule:** All work remains local. No pushing to GitHub or Vercel until final verification and explicit approval at the end of the session.
-- **Rejection over Mutation:** Changed from rounding fractional `lock_in_years` to rejecting them in both UI and API to avoid silent mutation of financial terms.
+- Unified development onto `feature/investor-delete-safety` after merging `feature/doc-url-fix` to resolve Codex's Task 1 consistency note.
+- `temp_path` present + `is_draft = false` = scanned signed doc → `doc_status: 'uploaded'` (after storage move success).
+- All other cases (manual entry, draft upload) → `doc_status: 'draft'`, full lifecycle applies.
+- **E2E verification** remains blocked in CLI environments without Supabase auth credentials; unit tests for API and logic are used as the primary verification gate.
+- **Race Condition Prevention:** The `DELETE` endpoint now supports a `check_only` query parameter to allow the UI to safely refresh blocking status.
 
 ## Codex Review Notes
-- **Resolved** Lint errors and positive-path test coverage added.
-- **Resolved** `test-results/` artifacts removed and ignored.
-- **Note on E2E** Playwright tests are failing due to missing `E2E_USER_EMAIL` in the CLI environment. This is expected as per `CLAUDE.md` and does not block the release of the logic changes which are verified by unit tests and manual local verification.
+- **Resolved** Destructive race condition: `DeleteInvestorButton` uses `check_only=true` and handles errors.
+- **Resolved** Doc-storage consistency: `doc_status` and `document_url` updates are now fatal if move succeeds but update fails.
+- **Resolved** Regression coverage: Tests added for new edge cases.
+- **Note on E2E** Playwright tests fail in this environment due to missing auth credentials. Verified by Gemini via expanded unit tests.
 
 ## Next Agent Action
 - Awaiting release approval.
+

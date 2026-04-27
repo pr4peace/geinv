@@ -64,9 +64,10 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const body = await request.json()
 
-    const { payout_schedule: payoutScheduleRows, force, ...agreementFields } = body as {
+    const { payout_schedule: payoutScheduleRows, force, temp_path, ...agreementFields } = body as {
       payout_schedule: ExtractedPayoutRow[]
       force?: boolean
+      temp_path?: string
       [key: string]: unknown
     }
 
@@ -148,12 +149,73 @@ export async function POST(request: NextRequest) {
     // Insert agreement
     const { data: agreement, error: agreementError } = await supabase
       .from('agreements')
-      .insert({ ...agreementFields, reference_id, investor_id })
+      .insert({ 
+        ...agreementFields, 
+        reference_id, 
+        investor_id,
+        doc_status: 'draft' // Always start as draft, even if upload
+      })
       .select()
       .single()
 
     if (agreementError) {
       return NextResponse.json({ error: agreementError.message }, { status: 400 })
+    }
+
+    // Handle document storage move if temp_path provided
+    let finalAgreement = agreement
+    if (temp_path) {
+      try {
+        const ext = temp_path.split('.').pop()?.toLowerCase() || 'pdf'
+        const permanentPath = `${agreement.reference_id}/original.${ext}`
+
+        const { error: moveError } = await supabase.storage
+          .from('agreements')
+          .move(temp_path, permanentPath)
+
+        if (moveError) {
+          console.error(`CRITICAL: Failed to move document to permanent path for agreement ${agreement.id}. Temp path: ${temp_path}. Error: ${moveError.message}`)
+        } else {
+          // If move succeeds, doc is now in its permanent path
+          const updatePayload: Record<string, unknown> = {}
+          if (!agreementFields.is_draft) {
+            updatePayload.doc_status = 'uploaded'
+          }
+
+          // Try to generate 1-year signed URL
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('agreements')
+            .createSignedUrl(permanentPath, 60 * 60 * 24 * 365) // 1 year
+
+          if (signedError || !signedData) {
+            console.error('Failed to generate 1-year signed URL:', signedError?.message)
+            // Even if URL fails, move was successful, so we should still update doc_status if applicable
+          } else {
+            updatePayload.document_url = signedData.signedUrl
+          }
+
+          if (Object.keys(updatePayload).length > 0) {
+            const { data: updated, error: updateError } = await supabase
+              .from('agreements')
+              .update(updatePayload)
+              .eq('id', agreement.id)
+              .select()
+              .single()
+
+            if (updateError) {
+              console.error('Failed to update agreement with permanent document details:', updateError.message)
+              return NextResponse.json(
+                { error: `Document moved but failed to update agreement record: ${updateError.message}` },
+                { status: 500 }
+              )
+            } else if (updated) {
+              finalAgreement = updated
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error during document move:', err)
+      }
     }
 
     // Insert payout schedule rows
@@ -201,11 +263,11 @@ export async function POST(request: NextRequest) {
 
     // Fetch salesperson email if assigned
     let salespersonEmail: string | null = null
-    if (agreement.salesperson_id) {
+    if (finalAgreement.salesperson_id) {
       const { data: sp } = await supabase
         .from('team_members')
         .select('email')
-        .eq('id', agreement.salesperson_id)
+        .eq('id', finalAgreement.salesperson_id)
         .single()
       salespersonEmail = sp?.email ?? null
     }
@@ -215,7 +277,7 @@ export async function POST(request: NextRequest) {
 
     for (const payoutRow of payoutRows ?? []) {
       const payoutReminders = generatePayoutReminders(
-        agreement,
+        finalAgreement,
         payoutRow,
         internalEmail,
         salespersonEmail
@@ -223,12 +285,12 @@ export async function POST(request: NextRequest) {
       reminderInputs.push(...payoutReminders)
     }
 
-    const maturityReminders = generateMaturityReminders(agreement, internalEmail, salespersonEmail)
+    const maturityReminders = generateMaturityReminders(finalAgreement, internalEmail, salespersonEmail)
     reminderInputs.push(...maturityReminders)
 
     // Doc return reminders if doc_sent_to_client_date is set
-    if (agreement.doc_sent_to_client_date) {
-      const docReturnReminders = generateDocReturnReminders(agreement, internalEmail, salespersonEmail)
+    if (finalAgreement.doc_sent_to_client_date) {
+      const docReturnReminders = generateDocReturnReminders(finalAgreement, internalEmail, salespersonEmail)
       reminderInputs.push(...docReturnReminders)
     }
 
@@ -252,7 +314,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(agreement, { status: 201 })
+    return NextResponse.json(finalAgreement, { status: 201 })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },

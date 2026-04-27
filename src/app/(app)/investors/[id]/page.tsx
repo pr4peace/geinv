@@ -4,6 +4,7 @@ import { ArrowLeft, User } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import InvestorNotes from '@/components/investors/InvestorNotes'
 import MergeInvestorButton from '@/components/investors/MergeInvestorButton'
+import DeleteInvestorButton from '@/components/investors/DeleteInvestorButton'
 import type { Agreement } from '@/types/database'
 
 type InvestorWithAgreements = {
@@ -98,13 +99,21 @@ export default async function InvestorProfilePage({
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
-        <Link
-          href="/agreements"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          All Agreements
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/agreements"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            All Agreements
+          </Link>
+
+          <DeleteInvestorButton
+            investorId={inv.id}
+            investorName={inv.name}
+            agreementCount={agrs.length}
+          />
+        </div>
 
         {/* Header */}
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
