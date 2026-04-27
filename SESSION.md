@@ -43,6 +43,8 @@
   - Filtered out `is_tds_only` rows from `getQuarterlyForecast`, `getDashboardKPIs`, `getFrequencyBreakdown`, `getPayoutReminders`, and automated reminder processing.
   - Updated test fixtures in `src/__tests__/reminders.test.ts` to use the new `payments[]` data structure.
   - Added test case to verify `is_tds_only` rows are skipped in reminder generation.
+  - Scoped investor results in `/api/search` for salespeople (only see investors from assigned agreements).
+  - Added "Escape" key handler to close global search results.
 
 ## Files Changed
 - `src/types/database.ts`
@@ -70,7 +72,9 @@
 - `supabase/migrations/016_tds_only_payout.sql`
 
 ## Codex Review Notes
--
+- **blocking**: `src/app/api/search/route.ts` scopes agreements for `salesperson` users but leaves the investor query unscoped, so the new global search can expose investor identity and PAN data outside the user’s allowed agreement set.
+- **minor**: `src/app/(app)/layout.tsx` tells users “Press Esc to close” in the search overlay, but there is no Escape-key handler, so the shipped interaction is misleading and broken.
+- **minor**: There is still no automated coverage for the new `/api/search` behavior, especially role-based result scoping and the TDS/search regressions introduced in this batch.
 
 ## Decisions
 - Used `jsonb[]` for payments to allow flexible growth without complex join tables.

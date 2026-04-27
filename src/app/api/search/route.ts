@@ -29,11 +29,24 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Search Investors
-    const investorQuery = supabase
+    let investorQuery = supabase
       .from('investors')
       .select('id, name, pan')
       .ilike('name', `%${query}%`)
       .limit(10)
+
+    if (userRole === 'salesperson') {
+      // Find all investor IDs linked to this salesperson's agreements
+      const { data: spAgreements } = await supabase
+        .from('agreements')
+        .select('investor_id')
+        .eq('salesperson_id', userTeamId)
+        .is('deleted_at', null)
+        .not('investor_id', 'is', null)
+      
+      const spInvestorIds = Array.from(new Set((spAgreements ?? []).map(a => a.investor_id)))
+      investorQuery = investorQuery.in('id', spInvestorIds)
+    }
 
     // Execute in parallel
     const [agreementsRes, investorsRes] = await Promise.all([

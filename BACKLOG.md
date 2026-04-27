@@ -5,35 +5,66 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 ---
 
 ### 🟠 Batch C — Agreement Data + Quick Polish (branch: `feature/batch-c-agreement-data`)
-*DB changes to the agreement model + two small frontend items folded in.*
+*DB changes to the agreement model + frontend polish items folded in.*
 
 | Item | Notes |
 |---|---|
-| **Multiple payment entries** | Replace `payment_date/mode/bank` with `payments jsonb []`. Migration `013_multiple_payments.sql`. Update ExtractionReview, ManualAgreementForm, API route, detail page, Gemini extraction prompt. |
-| **Cumulative TDS-only row** | Add `is_tds_only boolean default false` to `payout_schedule`. Set `true` when `payout_frequency = 'cumulative'`. Skip investor reminders for these rows. Show "TDS Filing" badge in payout table with trackable `tds_filed` status. Migration needed. |
-| **Version number in sidebar** | `v{x.y.z}` below logo in `layout.tsx`. Bump on each release. 1-line change. |
-| **Sortable table headers** | Investors table — sort by name, PAN, principal, agreement count. Pure `useState` sort, no API changes. |
+| **Multiple payment entries** | Replace `payment_date/mode/bank` with `payments jsonb[]`. Each entry: `{ date, mode, bank, amount }`. Migration `015_multiple_payments.sql`. Update ExtractionReview, ManualAgreementForm, API route, detail page, Gemini extraction prompt. |
+| **Cumulative TDS-only row** | Add `is_tds_only boolean default false` + `tds_filed boolean default false` to `payout_schedule`. Migration `016_tds_only_payout.sql`. Show TDS amount. Generate TDS filing reminder. Skip investor-facing reminders. Show "TDS Filing" badge + Mark Filed button. |
+| **Splash screen** | Full-screen loading splash on initial app load. Good Earth branding, fade out after 1–2s. |
+| **Version number in sidebar** | `v0.1.0` below logo in `layout.tsx`. Bump on each release. |
+| **Grey out Quarterly Review + Reports nav** | Non-clickable, "Soon" badge. Not yet functional. |
+| **Collapsible sidebar** | Toggle button, collapsed state persisted in localStorage, icon tooltips when collapsed. |
+| **Global search bar** | Search investors + agreements by name/ref from sidebar. |
+| **Sortable investors table** | Sort by name, PAN, principal, agreement count. Pure `useState` sort, extracted to `InvestorsTable` client component. |
 
 ---
 
-### 🟡 Batch D — Dashboard Polish (branch: `feature/batch-d-dashboard`)
-*Pure frontend. Version number + sortable tables moved to Batch C.*
+### 🟠 Batch D — Offer Letter Flow (branch: `feature/batch-d-offer-letter`)
+*Comprehensive interest calculator → offer letter PDF → client magic link upload → converts to agreement.*
+
+**Architecture:** `Calculator (defaults + overrides) → PayoutSchedule[] → PDF (grammar wrapper) → email + magic link → signed upload → Convert to Agreement → Agreement signing`
 
 | Item | Notes |
 |---|---|
-| **Dashboard segmentation** | Split into Upcoming Payouts / Portfolio Health / Compliance Checklist sections. Data already fetched. |
+| **Comprehensive interest calculator** | Standalone tool at `/calculator`. Auto-populates sensible defaults. ROI suggestion based on principal (starter tier table, overridable). **Fixed payout day option**: first period pro-rata, then full periods always on chosen day. All inputs overridable. Live output: full payout schedule (period, days, gross, TDS 10%, net, running total). Extend `src/lib/payout-calculator.ts` with optional `fixedPayoutDay?: number`. |
+| **Offer letter PDF** | `@react-pdf/renderer`. Grammar wrapper around calculator output. Sections: Good Earth letterhead, investor details, terms, full payout schedule table. Modular section components. |
+| **Send offer letter to client** | "Send Offer Letter" button. Generates PDF, attaches to Resend email. Creates unique upload token (UUID, 30-day expiry) on `agreements`. Magic link in email. Updates `doc_status: sent_to_client`. Migration `017_upload_token.sql`. |
+| **Client magic link upload (offer letter)** | Public route `/upload/[token]` — no auth. Validates token + expiry. Client uploads signed offer letter → Supabase Storage → coordinator notification. |
+| **Approved offer letter → Agreement** | "Convert to Agreement" button once signed offer letter uploaded. Pre-fills New Agreement form with calculator data. Coordinator confirms → agreement created with payout schedule imported. |
+| **Agreement signing (client)** | After `doc_status: partner_signed`, "Send Agreement to Client" generates new magic link. Client signs + uploads → `doc_status: uploaded`. Reuses `/upload/[token]` route with type context. |
+
+---
+
+### 🟠 Batch F — Notification Revamp (branch: `feature/batch-f-notifications`)
+*Three-layer model: auto-fire red flags only → coordinator staging report → keep existing weekly/monthly summaries.*
+
+| Item | Notes |
+|---|---|
+| **Tighten auto-fire to red flags only** | Cron only auto-sends: payout overdue, maturity <14 days, doc not returned >30 days. Remove day-of + 7-day advance payout auto-reminders. Update `src/lib/reminders.ts` + `src/app/api/reminders/process/route.ts`. |
+| **Notification report page** | New `/notifications` page. Three sections: 🔴 Red Flags (auto-sent, read-only), 🟡 Action Queue (upcoming payouts/maturities/docs, checkboxes), 📋 History (last 30 days). Filter by type/salesperson/date. |
+| **Notify selected / Notify all** | `POST /api/notifications/send` — takes selected item IDs + type, sends one batched email per category, logs to reminders table. Idempotency warning if notified in last 7 days. |
+| **Notification nav item** | Add "Notifications" to sidebar in `layout.tsx`. |
+| **Automated summaries untouched** | Weekly Monday + monthly 1st + quarterly forecast crons stay exactly as-is. |
+
+---
+
+### 🟡 Batch E — UI Design Pass (branch: `feature/batch-e-design`)
+*Do this last — after all core flows work. Use claude.ai/design for mockups first.*
+
+| Item | Notes |
+|---|---|
+| **Dashboard segmentation** | Split into Upcoming Payouts / Portfolio Health / Compliance Checklist. Design mockup first. |
 | **Changelog / What's new modal** | Show on first load after version bump using localStorage. |
+| **Full UI polish** | Apply design pass across all pages based on mockups. Typography, spacing, colour consistency. |
 
 ---
 
-### 🟠 Batch E — Offer Letter Flow (branch: `feature/batch-e-offer-letter`)
-*Part of the Create Agreement flow. No external dependencies — physical signing, not e-sign.*
+### 🔧 Ops / Config
 
 | Item | Notes |
 |---|---|
-| **Generate offer letter PDF** | Render agreement data into a PDF offer letter. Library TBD (react-pdf or puppeteer). Needs template design before implementation. |
-| **Send offer letter to client** | Email PDF attachment via Resend from agreement detail page. Button: "Send Offer Letter". Updates `doc_status: sent_to_client`. |
-| **Mark as signed / approved** | "Mark as Signed" button on agreement detail after client returns physical signed copy. Updates `doc_status: returned`. Optionally attach scanned copy (upload already exists). |
+| **Vercel production branch → main** | Change Vercel project production branch from `feature/investment-tracker` to `main`. Settings → Git → Production Branch. Once done, remove `git push origin main:feature/investment-tracker` from AGENTS.md and PROMPTS.md. |
 
 ---
 
@@ -41,7 +72,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Item | Notes |
 |---|---|
-| **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch E is stable. |
+| **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch D is stable. |
 | **Slack integration** | Automated notifications. External dependency. |
 
 ---
@@ -50,7 +81,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Title | Notes |
 |---|---|
-| **Batch A — Auth & Access** | Google Login integration, Middleware RBAC with header propagation, comprehensive API-level access control. |
+| **Batch A — Auth & Access** | Google Login, Middleware RBAC with header propagation, API-level access control. |
 | **Batch B — Calendar & Reminders** | Fixed phantom payouts, rebuilt calendar with react-big-calendar, fixed reminder lead times, added Monday cron. |
 | Remove E2E tests | E2E tests removed; relying on Vitest unit tests. |
 | Sidebar collapse/expand | Merged to main |
