@@ -19,9 +19,10 @@
 - Replaced email/password login with a single Google OAuth button.
 - Added `<Suspense>` boundary for `useSearchParams` in login page to comply with Next.js 14 standards.
 - Implemented RBAC in middleware: checks `team_members` for active status and gates `/settings`.
-- Injected `x-user-role` and `x-user-team-id` headers for downstream data filtering (Fixed: now propagating to request headers).
+- Injected `x-user-role` and `x-user-team-id` headers for downstream data filtering (Fixed: now correctly propagating cookies when headers are set).
 - Updated Agreements page to filter by `salesperson_id` and hide administrative buttons for salespersons.
 - Fixed: RBAC middleware now fails closed on DB/network errors.
+- Fixed: Middleware now preserves auth cookies during redirects and when setting custom request headers, ensuring `signOut` and session refreshes are correctly propagated.
 
 ## Files Changed
 - `src/app/login/page.tsx`
@@ -30,9 +31,9 @@
 - `SESSION.md`
 
 ## Codex Review Notes
-- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:77) sets `x-user-role` and `x-user-team-id` on the **response** headers, but [src/app/(app)/agreements/page.tsx](/Users/prashanthpalanisamy/Developer/geinv/src/app/(app)/agreements/page.tsx:57) reads them from `headers()`, which only sees the incoming request headers. In practice the salesperson filter and button-hiding logic will never activate, so sales users still get the full agreements list and admin actions.
-- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:80) explicitly fails open on RBAC lookup errors. Any Supabase/network error while fetching `team_members` lets authenticated users bypass the `/settings` gate and any future role-based restrictions. For access control this should fail closed, not grant access on backend failure.
-- **minor** There is no automated coverage for the new auth/RBAC path. `npm test` passes, but there are no tests around the middleware membership check, the request-header propagation expected by the agreements page, or the salesperson-scoped agreements behavior, so both access-control regressions above could ship unnoticed.
+- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:73) rebuilds `supabaseResponse` with `NextResponse.next({ request: { headers: requestHeaders } })` after `supabase.auth.getUser()`. If Supabase refreshed auth cookies during `getUser()`, those `setAll()` cookie mutations were attached to the previous response object and are dropped here. That can leave refreshed sessions unsaved and cause flaky auth/logout behavior in production.
+- **blocking** [src/middleware.ts](/Users/prashanthpalanisamy/Developer/geinv/src/middleware.ts:52) calls `supabase.auth.signOut()` for non-team members, but then immediately returns a fresh `NextResponse.redirect(url)`. The sign-out cookie clears are written to `supabaseResponse`, not the returned redirect response, so the session is not actually cleared. Because the RBAC check still runs on `/login` for authenticated users, an unauthorized user can get stuck in a redirect loop back to `/login?error=unauthorized`.
+- **minor** There is still no automated coverage for the new middleware auth path. `npm test` and `npm run build` pass, but there are no tests around cookie propagation after `getUser()`, unauthorized-user redirect/sign-out behavior, or the salesperson-scoped agreements flow, so the middleware regressions above are not protected.
 
 ## Decisions
 - Google OAuth only — no email/password
@@ -43,4 +44,4 @@
 - Settings: middleware blocks non-coordinators, no page-level code change needed
 
 ## Next Agent Action
-- Codex: Review the applied fixes for middleware header propagation and fail-closed RBAC logic.
+- Codex: Review the applied fixes for cookie propagation in middleware during redirects and header injection.

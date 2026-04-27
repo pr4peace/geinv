@@ -24,15 +24,32 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Helper to create a response that preserves auth cookies
+  const createResponse = (type: 'next' | 'redirect', url?: string, error?: string) => {
+    let res: NextResponse
+    if (type === 'redirect' && url) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = url
+      if (error) redirectUrl.searchParams.set('error', error)
+      res = NextResponse.redirect(redirectUrl)
+    } else {
+      res = NextResponse.next({ request })
+    }
+    
+    // Copy all cookies from the potentially updated supabaseResponse
+    supabaseResponse.cookies.getAll().forEach(c => {
+      res.cookies.set(c)
+    })
+    return res
+  }
+
   // Unauthenticated: redirect to login
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    return createResponse('redirect', '/login')
   }
 
   // Authenticated: check team membership + apply role gates
@@ -56,10 +73,7 @@ export async function middleware(request: NextRequest) {
         // Not an active team member: sign out and redirect with error
         // Clearing session is crucial to prevent redirect loops
         await supabase.auth.signOut()
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        url.searchParams.set('error', 'unauthorized')
-        return NextResponse.redirect(url)
+        return createResponse('redirect', '/login', 'unauthorized')
       }
 
       // Gate /settings to coordinator/admin only
@@ -68,29 +82,30 @@ export async function middleware(request: NextRequest) {
         member.role !== 'coordinator' &&
         member.role !== 'admin'
       ) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
+        return createResponse('redirect', '/dashboard')
       }
 
       // Pass role and team ID downstream via request headers
-      // We must set them on a new headers object and pass it to NextResponse.next
       const requestHeaders = new Headers(request.headers)
       requestHeaders.set('x-user-role', member.role)
       requestHeaders.set('x-user-team-id', member.id)
 
-      supabaseResponse = NextResponse.next({
+      const finalResponse = NextResponse.next({
         request: {
           headers: requestHeaders,
         },
       })
+      
+      // Copy cookies to the final header-enhanced response
+      supabaseResponse.cookies.getAll().forEach(c => {
+        finalResponse.cookies.set(c)
+      })
+      
+      return finalResponse
     } catch (err) {
       console.error('RBAC middleware error:', err)
       // Fail closed: if we can't verify membership, redirect to login
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      url.searchParams.set('error', 'auth_callback_failed')
-      return NextResponse.redirect(url)
+      return createResponse('redirect', '/login', 'auth_callback_failed')
     }
   }
 

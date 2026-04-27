@@ -14,24 +14,24 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🟠 Batch C — Agreement Data (branch: `feature/batch-c-agreement-data`)
-*All changes to the agreement model together — one migration run.*
+### 🟠 Batch C — Agreement Data + Quick Polish (branch: `feature/batch-c-agreement-data`)
+*DB changes to the agreement model + two small frontend items folded in.*
 
 | Item | Notes |
 |---|---|
 | **Multiple payment entries** | Replace `payment_date/mode/bank` with `payments jsonb []`. Migration `013_multiple_payments.sql`. Update ExtractionReview, ManualAgreementForm, API route, detail page, Gemini extraction prompt. |
 | **Cumulative TDS-only row** | Add `is_tds_only boolean default false` to `payout_schedule`. Set `true` when `payout_frequency = 'cumulative'`. Skip investor reminders for these rows. Show "TDS Filing" badge in payout table with trackable `tds_filed` status. Migration needed. |
+| **Version number in sidebar** | `v{x.y.z}` below logo in `layout.tsx`. Bump on each release. 1-line change. |
+| **Sortable table headers** | Investors table — sort by name, PAN, principal, agreement count. Pure `useState` sort, no API changes. |
 
 ---
 
-### 🟡 Batch D — Dashboard & UI Polish (branch: `feature/batch-d-dashboard`)
-*Pure frontend, no API/DB changes. Fast to build and review.*
+### 🟡 Batch D — Dashboard Polish (branch: `feature/batch-d-dashboard`)
+*Pure frontend. Version number + sortable tables moved to Batch C.*
 
 | Item | Notes |
 |---|---|
 | **Dashboard segmentation** | Split into Upcoming Payouts / Portfolio Health / Compliance Checklist sections. Data already fetched. |
-| **Version number in sidebar** | `v{x.y.z}` below logo in `layout.tsx`. Bump on each release. |
-| **Sortable table headers** | Investors table — sort by name, PAN, principal, agreement count. Pure `useState` sort. |
 | **Changelog / What's new modal** | Show on first load after version bump using localStorage. |
 
 ---
