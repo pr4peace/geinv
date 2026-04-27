@@ -87,7 +87,7 @@ describe('Agreements API POST validation', () => {
         limit: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
       }),
-    } as any)
+    } as unknown as ReturnType<typeof createAdminClient>)
 
     const req = createReq({
       payout_frequency: 'quarterly',
