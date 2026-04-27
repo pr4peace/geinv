@@ -83,3 +83,21 @@ export async function getInvestors(): Promise<InvestorRow[]> {
     }
   })
 }
+
+export async function checkInvestorAccess(investorId: string): Promise<boolean> {
+  const headersList = await headers()
+  const userRole = headersList.get('x-user-role') ?? ''
+  const userTeamId = headersList.get('x-user-team-id') ?? ''
+
+  if (userRole === 'salesperson' && userTeamId) {
+    const supabase = createAdminClient()
+    const { count } = await supabase
+      .from('agreements')
+      .select('id', { count: 'exact', head: true })
+      .eq('investor_id', investorId)
+      .eq('salesperson_id', userTeamId)
+      .is('deleted_at', null)
+    return (count ?? 0) > 0
+  }
+  return true
+}
