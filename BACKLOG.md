@@ -14,18 +14,6 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🔴 Batch B — Calendar & Reminders (branch: `feature/batch-b-calendar`)
-*Fix the broken calendar and reminder dates together — same data layer.*
-
-| Item | Notes |
-|---|---|
-| **Calendar phantom payouts** | Supabase aliased join filter silently ignored. Fix: fetch active non-draft IDs first, filter with `.in()`. Also exclude `is_draft` and skip cumulative payout events (maturity event is sufficient). |
-| **Calendar rebuild** | Replace custom `CalendarGrid.tsx` with `react-big-calendar` (already installed). Month/Week/Agenda views. Dark slate theme. |
-| **Reminders wrong dates** | Investigate `generatePayoutReminders` in `src/lib/reminders.ts` and monthly summary logic. Fix whatever's causing wrong schedule dates. |
-| **Weekly reminder cron** | Add Monday-morning cron to `vercel.json` to auto-trigger summary email. 1-line change. |
-
----
-
 ### 🟠 Batch C — Agreement Data (branch: `feature/batch-c-agreement-data`)
 *All changes to the agreement model together — one migration run.*
 
@@ -69,7 +57,8 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Title | Notes |
 |---|---|
-| Remove E2E tests | In progress on `feature/wave-2-remove-e2e` — release pending |
+| **Batch B — Calendar & Reminders** | Fixed phantom payouts, rebuilt calendar with react-big-calendar, fixed reminder lead times, added Monday cron. |
+| Remove E2E tests | E2E tests removed; relying on Vitest unit tests. |
 | Sidebar collapse/expand | Merged to main |
 | Digital agreement flow | Manual form + live payout calculator |
 | Document URL expiry fix | Permanent storage path + 1-year signed URL |
