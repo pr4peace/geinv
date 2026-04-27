@@ -15,6 +15,8 @@
 - [x] Item 2: Cumulative TDS-only row
 - [x] Item 3: Version number in sidebar
 - [x] Item 4: Sortable table headers (Investors)
+- [x] Item 5: Collapsible sidebar with localStorage persistence
+- [x] Item 6: Global search bar for agreements and investors
 - [x] Splash Screen
 - [x] Build + test clean, release to main
 
@@ -33,6 +35,9 @@
   - Added `SplashScreen` component for branded initial load.
   - Added version number (v0.1.0) to sidebar.
   - Rebuilt Investors table with client-side sortable headers (Name, PAN, Principal, Agreements).
+- Sidebar & Search:
+  - Implemented collapsible sidebar with `localStorage` persistence and tooltips for collapsed icons.
+  - Added global search bar for agreements (by reference ID or investor name) and investors (by name).
 - Fixed all build-time type errors and updated unit tests.
 - Applied Codex fixes:
   - Filtered out `is_tds_only` rows from `getQuarterlyForecast`, `getDashboardKPIs`, `getFrequencyBreakdown`, `getPayoutReminders`, and automated reminder processing.
@@ -47,6 +52,7 @@
 - `src/lib/kpi.ts`
 - `src/lib/dashboard-reminders.ts`
 - `src/app/api/reminders/process/route.ts`
+- `src/app/api/search/route.ts`
 - `src/components/agreements/ExtractionReview.tsx`
 - `src/components/agreements/ManualAgreementForm.tsx`
 - `src/components/agreements/PayoutScheduleSection.tsx`
