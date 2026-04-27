@@ -34,12 +34,19 @@
   - Added version number (v0.1.0) to sidebar.
   - Rebuilt Investors table with client-side sortable headers (Name, PAN, Principal, Agreements).
 - Fixed all build-time type errors and updated unit tests.
+- Applied Codex fixes:
+  - Filtered out `is_tds_only` rows from `getQuarterlyForecast`, `getDashboardKPIs`, `getFrequencyBreakdown`, `getPayoutReminders`, and automated reminder processing.
+  - Updated test fixtures in `src/__tests__/reminders.test.ts` to use the new `payments[]` data structure.
+  - Added test case to verify `is_tds_only` rows are skipped in reminder generation.
 
 ## Files Changed
 - `src/types/database.ts`
 - `src/lib/claude.ts`
 - `src/lib/payout-calculator.ts`
 - `src/lib/reminders.ts`
+- `src/lib/kpi.ts`
+- `src/lib/dashboard-reminders.ts`
+- `src/app/api/reminders/process/route.ts`
 - `src/components/agreements/ExtractionReview.tsx`
 - `src/components/agreements/ManualAgreementForm.tsx`
 - `src/components/agreements/PayoutScheduleSection.tsx`
@@ -52,6 +59,7 @@
 - `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
 - `src/app/api/email/quarterly-forecast/route.ts`
 - `src/__tests__/payout-calculator.test.ts`
+- `src/__tests__/reminders.test.ts`
 - `supabase/migrations/015_multiple_payments.sql`
 - `supabase/migrations/016_tds_only_payout.sql`
 
@@ -64,4 +72,4 @@
 - Implemented client-side sorting for Investors table for instant feedback on the small dataset.
 
 ## Next Agent Action
-- Codex: Review the changes for Batch C.
+- Codex: Review the applied fixes for `is_tds_only` row filtering and updated test coverage.

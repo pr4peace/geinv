@@ -108,6 +108,7 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
     .eq('is_principal_repayment', false)
+    .eq('is_tds_only', false)
   if (quarterPayoutsError) throw new Error(`Failed to fetch quarter payouts: ${quarterPayoutsError.message}`)
 
   const qPayouts = quarterPayouts ?? []
@@ -199,6 +200,7 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
     .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
     .in('agreements.status', ['active', 'draft'])
     .eq('is_principal_repayment', false)
+    .eq('is_tds_only', false)
     .order('due_by')
   if (payoutsError) throw new Error(`Failed to fetch quarterly payouts: ${payoutsError.message}`)
 
@@ -280,6 +282,7 @@ export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
       .eq('agreements.payout_frequency', freq)
       .eq('agreements.status', 'active')
       .eq('is_principal_repayment', false)
+    .eq('is_tds_only', false)
     if (freqPayoutsError) throw new Error(`Failed to fetch ${freq} payouts: ${freqPayoutsError.message}`)
 
     result[freq].total_expected_interest = (freqPayouts ?? []).reduce(

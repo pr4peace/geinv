@@ -241,6 +241,7 @@ async function processReminders(): Promise<{
       .gte('due_by', start)
       .lte('due_by', end)
       .eq('is_principal_repayment', false)
+      .eq('is_tds_only', false)
 
     // Fetch agreements maturing this quarter
     const { data: quarterMaturities } = await supabase
@@ -284,6 +285,7 @@ async function processReminders(): Promise<{
     .from('payout_schedule')
     .update({ status: 'overdue' })
     .eq('status', 'pending')
+    .eq('is_tds_only', false)
     .lt('due_by', todayStr)
     .select('id')
 
