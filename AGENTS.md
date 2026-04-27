@@ -26,6 +26,7 @@ All agents must read:
 - Plan before implementation
 - SESSION.md is the single source of truth for current work
 - BACKLOG.md is the source of tasks
+- Local-Only Development: All work is kept local to the active branch. Push to GitHub (and thus trigger Vercel deployment) ONLY at the end of the session after everything is verified and approved.
 - Session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) are committed and pushed at the end of every session — they must always be in sync across devices
 
 ---
@@ -79,12 +80,13 @@ Rules:
 
 ---
 
-### Gemini CLI — Builder
+### Gemini CLI — Builder + Releaser
 
 Responsibilities:
 - Implement planned tasks
 - Build base-layer code
 - Apply fixes from Codex review
+- Prepare and execute releases (merge to main, push, clean up branch)
 
 Rules:
 - Follow SESSION.md strictly
@@ -128,15 +130,15 @@ Rules:
 3. Codex → reviews changes
 4. Gemini → fixes Codex issues
 5. Repeat 3–4 until clean
-6. Claude → prepares release
+6. Gemini → prepares release (runs checks, proposes plan)
 7. User → approves
-8. Claude → executes release
+8. Gemini → executes release (merge to main, push, delete branch, sync session files)
 
 ### Safety Mandates
 - **Post-Build Review:** Never deploy to production (Vercel --prod) without first running a full build (`npm run build`) and having the **Codex** agent review the final state and any build warnings/logs.
 - **Semantic Branching:** Propose descriptive, semantic branch names (e.g., `feature/activity-log-auth` instead of `feature/your-task-name`).
 - **Branch hygiene:** Every task gets its own branch cut from `main`. Claude creates the branch at planning time. Gemini verifies the branch before touching any code. Work never accumulates on a stale or misnamed branch.
-- **Merge before next task:** Before starting a new task, Claude merges the completed branch into `main` and deletes the old branch.
+- **Merge before next task:** Before starting a new task, the completed branch must be merged into `main` and deleted. Gemini executes this via the GEMINI — EXECUTE RELEASE prompt.
 - **Session file sync:** At the end of every session, all four session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) must be committed and pushed — to whichever branch is active. This keeps both devices (MacBook Pro and Mac Mini) in sync. Never leave a session with uncommitted session files.
 
 ---

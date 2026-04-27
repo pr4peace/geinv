@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileUp, FileSignature } from 'lucide-react'
 import UploadStep from '@/components/agreements/UploadStep'
 import ExtractionReview from '@/components/agreements/ExtractionReview'
+import ManualAgreementForm from '@/components/agreements/ManualAgreementForm'
 import type { ExtractedAgreement } from '@/lib/claude'
 
 interface TeamMember {
@@ -14,7 +15,7 @@ interface TeamMember {
   is_active: boolean
 }
 
-type Step = 'upload' | 'loading' | 'review'
+type Step = 'choice' | 'upload' | 'manual' | 'loading' | 'review'
 
 interface ExtractResult {
   extracted: ExtractedAgreement
@@ -22,7 +23,7 @@ interface ExtractResult {
 }
 
 export default function NewAgreementPage() {
-  const [step, setStep] = useState<Step>('upload')
+  const [step, setStep] = useState<Step>('choice')
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [teamLoading, setTeamLoading] = useState(true)
 
@@ -86,8 +87,12 @@ export default function NewAgreementPage() {
   }
 
   function handleBack() {
-    setExtractResult(null)
-    setStep('upload')
+    if (step === 'review' || step === 'loading') {
+      setExtractResult(null)
+      setStep('upload')
+    } else {
+      setStep('choice')
+    }
   }
 
   return (
@@ -95,45 +100,89 @@ export default function NewAgreementPage() {
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-100">New Agreement</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Upload and extract investment agreement details</p>
+        <p className="text-xs text-slate-500 mt-0.5">Create a new investment agreement record</p>
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-3 mb-8">
-        {(['upload', 'loading', 'review'] as const).map((s, idx) => {
-          const labels: Record<Step, string> = { upload: 'Upload', loading: 'Extracting', review: 'Review & Confirm' }
-          const stepIdx = { upload: 0, loading: 1, review: 2 }
-          const currentIdx = stepIdx[step]
-          const thisIdx = stepIdx[s]
-          const done = currentIdx > thisIdx
-          const active = currentIdx === thisIdx
-          return (
-            <div key={s} className="flex items-center gap-2">
-              {idx > 0 && <div className={`w-10 h-px ${done || active ? 'bg-indigo-600' : 'bg-slate-700'}`} />}
-              <div className={`flex items-center gap-2`}>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                    done
-                      ? 'bg-emerald-600 text-white'
-                      : active
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700'
-                  }`}
-                >
-                  {done ? '✓' : idx + 1}
+      {step !== 'choice' && (
+        <div className="flex items-center gap-3 mb-8">
+          {(['upload', 'loading', 'review', 'manual'] as const)
+            .filter(s => {
+              if (step === 'manual') return s === 'manual'
+              return s !== 'manual'
+            })
+            .map((s, idx) => {
+              const labels: Record<Step, string> = {
+                choice: 'Choice',
+                upload: 'Upload',
+                loading: 'Extracting',
+                review: 'Review & Confirm',
+                manual: 'Create Manually',
+              }
+              const stepIdx: Record<Step, number> = { choice: -1, upload: 0, loading: 1, review: 2, manual: 0 }
+              const currentIdx = stepIdx[step]
+              const thisIdx = stepIdx[s]
+              const done = currentIdx > thisIdx
+              const active = currentIdx === thisIdx
+              return (
+                <div key={s} className="flex items-center gap-2">
+                  {idx > 0 && <div className={`w-10 h-px ${done || active ? 'bg-indigo-600' : 'bg-slate-700'}`} />}
+                  <div className={`flex items-center gap-2`}>
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                        done
+                          ? 'bg-emerald-600 text-white'
+                          : active
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700'
+                      }`}
+                    >
+                      {done ? '✓' : idx + 1}
+                    </div>
+                    <span
+                      className={`text-sm font-medium hidden sm:inline ${
+                        active ? 'text-slate-100' : done ? 'text-emerald-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {labels[s]}
+                    </span>
+                  </div>
                 </div>
-                <span
-                  className={`text-sm font-medium hidden sm:inline ${
-                    active ? 'text-slate-100' : done ? 'text-emerald-400' : 'text-slate-500'
-                  }`}
-                >
-                  {labels[s]}
-                </span>
-              </div>
+              )
+            })}
+        </div>
+      )}
+
+      {/* Choice Screen */}
+      {step === 'choice' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto py-12">
+          <button
+            onClick={() => setStep('upload')}
+            className="flex flex-col items-center justify-center p-8 bg-slate-900 border border-slate-800 rounded-2xl hover:border-indigo-500 hover:bg-slate-800/50 transition-all group"
+          >
+            <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <FileUp className="w-8 h-8 text-indigo-400" />
             </div>
-          )
-        })}
-      </div>
+            <h2 className="text-xl font-bold text-slate-100 mb-2">Upload PDF / DOCX</h2>
+            <p className="text-sm text-slate-400 text-center">
+              Upload an existing signed agreement. Claude will automatically extract all details.
+            </p>
+          </button>
+
+          <button
+            onClick={() => setStep('manual')}
+            className="flex flex-col items-center justify-center p-8 bg-slate-900 border border-slate-800 rounded-2xl hover:border-emerald-500 hover:bg-slate-800/50 transition-all group"
+          >
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <FileSignature className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-100 mb-2">Create Manually</h2>
+            <p className="text-sm text-slate-400 text-center">
+              Fill in agreement details manually via form. Best for drafts or when no document is available yet.
+            </p>
+          </button>
+        </div>
+      )}
 
       {/* Step 1: Upload */}
       {step === 'upload' && (
@@ -142,10 +191,16 @@ export default function NewAgreementPage() {
           onExtract={handleExtract}
           isLoading={false}
           error={uploadError}
+          onBack={handleBack}
         />
       )}
 
-      {/* Step 2: Loading */}
+      {/* Step 2: Manual Form */}
+      {step === 'manual' && (
+        <ManualAgreementForm teamMembers={teamMembers} onBack={handleBack} />
+      )}
+
+      {/* Step 3: Loading */}
       {step === 'loading' && (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
@@ -154,7 +209,7 @@ export default function NewAgreementPage() {
         </div>
       )}
 
-      {/* Step 3: Review */}
+      {/* Step 4: Review */}
       {step === 'review' && extractResult && file && (
         <ExtractionReview
           extracted={extractResult.extracted}

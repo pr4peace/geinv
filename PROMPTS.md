@@ -4,6 +4,11 @@
 
 ## CLAUDE — START SESSION (BACKLOG → PLAN)
 
+First — sync before anything else:
+```bash
+git pull
+```
+
 Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
 
 You are the primary planner.
@@ -32,6 +37,11 @@ Keep scope tight (one task only).
 ---
 
 ## CLAUDE — DIRECT TASK (OVERRIDE BACKLOG)
+
+First — sync before anything else:
+```bash
+git pull
+```
 
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
@@ -62,6 +72,11 @@ Keep scope tight.
 
 ## GEMINI — BUILD
 
+First — sync before anything else:
+```bash
+git pull
+```
+
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
 Follow the plan and todos.
@@ -77,6 +92,11 @@ After work, update SESSION.md:
 - Files Changed
 - Decisions
 - Next Agent Action → Codex
+
+Then — push before closing:
+```bash
+git add -A && git commit -m "wip: gemini build progress" && git push
+```
 
 ---
 
@@ -105,6 +125,11 @@ Do NOT edit code.
 
 ## GEMINI — FIX CODEX ISSUES
 
+First — sync before anything else:
+```bash
+git pull
+```
+
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
 Fix ONLY issues in "Codex Review Notes".
@@ -118,6 +143,75 @@ After fixing:
 - update Work Completed
 - update Files Changed
 - Next Agent Action → Codex
+
+Then — push before closing:
+```bash
+git add -A && git commit -m "fix: apply codex review fixes" && git push
+```
+
+---
+
+## GEMINI — RELEASE PREPARATION
+
+First — sync before anything else:
+```bash
+git pull
+```
+
+Read CLAUDE.md, AGENTS.md, and SESSION.md.
+
+You are preparing this feature branch for release.
+
+Run all checks:
+```bash
+npm run lint
+npm run build
+npm test
+```
+
+Then:
+- Confirm all checks pass (stop and report if any fail)
+- Summarize what changed (files, behaviour, any new env vars)
+- Check if any new Supabase migration files exist in `supabase/migrations/`
+- Verify SESSION.md Codex Review Notes has no outstanding **blocking** issues
+
+Propose the release plan:
+1. Merge `feature/<branch>` → `main` (no-ff)
+2. Apply Supabase migration in SQL Editor (if needed)
+3. Vercel auto-deploys on push to main — confirm no manual step needed
+
+Do NOT execute.
+Update SESSION.md → Next Agent Action: "Awaiting release approval."
+Then push SESSION.md.
+
+---
+
+## GEMINI — EXECUTE RELEASE
+
+Read SESSION.md to confirm the branch name.
+
+Run:
+```bash
+git checkout main
+git pull
+git merge --no-ff feature/<branch> -m "feat: merge feature/<branch> into main"
+git push origin main
+git branch -d feature/<branch>
+git push origin --delete feature/<branch>
+```
+
+Then:
+- Update SESSION.md → Branch: `main`
+- Commit and push session files:
+```bash
+git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
+git commit -m "chore: post-release session sync"
+git push
+```
+- Confirm Vercel deployment triggered (check that push succeeded)
+- Report: branch merged, remote branch deleted, session files synced
+
+If a Supabase migration is needed, list the file path and instruct the user to run it manually in the Supabase SQL Editor before confirming deploy success.
 
 ---
 
