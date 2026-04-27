@@ -1,41 +1,25 @@
 # SESSION
 
 ## Branch
-- feature/batch-a-auth
+- main
 
 ## Phase
-- reviewing
+- planning
 
 ## Active Batch
-- Batch A — Auth & Access (`feature/batch-a-auth`)
+- Batch C — Agreement Data + Quick Polish
 
 ## Items
-- [x] Item 1: Google-only login page (`src/app/login/page.tsx`)
-- [x] Item 2: Middleware RBAC (`src/middleware.ts`)
-- [x] Item 3: Agreements salesperson filter (`src/app/(app)/agreements/page.tsx`)
-- [x] Build + test clean, release to main
+- [ ] Item 1: Multiple payment entries (`013_multiple_payments.sql`)
+- [ ] Item 2: Cumulative TDS-only row
+- [ ] Item 3: Version number in sidebar
+- [ ] Item 4: Sortable table headers (Investors)
 
 ## Work Completed
-- Replaced email/password login with a single Google OAuth button.
-- Added `<Suspense>` boundary for `useSearchParams` in login page to comply with Next.js 14 standards.
-- Implemented RBAC in middleware: checks `team_members` for active status and gates `/settings`, `/agreements/new`, and `/agreements/import`.
-- Injected `x-user-role` and `x-user-team-id` headers for downstream data filtering (Fixed: now correctly propagating cookies when headers are set).
-- Updated Agreements page to filter by `salesperson_id` and hide administrative buttons for salespersons.
-- Fixed: RBAC middleware now fails closed on DB/network errors.
-- Fixed: Middleware now preserves auth cookies during redirects and when setting custom request headers, ensuring `signOut` and session refreshes are correctly propagated.
-- Added server-side RBAC to API routes:
-  - `GET /api/agreements`: forced salesperson scoping.
-  - `POST /api/agreements`: restricted to coordinator/admin only.
-  - `GET /api/agreements/[id]`: ownership check for salespeople.
-  - `PATCH/DELETE /api/agreements/[id]`: blocked for salespeople.
-  - `GET/POST /api/team` and `PATCH /api/team/[id]`: restricted to coordinator/admin only.
-  - `POST/DELETE /api/agreements/import`: restricted to coordinator/admin only.
-  - `POST /api/agreements/[id]/restore`: restricted to coordinator/admin only.
-  - `POST /api/agreements/[id]/upload-signed`: restricted to coordinator/admin only.
-  - `POST /api/agreements/[id]/payouts/[payoutId]/notify`: blocked for salespeople.
-  - `POST /api/agreements/[id]/payouts/[payoutId]/paid`: blocked for salespeople.
-  - `POST /api/extract`: restricted to coordinator/admin only.
-- Updated unit tests in `src/__tests__/agreements-api.test.ts` to include the `x-user-role` header for authorized requests.
+- Batch A released to main.
+- Google Login integration complete.
+- Middleware RBAC with header propagation complete.
+- Comprehensive API-level access control complete.
 
 ## Files Changed
 - `src/app/login/page.tsx`
