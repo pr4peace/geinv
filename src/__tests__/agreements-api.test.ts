@@ -20,6 +20,9 @@ describe('Agreements API POST validation', () => {
     return new NextRequest('http://localhost:3000/api/agreements', {
       method: 'POST',
       body: JSON.stringify(body),
+      headers: {
+        'x-user-role': 'coordinator',
+      },
     })
   }
 

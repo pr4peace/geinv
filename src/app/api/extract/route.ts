@@ -9,7 +9,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export async function POST(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
-    if (userRole === 'salesperson') {
+    if (userRole !== 'coordinator' && userRole !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

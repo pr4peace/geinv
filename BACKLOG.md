@@ -36,12 +36,14 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🟠 Batch E — Offer Letter (branch: `feature/batch-e-offer-letter`)
-*Standalone — needs PDF template design. Separate session.*
+### 🟠 Batch E — Offer Letter Flow (branch: `feature/batch-e-offer-letter`)
+*Part of the Create Agreement flow. No external dependencies — physical signing, not e-sign.*
 
 | Item | Notes |
 |---|---|
-| **Offer letter generation** | Generate PDF offer letter from agreement form data. Needs template design + PDF renderer library choice. |
+| **Generate offer letter PDF** | Render agreement data into a PDF offer letter. Library TBD (react-pdf or puppeteer). Needs template design before implementation. |
+| **Send offer letter to client** | Email PDF attachment via Resend from agreement detail page. Button: "Send Offer Letter". Updates `doc_status: sent_to_client`. |
+| **Mark as signed / approved** | "Mark as Signed" button on agreement detail after client returns physical signed copy. Updates `doc_status: returned`. Optionally attach scanned copy (upload already exists). |
 
 ---
 
@@ -49,6 +51,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Item | Notes |
 |---|---|
+| **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch E is stable. |
 | **Slack integration** | Automated notifications. External dependency. |
 
 ---
