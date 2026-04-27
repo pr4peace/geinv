@@ -1,54 +1,57 @@
 # SESSION
 
 ## Branch
-- main
+- feature/batch-c-agreement-data
 
 ## Phase
-- planning
+- building
 
 ## Active Batch
-- Batch C — Agreement Data + Quick Polish
+- Batch C — Agreement Data + Quick Polish (`feature/batch-c-agreement-data`)
 
 ## Items
-- [ ] Item 1: Multiple payment entries (`013_multiple_payments.sql`)
-- [ ] Item 2: Cumulative TDS-only row
-- [ ] Item 3: Version number in sidebar
-- [ ] Item 4: Sortable table headers (Investors)
+- [ ] Migrations: run `015_multiple_payments.sql` + `016_tds_only_payout.sql` in Supabase SQL Editor
+- [ ] Multiple payment entries (`payments jsonb[]` replacing `payment_date/mode/bank`)
+- [ ] Cumulative TDS-only row (`is_tds_only` + `tds_filed` on `payout_schedule`)
+- [ ] Splash screen (fade-out on initial app load)
+- [ ] Version number in sidebar (`v0.1.0` below logo in `layout.tsx`)
+- [ ] Grey out Quarterly Review + Reports nav items (non-clickable, "Soon" badge)
+- [ ] Collapsible sidebar (toggle button, collapsed state persisted in localStorage, tooltips when collapsed)
+- [ ] Global search bar in sidebar (search investors + agreements by name/ref)
+- [ ] Sortable investors table (client component, `useState` sort)
+- [ ] Build + test clean, release to main
 
 ## Work Completed
-- Batch A released to main.
-- Google Login integration complete.
-- Middleware RBAC with header propagation complete.
-- Comprehensive API-level access control complete.
+- Batch A released: Google Login, Middleware RBAC, API-level access control.
 
 ## Files Changed
-- `src/app/login/page.tsx`
-- `src/middleware.ts`
-- `src/app/(app)/agreements/page.tsx`
-- `src/app/api/agreements/route.ts`
-- `src/app/api/agreements/[id]/route.ts`
-- `src/app/api/team/route.ts`
-- `src/app/api/agreements/import/route.ts`
-- `src/app/api/agreements/[id]/restore/route.ts`
-- `src/app/api/agreements/[id]/upload-signed/route.ts`
-- `src/app/api/agreements/[id]/payouts/[payoutId]/notify/route.ts`
-- `src/app/api/agreements/[id]/payouts/[payoutId]/paid/route.ts`
-- `src/app/api/team/[id]/route.ts`
-- `src/app/api/extract/route.ts`
-- `src/__tests__/agreements-api.test.ts`
-- `SESSION.md`
-
+-
 
 ## Codex Review Notes
-- **minor** No new blocking issues found in the current diff. Residual risk: RBAC coverage is still thin. `npm test` passes, but the tests do not exercise middleware header propagation or assert that non-admin roles are rejected across the restricted route/API matrix (`/settings`, `/agreements/new`, `/agreements/import`, `/api/extract`, `/api/team*`, agreement mutation endpoints), so a future regression in access control could ship unnoticed.
+-
 
 ## Decisions
-- Google OAuth only — no email/password
-- RBAC via middleware DB query per request — small team, acceptable overhead
-- Role + team ID injected as `x-user-role` / `x-user-team-id` request headers
-- Unauthorized users: sign out before redirect to prevent redirect loop
-- Salespersons: filter agreements list + hide Import/New buttons
-- Settings: middleware blocks non-coordinators, no page-level code change needed
+- `payments jsonb[]` entries: `{ date, mode, bank, amount }` — amount included for tranche tracking
+- Migration migrates existing single-payment data with `amount: null` (historical amounts unknown)
+- TDS-only rows are separate `payout_schedule` rows, not columns on main row
+- `generatePayoutReminders` skips `is_tds_only` rows — no investor-facing reminder
+- Splash fades at 1.2s, fully hidden at 1.7s — CSS transition, no server dependency
+- Investors table extracted to `src/components/investors/InvestorsTable.tsx` client component
+- Migration numbers are `015` + `016` (latest in repo is `014`)
 
 ## Next Agent Action
-- Codex: Review the applied RBAC alignment fixes (tightening API access to coordinator/admin to match middleware route gates) and test updates.
+- Gemini: Read the full plan at `docs/superpowers/plans/2026-04-27-batch-c-agreement-data.md`.
+  Summarise all 5 items to user, wait for confirmation, then implement in this order:
+  1. Create migration files, ask user to run both in Supabase SQL Editor — wait for confirmation before writing any code
+  2. Update `src/types/database.ts` — run build to surface type errors
+  3. Update `src/lib/claude.ts` (ExtractedAgreement + prompt)
+  4. Update `ExtractionReview.tsx` + `ManualAgreementForm.tsx` (payments array UI)
+  5. Update `src/app/api/agreements/route.ts`
+  6. Update `src/app/(app)/agreements/[id]/page.tsx` (payments display + TDS badge + Mark Filed button)
+  7. Create `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
+  8. Update `src/lib/payout-calculator.ts` (TDS-only row for cumulative)
+  9. Update `src/lib/reminders.ts` (skip is_tds_only)
+  10. Create `src/components/SplashScreen.tsx`
+  11. Update `src/app/(app)/layout.tsx` (version + splash)
+  12. Create `src/components/investors/InvestorsTable.tsx` + update `src/app/(app)/investors/page.tsx`
+  Run `npm run build` + `npm test`. Release to main, sync session files, mark Batch C done in BACKLOG.md.

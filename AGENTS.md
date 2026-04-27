@@ -149,6 +149,7 @@ git checkout main
 git pull
 git merge --no-ff feature/<task-name> -m "feat: merge feature/<task-name> into main"
 git push origin main
+git push origin main:feature/investment-tracker  # triggers Vercel production deployment
 git branch -d feature/<task-name>
 git push origin --delete feature/<task-name>
 ```

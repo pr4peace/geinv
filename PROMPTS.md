@@ -84,6 +84,7 @@ Then execute the release:
 git checkout main && git pull
 git merge --no-ff feature/<batch-branch> -m "feat: <batch name>"
 git push origin main
+git push origin main:feature/investment-tracker  # triggers Vercel production deployment
 git branch -d feature/<batch-branch>
 git push origin --delete feature/<batch-branch>
 ```
