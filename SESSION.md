@@ -1,119 +1,85 @@
 # SESSION
 
 ## Branch
-- feature/doc-url-fix  ← start here
-- feature/investor-delete-safety  ← do second, after #1 is pushed
+- feature/doc-url-fix  ← start here (add C, then release)
+- feature/investor-delete-safety  ← release second
 
 ## Current Task
-- Two sequential fixes for Gemini. Do them in order — finish and push #1 before switching to #2.
+- Wave 1 release: add doc lifecycle auto-advance to `feature/doc-url-fix`, then release both feature branches to `main`.
 
 ---
 
-## TASK 1 — Document URL expiry (branch: feature/doc-url-fix)
+## TASK C — Doc lifecycle auto-advance (branch: feature/doc-url-fix)
 
 ### Goal
-Uploaded PDFs are saved with a 24-hour signed URL as `document_url`. After 24 hours every document link breaks. Fix: pass the storage `temp_path` back from the extract route, then on agreement save move the file to a permanent path and store a 1-year signed URL instead.
+When Irene uploads a scanned signed PDF and `is_draft = false`, `doc_status` should be set to `'uploaded'` automatically — skipping the 5-stage lifecycle. Drafts and manual entries still start at `'draft'`.
 
-### Plan
+### Change
+**File:** `src/app/api/agreements/route.ts`
 
-**Step 1 — `src/app/api/extract/route.ts`**
-- Add `temp_path` to the JSON response alongside `file_url`
-- Response becomes: `{ extracted, file_url, temp_path }`
-- No other changes — `file_url` (24-hour URL) stays for in-browser preview only
+In the `POST` handler, find the `supabase.from('agreements').insert(...)` call. Add `doc_status` to the insert payload:
 
-**Step 2 — `src/app/(app)/agreements/new/page.tsx`**
-- Extend `ExtractResult` interface: add `temp_path: string`
-- Pass `tempPath={extractResult.temp_path}` to `ExtractionReview`
-
-**Step 3 — `src/components/agreements/ExtractionReview.tsx`**
-- Add `tempPath: string` to props interface
-- In the save body, replace `document_url: fileUrl` with `temp_path: tempPath` (remove `document_url` from the client — the server will set it after moving the file)
-
-**Step 4 — `src/app/api/agreements/route.ts`**
-- Receive `temp_path` from the request body
-- After inserting the agreement, if `temp_path` is present:
-  - Derive extension from the filename in `temp_path`
-  - Permanent path: `${reference_id}/original.${ext}`
-  - Move: `supabase.storage.from('agreements').move(temp_path, permanentPath)`
-  - Generate 1-year signed URL: `createSignedUrl(permanentPath, 60 * 60 * 24 * 365)`
-  - Update the agreement: `supabase.from('agreements').update({ document_url: permanentUrl }).eq('id', agreement.id)`
-  - If move fails: log the error but do not fail the request — agreement data is more important than the file move
-
-**Step 5 — Verify**
-- `npm run build` — clean
-- `npm test` — no regressions
-- Push: `git add -A && git commit -m "fix: move uploaded docs to permanent path with 1-year URL" && git push -u origin feature/doc-url-fix`
-
----
-
-## TASK 2 — Investor delete safety (branch: feature/investor-delete-safety)
-
-After Task 1 is pushed, switch branches:
-```bash
-git checkout feature/investor-delete-safety
-git pull
+```ts
+const docStatus = (temp_path && !agreementFields.is_draft) ? 'uploaded' : 'draft'
+// add doc_status: docStatus to the insert payload alongside reference_id and investor_id
 ```
 
-### Goal
-No DELETE endpoint exists for investors. Add one that blocks if the investor still has non-deleted agreements, and add a delete button to the investor detail page.
+That's the only change. Run `npm run build` and `npm test` to confirm clean, then push.
 
-### Plan
+---
 
-**Step 1 — `src/app/api/investors/[id]/route.ts`**
-- Add `export async function DELETE`
-- Query `agreements` where `investor_id = id` AND `deleted_at IS NULL`
-- If any found: return 409 `{ error: 'Investor has active agreements', agreements: [{ id, reference_id, status }] }`
-- If none: `supabase.from('investors').delete().eq('id', id)`
-- Return 200 `{ success: true }`
+## RELEASE — Wave 1
 
-**Step 2 — `src/components/investors/DeleteInvestorButton.tsx`** (new file)
-- `'use client'` component
-- Props: `investorId: string`, `investorName: string`, `agreementCount: number`
-- If `agreementCount > 0`: disabled button, tooltip "Cannot delete — investor has linked agreements"
-- If `agreementCount === 0`:
-  - "Delete investor" button (red/destructive style)
-  - On click: show inline confirm "Permanently delete {name}? This cannot be undone."
-  - On confirm: `DELETE /api/investors/{id}`
-  - On success: `router.push('/investors')`
-  - On 409: show the blocking agreement list (server check takes precedence)
-  - On error: show red message
+After Task C is pushed, execute the release:
 
-**Step 3 — `src/app/(app)/investors/[id]/page.tsx`**
-- Import `DeleteInvestorButton`
-- Pass `investorId={investor.id}`, `investorName={investor.name}`, `agreementCount={agreements?.length ?? 0}`
-- Place in the page header next to the back link
+### Step 1 — Merge feature/doc-url-fix → main
+```bash
+git checkout main && git pull
+git merge --no-ff feature/doc-url-fix -m "feat: permanent doc storage, doc lifecycle auto-advance"
+git push origin main
+git branch -d feature/doc-url-fix
+git push origin --delete feature/doc-url-fix
+```
 
-**Step 4 — Verify**
-- `npm run build` — clean
-- `npm test` — no regressions
-- Push: `git add -A && git commit -m "feat: add safe investor deletion with agreement guard" && git push`
+### Step 2 — Merge feature/investor-delete-safety → main
+```bash
+git pull
+git merge --no-ff feature/investor-delete-safety -m "feat: safe investor deletion with agreement guard"
+git push origin main
+git branch -d feature/investor-delete-safety
+git push origin --delete feature/investor-delete-safety
+```
+
+### Step 3 — Sync session files
+After both merges, commit and push the session files:
+```bash
+git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
+git commit -m "chore: post-wave-1 release sync"
+git push
+```
 
 ---
 
 ## Todos
-- [ ] Task 1: return `temp_path` from extract route
-- [ ] Task 1: pass `temp_path` through `new/page.tsx` → `ExtractionReview`
-- [ ] Task 1: move file + generate 1-year URL in `POST /api/agreements`
-- [ ] Task 1: `npm run build` + `npm test` + push
-- [ ] Task 2: `DELETE /api/investors/[id]` with agreement guard
-- [ ] Task 2: `DeleteInvestorButton.tsx` with confirm dialog
-- [ ] Task 2: Add button to investor detail page
-- [ ] Task 2: `npm run build` + `npm test` + push
+- [ ] Task C: add `doc_status` auto-advance to `POST /api/agreements` in `feature/doc-url-fix`
+- [ ] Task C: `npm run build` + `npm test` + push
+- [ ] Release: merge `feature/doc-url-fix` → `main`
+- [ ] Release: merge `feature/investor-delete-safety` → `main`
+- [ ] Release: sync session files + push `main`
 
 ## Work Completed
 -
 
 ## Files Changed
--
+- `src/app/api/agreements/route.ts` — add doc_status auto-advance
 
 ## Decisions
-- `file_url` (24-hour URL) stays for in-browser preview — only `document_url` stored in DB changes
-- File move failure is non-fatal — agreement data must not be rolled back over a storage failure
-- Investor hard-delete (not soft) — no audit trail requirement; agreements carry the financial history
-- Block on ANY non-deleted agreement (active, matured, cancelled) — not just active ones
+- `temp_path` present + `is_draft = false` = scanned signed doc → `doc_status: 'uploaded'`
+- All other cases (manual entry, draft upload) → `doc_status: 'draft'`, full lifecycle applies
+- Wave 2 items (multiple payments, RBAC) planned but NOT implemented this session
 
 ## Codex Review Notes
 -
 
 ## Next Agent Action
-- Gemini: Do Task 1 on `feature/doc-url-fix` first. Push when done. Then switch to `feature/investor-delete-safety` and do Task 2. Push when done. Update this SESSION.md Work Completed after both.
+- Gemini: Checkout `feature/doc-url-fix`, add Task C (one condition in the agreements POST route), verify `npm run build` + `npm test` clean, push. Then execute the Wave 1 release steps above. Update SESSION.md Work Completed after release.
