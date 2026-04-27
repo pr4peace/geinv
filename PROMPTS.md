@@ -79,6 +79,15 @@ git pull
 
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
+**Before writing any code — post a summary to the user:**
+List exactly what you are about to do:
+- Which task from SESSION.md you are working on
+- Which files you will create or modify
+- What each change does in one line
+- Any migrations or manual steps the user needs to do
+
+Wait for the user to confirm before proceeding.
+
 Follow the plan and todos.
 
 Rules:
