@@ -16,6 +16,21 @@ export async function POST(
     }
 
     const supabase = createAdminClient()
+    const userRole = request.headers.get('x-user-role') ?? ''
+    const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+    if (userRole === 'salesperson') {
+      const { count } = await supabase
+        .from('agreements')
+        .select('id', { count: 'exact', head: true })
+        .eq('investor_id', id)
+        .eq('salesperson_id', userTeamId)
+        .is('deleted_at', null)
+
+      if ((count ?? 0) === 0) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+    }
 
     // Verify both investors exist
     const [{ data: source }, { data: target }] = await Promise.all([

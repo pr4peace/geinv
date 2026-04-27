@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient as createServerClient } from '@/lib/supabase/server'
 import {
   parseIncomingFundsExcel,
   parseTDSExcel,
@@ -19,16 +18,17 @@ async function downloadFileFromUrl(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
+const allowedRoles = new Set(['coordinator', 'admin', 'financial_analyst', 'accountant'])
+
 // UI-accessible reconcile endpoint
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authClient = await createServerClient()
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userRole = request.headers.get('x-user-role') ?? ''
+    if (!allowedRoles.has(userRole)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     const { id } = await params

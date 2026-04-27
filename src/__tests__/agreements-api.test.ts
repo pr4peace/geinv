@@ -28,7 +28,7 @@ describe('Agreements API POST validation', () => {
 
   it('rejects invalid payout frequency', async () => {
     const req = createReq({
-      payout_frequency: 'monthly', // Not allowed in DB constraint yet
+      payout_frequency: 'invalid-freq',
       investor_name: 'Test',
     })
     const res = await POST(req)

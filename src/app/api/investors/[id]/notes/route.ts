@@ -2,11 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
   const supabase = createAdminClient()
+
+  const userRole = request.headers.get('x-user-role') ?? ''
+  const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+  if (userRole === 'salesperson') {
+    const { count } = await supabase
+      .from('agreements')
+      .select('id', { count: 'exact', head: true })
+      .eq('investor_id', id)
+      .eq('salesperson_id', userTeamId)
+      .is('deleted_at', null)
+
+    if ((count ?? 0) === 0) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+  }
 
   const { data, error } = await supabase
     .from('investor_notes')
@@ -27,6 +43,23 @@ export async function POST(
 ) {
   const { id } = await params
   const supabase = createAdminClient()
+
+  const userRole = request.headers.get('x-user-role') ?? ''
+  const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+  if (userRole === 'salesperson') {
+    const { count } = await supabase
+      .from('agreements')
+      .select('id', { count: 'exact', head: true })
+      .eq('investor_id', id)
+      .eq('salesperson_id', userTeamId)
+      .is('deleted_at', null)
+
+    if ((count ?? 0) === 0) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+  }
+
   const { note } = await request.json()
 
   if (!note?.trim()) {

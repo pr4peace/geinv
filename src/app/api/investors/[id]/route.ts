@@ -2,12 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const supabase = createAdminClient()
+
+    const userRole = request.headers.get('x-user-role') ?? ''
+    const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+    if (userRole === 'salesperson') {
+      const { count } = await supabase
+        .from('agreements')
+        .select('id', { count: 'exact', head: true })
+        .eq('investor_id', id)
+        .eq('salesperson_id', userTeamId)
+        .is('deleted_at', null)
+
+      if ((count ?? 0) === 0) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+    }
 
     const { data: investor, error } = await supabase
       .from('investors')
@@ -42,6 +58,23 @@ export async function PATCH(
   try {
     const { id } = await params
     const supabase = createAdminClient()
+
+    const userRole = request.headers.get('x-user-role') ?? ''
+    const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+    if (userRole === 'salesperson') {
+      const { count } = await supabase
+        .from('agreements')
+        .select('id', { count: 'exact', head: true })
+        .eq('investor_id', id)
+        .eq('salesperson_id', userTeamId)
+        .is('deleted_at', null)
+
+      if ((count ?? 0) === 0) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+    }
+
     const body = await request.json()
 
     const { data, error } = await supabase
@@ -73,6 +106,22 @@ export async function DELETE(
     const { searchParams } = new URL(request.url)
     const checkOnly = searchParams.get('check_only') === 'true'
     const supabase = createAdminClient()
+
+    const userRole = request.headers.get('x-user-role') ?? ''
+    const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
+    if (userRole === 'salesperson') {
+      const { count } = await supabase
+        .from('agreements')
+        .select('id', { count: 'exact', head: true })
+        .eq('investor_id', id)
+        .eq('salesperson_id', userTeamId)
+        .is('deleted_at', null)
+
+      if ((count ?? 0) === 0) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+    }
 
     // Guard: Check for non-deleted agreements
     const { data: agreements, error: agreementError } = await supabase

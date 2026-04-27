@@ -79,6 +79,7 @@ async function processReminders(): Promise<{
     .from('reminders')
     .select('*')
     .eq('status', 'pending')
+    .is('sent_at', null)
     .lte('scheduled_at', nowIso)
 
   if (remindersError) {
@@ -87,6 +88,17 @@ async function processReminders(): Promise<{
 
   for (const reminder of reminders ?? []) {
     try {
+      const { data: claimed, error: claimError } = await supabase
+        .from('reminders')
+        .update({ sent_at: nowIso })
+        .eq('id', reminder.id)
+        .eq('status', 'pending')
+        .is('sent_at', null)
+        .select('id')
+        .single()
+
+      if (claimError || !claimed) continue
+
       const result = await sendEmail({
         to: reminder.email_to,
         subject: reminder.email_subject ?? '(No subject)',
@@ -97,13 +109,12 @@ async function processReminders(): Promise<{
 
       await supabase
         .from('reminders')
-        .update({ status: newStatus, sent_at: nowIso })
+        .update({ status: newStatus, sent_at: result.success ? nowIso : null })
         .eq('id', reminder.id)
 
       if (result.success) {
         processed++
 
-        // For doc_return reminders: if agreement doc not yet returned, schedule next repeat
         if (reminder.reminder_type === 'doc_return') {
           const { data: agreement } = await supabase
             .from('agreements')

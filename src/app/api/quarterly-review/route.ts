@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export async function GET() {
+const allowedRoles = new Set(['coordinator', 'admin', 'financial_analyst', 'accountant'])
+
+export async function GET(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role') ?? ''
+    if (!allowedRoles.has(userRole)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
 
     const { data, error } = await supabase
@@ -25,6 +32,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role') ?? ''
+    if (!allowedRoles.has(userRole)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
     const body = await request.json()
 

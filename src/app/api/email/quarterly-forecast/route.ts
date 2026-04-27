@@ -6,6 +6,11 @@ import type { Agreement, PayoutSchedule } from '@/types/database'
 
 export async function POST(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role')
+    if (userRole !== 'coordinator' && userRole !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
     const body = await request.json().catch(() => ({}))
     const { quarter } = body as { quarter?: string }

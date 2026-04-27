@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
     // Server-side validation
     const isDraft = agreementFields.is_draft === true
     const frequency = agreementFields.payout_frequency as string
-    const allowedFrequencies = ['quarterly', 'annual', 'cumulative']
-    
+    const allowedFrequencies = ['monthly', 'quarterly', 'biannual', 'annual', 'cumulative']
+
     if (!allowedFrequencies.includes(frequency)) {
       return NextResponse.json({ error: `Invalid payout frequency: ${frequency}` }, { status: 400 })
     }
