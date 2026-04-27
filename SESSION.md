@@ -1,10 +1,10 @@
 # SESSION
 
 ## Branch
-- feature/investor-delete-safety
+- main
 
 ## Current Task
-- Wave 1 release: add doc lifecycle auto-advance, fix Codex issues, then release both feature branches to `main`.
+- Wave 1 release complete: permanent doc storage, doc lifecycle auto-advance, and safe investor deletion merged to main.
 
 ---
 
@@ -15,7 +15,7 @@ When Irene uploads a scanned signed PDF and `is_draft = false`, `doc_status` sho
 
 ## RELEASE — Wave 1
 
-After Task C and Codex fixes are pushed, execute the release:
+Wave 1 release executed successfully.
 
 ### Step 1 — Merge feature/investor-delete-safety → main
 ```bash
@@ -43,8 +43,8 @@ git push
 - [x] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
 - [x] Add unit tests for investor deletion API
 - [x] `npm run build` + `npm test` + push
-- [ ] Release: merge `feature/investor-delete-safety` → `main`
-- [ ] Release: sync session files + push `main`
+- [x] Release: merge `feature/investor-delete-safety` → `main`
+- [x] Release: sync session files + push `main`
 
 ## Work Completed
 - **Task 1: Document URL Expiry Fix** (Merged from feature/doc-url-fix)
