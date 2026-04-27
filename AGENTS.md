@@ -97,8 +97,7 @@ Rules:
 - **Verification order after every implementation:**
   1. `npm run build` — must be clean
   2. `npm test` — all unit tests must pass
-  3. `npm run test:e2e` — run Playwright against localhost; all existing tests must pass
-- Update SESSION.md after work, including E2E result
+- Update SESSION.md after work
 
 ---
 
@@ -109,7 +108,6 @@ Responsibilities:
 - Find bugs and risks
 - Identify missing tests and edge cases
 - Suggest simpler alternatives
-- **Verify E2E results:** Check SESSION.md Work Completed for Playwright output. If E2E was not run or any test failed, flag it as a **blocking** issue regardless of other findings.
 
 Rules:
 - Do NOT edit code

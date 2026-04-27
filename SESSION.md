@@ -1,91 +1,118 @@
 # SESSION
 
 ## Branch
-- main
+- feature/wave-2-remove-e2e
 
 ## Current Task
-- Wave 1 release complete: permanent doc storage, doc lifecycle auto-advance, and safe investor deletion merged to main.
+- Release E2E removal to main, then start Batch A (Auth & Access) on `feature/batch-a-auth`.
 
 ---
 
-## TASK C — Doc lifecycle auto-advance
-When Irene uploads a scanned signed PDF and `is_draft = false`, `doc_status` should be set to `'uploaded'` automatically. Drafts and manual entries still start at `'draft'`.
+## TASK 0 — Remove E2E tests ✅ Code complete, pending release
 
----
+### Goal
+E2E tests run against live prod, require credentials no agent has, and block every release with noise. Remove entirely. Rely on `npm run build` + `npm test` (Vitest) as the only gate.
 
-## RELEASE — Wave 1
+### Work done on this branch
+- Deleted `e2e/` directory and `playwright.config.ts`
+- Removed `test:e2e` script and `@playwright/test` from `package.json`
+- Updated `AGENTS.md` and `CLAUDE.md` to remove E2E references
+- Build and unit tests verified clean
 
-Wave 1 release executed successfully.
-
-### Step 1 — Merge feature/investor-delete-safety → main
+### Release steps (next action)
 ```bash
 git checkout main && git pull
-git merge --no-ff feature/investor-delete-safety -m "feat: permanent doc storage, doc lifecycle auto-advance, safe investor deletion"
+git merge --no-ff feature/wave-2-remove-e2e -m "chore: remove E2E tests — rely on vitest unit tests only"
 git push origin main
-git branch -d feature/investor-delete-safety
-git push origin --delete feature/investor-delete-safety
-```
-
-### Step 2 — Sync session files
-After merge, commit and push the session files:
-```bash
+git branch -d feature/wave-2-remove-e2e
+git push origin --delete feature/wave-2-remove-e2e
 git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
-git commit -m "chore: post-wave-1 release sync"
+git commit -m "chore: post-wave-2-task-0 session sync"
 git push
 ```
 
 ---
 
+## BATCH A — Auth & Access (next, after Task 0 released)
+
+**Branch:**
+```bash
+git checkout main && git pull
+git checkout -b feature/batch-a-auth
+```
+
+### Item 1 — Google login
+- Replace entire email/password form in `src/app/login/page.tsx` with a single "Sign in with Google" button
+- Call `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/auth/callback\` } })`
+- Keep "Good Earth / Investment Tracker" heading, dark slate background
+- **Pre-requisite:** Google OAuth was configured in Supabase on 2026-04-27 — verify the provider is active before building
+
+### Item 2 — Role-based access control
+- `src/middleware.ts`: after session check, query `team_members` by email; redirect to `/login?error=access_denied` if not found or `is_active = false`
+- `src/app/login/page.tsx`: show "You don't have access." on `?error=access_denied`
+- Agreements page: salespersons see only agreements where `salesperson_id` matches their team member ID
+- Settings page: visible to coordinators and admins only
+
+### Release after both items pass build + test
+```bash
+git checkout main && git pull
+git merge --no-ff feature/batch-a-auth -m "feat: Google login + RBAC"
+git push origin main
+git branch -d feature/batch-a-auth
+git push origin --delete feature/batch-a-auth
+```
+
+---
+
+## BATCH B — Calendar & Reminders (after A)
+
+Branch: `feature/batch-b-calendar` — see BACKLOG.md for full item list.
+
+---
+
+## BATCH C — Agreement Data (after B)
+
+Branch: `feature/batch-c-agreement-data` — see BACKLOG.md for full item list.
+
+---
+
+## BATCH D — Dashboard & UI Polish (after C)
+
+Branch: `feature/batch-d-dashboard` — see BACKLOG.md for full item list.
+
+---
+
 ## Todos
-- [x] Task C: add `doc_status` auto-advance to `POST /api/agreements`
-- [x] Fix: Update `DeleteInvestorButton` to allow viewing blocking agreements (blocking)
-- [x] Fix: `DELETE /api/investors/[id]` should return 404 if not found (minor)
-- [x] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
-- [x] Add unit tests for investor deletion API
-- [x] `npm run build` + `npm test` + push
-- [x] Release: merge `feature/investor-delete-safety` → `main`
-- [x] Release: sync session files + push `main`
+- [x] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
+- [x] Task 0: build + test verified clean
+- [ ] Task 0: release to main + sync session files
+- [ ] Task 0: release to main + sync session files
+- [ ] Batch A: Google login + RBAC on `feature/batch-a-auth`, release
+- [ ] Batch B: Calendar bugs + rebuild + reminders on `feature/batch-b-calendar`, release
+- [ ] Batch C: Multiple payments + cumulative TDS on `feature/batch-c-agreement-data`, release
+- [ ] Batch D: Dashboard + polish on `feature/batch-d-dashboard`, release
 
 ## Work Completed
-- **Task 1: Document URL Expiry Fix** (Merged from feature/doc-url-fix)
-  - Updated `POST /api/extract` to return `temp_path`.
-  - Updated `POST /api/agreements` to move document to permanent path and store 1-year URL.
-- **Task 2: Investor Delete Safety**
-  - Added `DELETE /api/investors/[id]` route with guard.
-  - Created `DeleteInvestorButton` component.
-- **Task C: Doc lifecycle auto-advance**
-  - Updated `POST /api/agreements` to auto-set `doc_status: 'uploaded'` for scanned signed PDFs, but ONLY after successful storage move.
-- **Codex Fixes:**
-  - **Resolved Blocking:** Prevented destructive race condition in `DeleteInvestorButton` by adding `check_only` support to the `DELETE` endpoint.
-  - **Resolved Blocking:** `doc_status: 'uploaded'` is now only set after successful storage move AND database record update.
-  - **Resolved Minor:** `DeleteInvestorButton` now handles and displays errors for 404/500 responses during blocking checks.
-  - **Resolved Minor:** `DELETE` endpoint now returns 404 if investor is missing.
-  - **Resolved Minor:** Added unit test coverage for the new race-condition guard and post-move update failure paths.
-  - **E2E Status:** Attempted `npm run test:e2e`; failed on setup due to missing `E2E_USER_EMAIL` secret in CLI environment. Blockage is environmental.
+- **Task 0:** E2E tests removed. Build and unit tests pass.
 
 ## Files Changed
-- `src/app/api/extract/route.ts`
-- `src/app/(app)/agreements/new/page.tsx`
-- `src/components/agreements/ExtractionReview.tsx`
-- `src/app/api/agreements/route.ts`
-- `src/app/api/investors/[id]/route.ts`
-- `src/components/investors/DeleteInvestorButton.tsx`
-- `src/__tests__/investors-api.test.ts`
-- `src/__tests__/agreements-api.test.ts`
+- `e2e/` (deleted)
+- `playwright.config.ts` (deleted)
+- `package.json`
+- `AGENTS.md`
+- `CLAUDE.md`
 
 ## Decisions
-- Unified development onto `feature/investor-delete-safety` after merging `feature/doc-url-fix` to resolve Codex's Task 1 consistency note.
-- `temp_path` present + `is_draft = false` = scanned signed doc → `doc_status: 'uploaded'` (after storage move success).
-- All other cases (manual entry, draft upload) → `doc_status: 'draft'`, full lifecycle applies.
-- **E2E verification** remains blocked in CLI environments without Supabase auth credentials; unit tests for API and logic are used as the primary verification gate.
-- **Race Condition Prevention:** The `DELETE` endpoint now supports a `check_only` query parameter to allow the UI to safely refresh blocking status.
+- Each Wave 2 task gets its own branch; SESSION.md `## Branch` shows only the active branch at any time
+- PROMPTS.md cleanup (removing duplicates, adding pre-work summary) was a separate approved change committed on this branch — not scope creep
+- Google OAuth config is environment state, not repo state — Gemini must verify the provider is enabled before building Task G
+- E2E removed permanently; `npm run build` + `npm test` is the gate
 
 ## Codex Review Notes
-- **Resolved** Destructive race condition: `DeleteInvestorButton` uses `check_only=true` and handles errors.
-- **Resolved** Doc-storage consistency: `doc_status` and `document_url` updates are now fatal if move succeeds but update fails.
-- **Resolved** Regression coverage: Tests added for new edge cases.
-- **Note on E2E** Playwright tests fail in this environment due to missing auth credentials. Verified by Gemini via expanded unit tests.
+- Resolved: `## Branch` now shows only the active branch
+- Resolved: Todos updated to accurately reflect Task 0 status (code done, release pending)
+- Resolved: Google OAuth marked as environment-dependent, not "done"
+- Resolved: BACKLOG.md Byju entry cleaned up
 
 ## Next Agent Action
-- Awaiting release approval.
-
+- Gemini: Release Task 0 to main using the steps above, then create `feature/wave-2-calendar` and start Task D.

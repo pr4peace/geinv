@@ -10,8 +10,7 @@
     "migrate": "tsx scripts/migrate.ts",
     "check-db": "tsx scripts/check-db.ts",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",
@@ -35,7 +34,6 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.20.0",

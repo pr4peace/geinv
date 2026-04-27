@@ -125,7 +125,7 @@ export async function PATCH(
         .eq('is_active', true)
         .limit(1)
 
-      const internalEmail = internalMembers?.[0]?.email ?? 'coordinator@goodearth.com'
+      const internalEmail = internalMembers?.[0]?.email ?? 'coordinator@goodearth.org.in'
 
       let salespersonEmail: string | null = null
       if (updated.salesperson_id) {

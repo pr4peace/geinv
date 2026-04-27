@@ -10,7 +10,6 @@ npm run build        # production build (must pass before any merge)
 npm run lint         # ESLint
 npm test             # vitest unit tests (node environment, no browser)
 npm run test:watch   # vitest in watch mode
-npm run test:e2e     # Playwright against https://geinv.vercel.app (needs .env.test with auth)
 
 # Run a single unit test file
 npx vitest run src/__tests__/dashboard-reminders.test.ts
@@ -19,8 +18,6 @@ npx vitest run src/__tests__/dashboard-reminders.test.ts
 npm run migrate      # run migration scripts via tsx
 npm run check-db     # verify DB connectivity
 ```
-
-E2E tests require a `.env.test` file with Supabase credentials and run against the live Vercel deployment, not localhost. They will fail in environments without auth state.
 
 ## Architecture
 

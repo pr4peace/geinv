@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .limit(1)
 
-    const internalEmail = internalMembers?.[0]?.email ?? 'coordinator@goodearth.com'
+    const internalEmail = internalMembers?.[0]?.email ?? 'coordinator@goodearth.org.in'
 
     // Fetch salesperson email if assigned
     let salespersonEmail: string | null = null
