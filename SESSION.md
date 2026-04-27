@@ -141,18 +141,15 @@ git checkout -b feature/wave-2-google-login
 ### Goal
 Add "Sign in with Google" button to the login page. OAuth callback already exists.
 
-### Pre-requisite (user does this manually before Gemini builds)
-1. Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID
-2. Authorized redirect URI: `https://[your-supabase-project].supabase.co/auth/v1/callback`
-3. Copy client ID + secret → Supabase dashboard → Authentication → Providers → Google → enable
-4. Confirm with user that this config is done before starting the code step
+### Pre-requisite — ✅ DONE
+Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redirect URI: `https://rzbklsfktktjlzepnunu.supabase.co/auth/v1/callback`
 
 ### Steps (Gemini)
-1. **`src/app/login/page.tsx`** — add "Sign in with Google" button below the existing form:
+1. **`src/app/login/page.tsx`** — **replace the entire email/password form** with a single "Sign in with Google" button. No email input, no password input, no submit button — Google only:
    ```ts
    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })
    ```
-2. Style the button to match the dark slate UI (white background, Google icon or text)
+2. Style: white card button with Google logo (use an inline SVG or text "G"), centred on the dark slate background. Keep the "Good Earth / Investment Tracker" heading above it.
 3. `npm run build` + `npm test` clean. Push and release.
 
 ---
