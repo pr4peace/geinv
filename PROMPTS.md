@@ -53,6 +53,31 @@ git add -A && git commit -m "fix: apply codex review fixes" && git push
 
 ---
 
+## CODEX — FINAL PRE-LAUNCH REVIEW
+
+Read CLAUDE.md, AGENTS.md, and SESSION.md.
+
+This is a full production readiness review — not just the last diff. Review all production-facing code across these areas:
+
+- **Security**: auth bypasses, missing role checks, unvalidated input reaching the DB
+- **Data integrity**: API routes that could corrupt agreements, payout_schedule, or reminders
+- **Error handling**: unhandled rejections or silent failures at API boundaries
+- **Email safety**: anything that could fire real emails accidentally
+- **Cron safety**: the daily reminder processor at `/api/reminders/process` — could it double-send or corrupt state?
+
+Key files to check:
+- `src/app/api/**` (all route handlers)
+- `src/middleware.ts`
+- `src/lib/reminders.ts`
+- `src/lib/payout-calculator.ts`
+- `src/lib/claude.ts`
+
+Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 5 bullets. Mark each as **blocking** or **minor**. Do NOT edit code.
+
+Every issue MUST include the exact fix: file path, line range, and replacement code as a code block. Vague fixes are not acceptable and will be sent back.
+
+---
+
 ## CODEX — REVIEW
 
 Read CLAUDE.md, AGENTS.md, and SESSION.md. Review the current git diff.
@@ -86,7 +111,6 @@ Then execute the release:
 git checkout main && git pull
 git merge --no-ff feature/<batch-branch> -m "feat: <batch name>"
 git push origin main
-git push origin main:feature/investment-tracker  # triggers Vercel production deployment
 git branch -d feature/<batch-branch>
 git push origin --delete feature/<batch-branch>
 ```
