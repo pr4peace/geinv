@@ -4,114 +4,99 @@
 - feature/wave-2-calendar
 
 ## Current Task
-- TASK D: Calendar rebuild. Fix data bugs and replace custom grid with react-big-calendar.
+- Batch B — Calendar & Reminders. Fix calendar data bugs and rebuild with react-big-calendar.
+
+## Status
+- Task 0 (E2E removal) code is done on `feature/wave-2-remove-e2e` — **needs release to main first**
+- Batch A (Auth & Access) is next after Batch B per BACKLOG.md order — but Calendar is already in progress on this branch, so finish B first
+- This branch was created by Gemini; Task 0 release is a prerequisite
 
 ---
 
-## TASK 0 — Remove E2E tests ✅ Code complete, pending release
+## PENDING — Release Task 0 first
 
-### Goal
-E2E tests run against live prod, require credentials no agent has, and block every release with noise. Remove entirely. Rely on `npm run build` + `npm test` (Vitest) as the only gate.
-
-### Work done on this branch
-- Deleted `e2e/` directory and `playwright.config.ts`
-- Removed `test:e2e` script and `@playwright/test` from `package.json`
-- Updated `AGENTS.md` and `CLAUDE.md` to remove E2E references
-- Build and unit tests verified clean
-
-### Release steps (next action)
 ```bash
 git checkout main && git pull
-git merge --no-ff feature/wave-2-remove-e2e -m "chore: remove E2E tests — rely on vitest unit tests only"
+git merge --no-ff feature/wave-2-remove-e2e -m "chore: remove E2E tests"
 git push origin main
 git branch -d feature/wave-2-remove-e2e
 git push origin --delete feature/wave-2-remove-e2e
+git checkout feature/wave-2-calendar
+```
+
+---
+
+## BATCH B — Calendar & Reminders (branch: feature/wave-2-calendar)
+
+### Item 1 — Fix calendar data bugs (`src/app/(app)/calendar/page.tsx`)
+1. **Phantom events** — `.eq('agreement.status', 'active')` silently ignored on aliased Supabase join. Fix: fetch active non-draft agreement IDs first, filter payout rows with `.in('agreement_id', ids)`.
+2. **Draft payouts showing** — exclude `is_draft = true` agreements from all calendar queries.
+3. **Cumulative double-count** — skip payout events where `payout_frequency = 'cumulative'` (maturity event covers it).
+
+### Item 2 — Rebuild CalendarGrid with react-big-calendar (`src/components/calendar/CalendarGrid.tsx`)
+- Replace custom monthly-only grid with `react-big-calendar` (already in `package.json`)
+- Views: Month, Week, Agenda
+- Map events to `{ title, start, end, resource }`
+- Dark slate theme — override react-big-calendar CSS to match `bg-slate-950` UI
+- Keep colour coding: amber=pending, red=overdue, green=paid, orange=maturity
+- Keep click-to-agreement navigation
+
+### Item 3 — Fix reminders wrong dates (`src/lib/reminders.ts`, `src/lib/reminders-monthly-summary.ts`)
+- Investigate why reminders are only being set for due dates
+- Check monthly summary trigger logic — ensure it fires on the 1st of each month correctly
+- Fix any off-by-one or timezone issues found
+
+### Item 4 — Weekly reminder cron (`vercel.json`)
+- Add a Monday 8am IST cron entry that triggers `POST /api/reminders/summary`
+- 8am IST = 2:30am UTC → `"30 2 * * 1"`
+
+### Verification
+- `npm run build` — clean
+- `npm test` — no regressions
+
+### Release
+```bash
+git checkout main && git pull
+git merge --no-ff feature/wave-2-calendar -m "feat: calendar rebuild + reminder fixes"
+git push origin main
+git branch -d feature/wave-2-calendar
+git push origin --delete feature/wave-2-calendar
 git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
-git commit -m "chore: post-wave-2-task-0 session sync"
+git commit -m "chore: post-batch-b sync"
 git push
 ```
 
 ---
 
-## BATCH A — Auth & Access (next, after Task 0 released)
-
-**Branch:**
-```bash
-git checkout main && git pull
-git checkout -b feature/batch-a-auth
-```
-
-### Item 1 — Google login
-- Replace entire email/password form in `src/app/login/page.tsx` with a single "Sign in with Google" button
-- Call `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/auth/callback\` } })`
-- Keep "Good Earth / Investment Tracker" heading, dark slate background
-- **Pre-requisite:** Google OAuth was configured in Supabase on 2026-04-27 — verify the provider is active before building
-
-### Item 2 — Role-based access control
-- `src/middleware.ts`: after session check, query `team_members` by email; redirect to `/login?error=access_denied` if not found or `is_active = false`
-- `src/app/login/page.tsx`: show "You don't have access." on `?error=access_denied`
-- Agreements page: salespersons see only agreements where `salesperson_id` matches their team member ID
-- Settings page: visible to coordinators and admins only
-
-### Release after both items pass build + test
-```bash
-git checkout main && git pull
-git merge --no-ff feature/batch-a-auth -m "feat: Google login + RBAC"
-git push origin main
-git branch -d feature/batch-a-auth
-git push origin --delete feature/batch-a-auth
-```
-
----
-
-## BATCH B — Calendar & Reminders (after A)
-
-Branch: `feature/batch-b-calendar` — see BACKLOG.md for full item list.
-
----
-
-## BATCH C — Agreement Data (after B)
-
-Branch: `feature/batch-c-agreement-data` — see BACKLOG.md for full item list.
-
----
-
-## BATCH D — Dashboard & UI Polish (after C)
-
-Branch: `feature/batch-d-dashboard` — see BACKLOG.md for full item list.
-
----
-
 ## Todos
-- [x] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
-- [x] Task 0: build + test verified clean
-- [ ] Task 0: release to main + sync session files
-- [ ] Batch A: Google login + RBAC on `feature/batch-a-auth`, release
-- [ ] Batch B: Calendar bugs + rebuild + reminders on `feature/batch-b-calendar`, release
-- [ ] Batch C: Multiple payments + cumulative TDS on `feature/batch-c-agreement-data`, release
-- [ ] Batch D: Dashboard + polish on `feature/batch-d-dashboard`, release
+- [x] Task 0: E2E removal code complete
+- [ ] Task 0: release `feature/wave-2-remove-e2e` → main
+- [ ] Batch B Item 1: fix 3 calendar data bugs
+- [ ] Batch B Item 2: rebuild CalendarGrid with react-big-calendar
+- [ ] Batch B Item 3: fix reminders wrong dates
+- [ ] Batch B Item 4: add Monday morning cron to vercel.json
+- [ ] Batch B: build + test clean, release to main
+- [ ] Batch A: Google login + RBAC (`feature/batch-a-auth`)
+- [ ] Batch C: Multiple payments + cumulative TDS (`feature/batch-c-agreement-data`)
+- [ ] Batch D: Dashboard + polish (`feature/batch-d-dashboard`)
 
 ## Work Completed
-- **Task 0:** E2E tests removed. Build and unit tests pass.
+- Task 0: E2E tests removed from codebase. Build and unit tests pass.
 
 ## Files Changed
-- `e2e/` (deleted)
-- `playwright.config.ts` (deleted)
-- `package.json`
-- `AGENTS.md`
-- `CLAUDE.md`
+- `e2e/` (deleted — on feature/wave-2-remove-e2e)
+- `playwright.config.ts` (deleted — on feature/wave-2-remove-e2e)
+- `package.json` (on feature/wave-2-remove-e2e)
+- `AGENTS.md`, `CLAUDE.md` (on feature/wave-2-remove-e2e)
 
 ## Decisions
-- Each Wave 2 task gets its own branch; SESSION.md `## Branch` shows only the active branch at any time
-- PROMPTS.md cleanup (removing duplicates, adding pre-work summary) was a separate approved change committed on this branch — not scope creep
-- Google OAuth config is environment state, not repo state — Gemini must verify the provider is enabled before building Task G
-- E2E removed permanently; `npm run build` + `npm test` is the gate
+- Batches group related items into one branch + one release for faster shipping
+- Calendar branch already created by Gemini — finishing Batch B before Batch A
+- `npm run build` + `npm test` is the only gate (E2E removed)
+- Google OAuth configured in Supabase on 2026-04-27 — Gemini must verify before building Batch A
 
 ## Codex Review Notes
-- Resolved: `## Branch` now shows only the active branch
-- Resolved: Todos updated to accurately reflect Task 0 status (code done, release pending)
-- Resolved: Google OAuth marked as environment-dependent, not "done"
-- Resolved: BACKLOG.md Byju entry cleaned up
+-
 
 ## Next Agent Action
-- Gemini: Release Task 0 to main using the steps above, then create `feature/wave-2-calendar` and start Task D.
+- Gemini: (1) Release `feature/wave-2-remove-e2e` → main first. (2) Stay on `feature/wave-2-calendar`. (3) Work through Batch B items 1–4. (4) Build + test. (5) Release Batch B to main.
