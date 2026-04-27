@@ -154,7 +154,7 @@ export default function AppLayout({
               <Leaf className="w-5 h-5 text-white" />
             </div>
             {!isCollapsed && (
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-white leading-tight truncate">Good Earth</p>
                 <div className="flex items-center gap-1.5">
                   <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Investments</p>
@@ -162,6 +162,13 @@ export default function AppLayout({
                 </div>
               </div>
             )}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="ml-auto p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all flex-shrink-0"
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
           </div>
 
           {/* Search Section */}
@@ -270,22 +277,6 @@ export default function AppLayout({
             })}
           </nav>
 
-          {/* Collapse Toggle */}
-          <div className="p-4 border-t border-slate-800">
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-700/50 ${
-                isCollapsed ? 'justify-center px-0' : ''
-              }`}
-            >
-              {isCollapsed ? <ChevronRight className="w-5 h-5" /> : (
-                <>
-                  <ChevronLeft className="w-5 h-5" />
-                  <span>Collapse Sidebar</span>
-                </>
-              )}
-            </button>
-          </div>
         </aside>
 
         {/* Main content */}
