@@ -45,6 +45,10 @@
   - Added test case to verify `is_tds_only` rows are skipped in reminder generation.
   - Scoped investor results in `/api/search` for salespeople (only see investors from assigned agreements).
   - Added "Escape" key handler to close global search results.
+  - Sanitized search query to prevent reserved PostgREST characters from breaking the `.or()` filter.
+  - Used `AbortController` in search UI to prevent stale responses from overwriting newer ones.
+  - Improved `mark-tds-filed` API to return 404 if no row was updated.
+  - Added automated test coverage for `/api/search` and `mark-tds-filed` endpoints.
 
 ## Files Changed
 - `src/types/database.ts`
@@ -55,6 +59,7 @@
 - `src/lib/dashboard-reminders.ts`
 - `src/app/api/reminders/process/route.ts`
 - `src/app/api/search/route.ts`
+- `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
 - `src/components/agreements/ExtractionReview.tsx`
 - `src/components/agreements/ManualAgreementForm.tsx`
 - `src/components/agreements/PayoutScheduleSection.tsx`
@@ -64,17 +69,16 @@
 - `src/app/(app)/investors/page.tsx`
 - `src/app/(app)/layout.tsx`
 - `src/app/api/agreements/route.ts`
-- `src/app/api/payout-schedule/[id]/mark-tds-filed/route.ts`
 - `src/app/api/email/quarterly-forecast/route.ts`
 - `src/__tests__/payout-calculator.test.ts`
 - `src/__tests__/reminders.test.ts`
+- `src/__tests__/search-api.test.ts`
+- `src/__tests__/mark-tds-filed.test.ts`
+- `src/__tests__/agreements-api.test.ts`
 - `supabase/migrations/015_multiple_payments.sql`
 - `supabase/migrations/016_tds_only_payout.sql`
-
 ## Codex Review Notes
-- **blocking**: `src/app/api/search/route.ts` scopes agreements for `salesperson` users but leaves the investor query unscoped, so the new global search can expose investor identity and PAN data outside the user’s allowed agreement set.
-- **minor**: `src/app/(app)/layout.tsx` tells users “Press Esc to close” in the search overlay, but there is no Escape-key handler, so the shipped interaction is misleading and broken.
-- **minor**: There is still no automated coverage for the new `/api/search` behavior, especially role-based result scoping and the TDS/search regressions introduced in this batch.
+-
 
 ## Decisions
 - Used `jsonb[]` for payments to allow flexible growth without complex join tables.
@@ -82,4 +86,4 @@
 - Implemented client-side sorting for Investors table for instant feedback on the small dataset.
 
 ## Next Agent Action
-- Codex: Review the applied fixes for `is_tds_only` row filtering and updated test coverage.
+- Codex: Review the applied fixes for search query sanitization, stale-response protection, and API success validation.

@@ -14,14 +14,19 @@ export async function POST(
     const { id } = await params
     const supabase = createAdminClient()
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('payout_schedule')
       .update({ tds_filed: true })
       .eq('id', id)
       .eq('is_tds_only', true)
+      .select('id')
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: 'TDS payout row not found' }, { status: 404 })
     }
 
     return NextResponse.json({ success: true })

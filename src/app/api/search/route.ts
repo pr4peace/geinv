@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
+    // Sanitize: PostgREST .or() uses commas and parentheses as separators
+    const sanitized = query.replace(/[(),]/g, ' ')
+
     const supabase = createAdminClient()
 
     // 1. Search Agreements
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
       .from('agreements')
       .select('id, reference_id, investor_name')
       .is('deleted_at', null)
-      .or(`reference_id.ilike.%${query}%,investor_name.ilike.%${query}%`)
+      .or(`reference_id.ilike.%${sanitized}%,investor_name.ilike.%${sanitized}%`)
       .limit(10)
 
     if (userRole === 'salesperson') {

@@ -101,23 +101,32 @@ export default function AppLayout({
       return
     }
 
+    const controller = new AbortController()
+    
     const timer = setTimeout(async () => {
       setIsSearching(true)
       setShowSearchResults(true)
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
+          signal: controller.signal
+        })
         if (res.ok) {
           const data = await res.json()
           setSearchResults(data)
         }
       } catch (err) {
-        console.error('Search failed:', err)
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Search failed:', err)
+        }
       } finally {
         setIsSearching(false)
       }
     }, 300)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [searchQuery])
 
   const handleResultClick = (result: SearchResult) => {

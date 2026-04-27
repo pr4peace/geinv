@@ -4,14 +4,23 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🟠 Batch C — Agreement Data + Quick Polish (branch: `feature/batch-c-agreement-data`)
+## Version Milestones
+
+| Version | Batch | What it means |
+|---|---|---|
+| **V1** | After Batch C | Core investment tracking — agreements, payouts, calendar, reminders, RBAC. Team can use it daily. |
+| **V2** | After Batch D | Full agreement lifecycle — calculator, offer letter, client signing, digital agreement creation through the system. |
+
+---
+
+### 🟠 Batch C — Agreement Data + Quick Polish · **V1 Release** (branch: `feature/batch-c-agreement-data`)
 *DB changes to the agreement model + frontend polish items folded in.*
 
 | Item | Notes |
 |---|---|
 | **Multiple payment entries** | Replace `payment_date/mode/bank` with `payments jsonb[]`. Each entry: `{ date, mode, bank, amount }`. Migration `015_multiple_payments.sql`. Update ExtractionReview, ManualAgreementForm, API route, detail page, Gemini extraction prompt. |
 | **Cumulative TDS-only row** | Add `is_tds_only boolean default false` + `tds_filed boolean default false` to `payout_schedule`. Migration `016_tds_only_payout.sql`. Show TDS amount. Generate TDS filing reminder. Skip investor-facing reminders. Show "TDS Filing" badge + Mark Filed button. |
-| **Splash screen** | Full-screen loading splash on initial app load. Good Earth branding, fade out after 1–2s. |
+| **Splash screen** | Full-screen V1 launch splash on initial app load. Good Earth branding + "V1" badge. Brief feature highlights (agreements, calendar, reminders, team access). Fade out after 2s. |
 | **Version number in sidebar** | `v0.1.0` below logo in `layout.tsx`. Bump on each release. |
 | **Grey out Quarterly Review + Reports nav** | Non-clickable, "Soon" badge. Not yet functional. |
 | **Collapsible sidebar** | Toggle button, collapsed state persisted in localStorage, icon tooltips when collapsed. |
@@ -20,7 +29,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🟠 Batch D — Offer Letter Flow (branch: `feature/batch-d-offer-letter`)
+### 🟠 Batch D — Offer Letter Flow · **V2 Release** (branch: `feature/batch-d-offer-letter`)
 *Comprehensive interest calculator → offer letter PDF → client magic link upload → converts to agreement.*
 
 **Architecture:** `Calculator (defaults + overrides) → PayoutSchedule[] → PDF (grammar wrapper) → email + magic link → signed upload → Convert to Agreement → Agreement signing`
