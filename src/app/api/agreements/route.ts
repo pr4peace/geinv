@@ -130,9 +130,6 @@ export async function POST(request: NextRequest) {
     // Generate reference_id
     const reference_id = await generateReferenceId()
 
-    // Doc status logic: scanned signed upload (not draft) auto-advances to 'uploaded'
-    const docStatus = (temp_path && !agreementFields.is_draft) ? 'uploaded' : 'draft'
-
     // Find or create investor profile
     let investor_id: string | null = null
     const investorName = (agreementFields.investor_name as string) ?? ''
@@ -156,7 +153,7 @@ export async function POST(request: NextRequest) {
         ...agreementFields, 
         reference_id, 
         investor_id,
-        doc_status: docStatus
+        doc_status: 'draft' // Always start as draft, even if upload
       })
       .select()
       .single()
@@ -188,9 +185,15 @@ export async function POST(request: NextRequest) {
             console.error('Failed to generate 1-year signed URL:', signedError?.message)
           } else {
             // Update the agreement record with the permanent URL
+            // If it was a non-draft upload, auto-advance doc_status to 'uploaded'
+            const updatePayload: Record<string, unknown> = { document_url: signedData.signedUrl }
+            if (!agreementFields.is_draft) {
+              updatePayload.doc_status = 'uploaded'
+            }
+
             const { data: updated, error: updateError } = await supabase
               .from('agreements')
-              .update({ document_url: signedData.signedUrl })
+              .update(updatePayload)
               .eq('id', agreement.id)
               .select()
               .single()
