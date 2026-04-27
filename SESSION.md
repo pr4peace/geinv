@@ -4,7 +4,7 @@
 - feature/wave-2-remove-e2e
 
 ## Current Task
-- Wave 2, Task 0: Release E2E removal to main, then hand off Task D to Gemini on a new branch.
+- Release E2E removal to main, then start Batch A (Auth & Access) on `feature/batch-a-auth`.
 
 ---
 
@@ -33,64 +33,52 @@ git push
 
 ---
 
-## TASK D — Calendar rebuild (next, after Task 0 is released)
+## BATCH A — Auth & Access (next, after Task 0 released)
 
-**Branch to create after release:**
+**Branch:**
 ```bash
 git checkout main && git pull
-git checkout -b feature/wave-2-calendar
+git checkout -b feature/batch-a-auth
 ```
 
-### Goal
-Fix three data bugs and replace the custom monthly-only grid with `react-big-calendar` (already in `package.json`) for month/week/agenda views.
-
-### Bugs to fix in `src/app/(app)/calendar/page.tsx`
-1. **Phantom events** — `.eq('agreement.status', 'active')` is silently ignored on aliased Supabase join. Fix: fetch active non-draft agreement IDs first, then use `.in('agreement_id', ids)` to filter payout rows.
-2. **Draft payouts** — draft agreements' payout schedules show on calendar. Fix: include only `is_draft = false` agreements.
-3. **Cumulative double-count** — cumulative agreements show both a payout event AND a maturity event on the same day. Fix: skip payout events where `payout_frequency = 'cumulative'`.
-
-### Calendar component
-- Replace `src/components/calendar/CalendarGrid.tsx` with `react-big-calendar`
-- Views: Month, Week, Agenda (no Day view)
-- Map `CalendarEvent` to `{ title, start, end, resource }`
-- Theme to match dark slate UI
-- Keep colour coding: amber=pending, red=overdue, green=paid, orange=maturity
-- Keep click-to-agreement navigation
-
----
-
-## TASK E — Multiple payment entries (after D)
-
-Branch: `feature/wave-2-payments`
-
-Replace `payment_date / payment_mode / payment_bank` with a `payments jsonb` array `[{date, mode, bank, amount}]`.
-- Migration: `supabase/migrations/013_multiple_payments.sql` — add `payments jsonb default '[]'`
-- Keep old three columns for read backwards compat, stop writing them
-- Update `ExtractionReview.tsx`, `ManualAgreementForm.tsx`, `POST /api/agreements`, agreement detail page, and Gemini extraction prompt in `src/lib/claude.ts`
-- Migration must be run in Supabase SQL Editor by user
-
----
-
-## TASK F — Role-based access control (after E)
-
-Branch: `feature/wave-2-rbac`
-
-- `src/middleware.ts`: query `team_members` by email after session check; redirect to `/login?error=access_denied` if not found or inactive
-- Login page: show access denied message on `?error=access_denied`
-- Agreements page: salespersons see only their agreements
-- Settings page: coordinators only
-
----
-
-## TASK G — Google login (after F)
-
-Branch: `feature/wave-2-google-login`
-
-**Pre-requisite (user confirms before Gemini starts):** Google Cloud Console OAuth 2.0 credentials must be configured in Supabase Authentication → Providers → Google. User confirmed this was done on 2026-04-27 — Gemini must verify the Supabase provider is active before building the button.
-
+### Item 1 — Google login
 - Replace entire email/password form in `src/app/login/page.tsx` with a single "Sign in with Google" button
 - Call `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/auth/callback\` } })`
 - Keep "Good Earth / Investment Tracker" heading, dark slate background
+- **Pre-requisite:** Google OAuth was configured in Supabase on 2026-04-27 — verify the provider is active before building
+
+### Item 2 — Role-based access control
+- `src/middleware.ts`: after session check, query `team_members` by email; redirect to `/login?error=access_denied` if not found or `is_active = false`
+- `src/app/login/page.tsx`: show "You don't have access." on `?error=access_denied`
+- Agreements page: salespersons see only agreements where `salesperson_id` matches their team member ID
+- Settings page: visible to coordinators and admins only
+
+### Release after both items pass build + test
+```bash
+git checkout main && git pull
+git merge --no-ff feature/batch-a-auth -m "feat: Google login + RBAC"
+git push origin main
+git branch -d feature/batch-a-auth
+git push origin --delete feature/batch-a-auth
+```
+
+---
+
+## BATCH B — Calendar & Reminders (after A)
+
+Branch: `feature/batch-b-calendar` — see BACKLOG.md for full item list.
+
+---
+
+## BATCH C — Agreement Data (after B)
+
+Branch: `feature/batch-c-agreement-data` — see BACKLOG.md for full item list.
+
+---
+
+## BATCH D — Dashboard & UI Polish (after C)
+
+Branch: `feature/batch-d-dashboard` — see BACKLOG.md for full item list.
 
 ---
 
@@ -98,10 +86,11 @@ Branch: `feature/wave-2-google-login`
 - [x] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
 - [x] Task 0: build + test verified clean
 - [ ] Task 0: release to main + sync session files
-- [ ] Task D: create feature/wave-2-calendar, fix 3 data bugs, rebuild with react-big-calendar, release
-- [ ] Task E: create feature/wave-2-payments, migration + UI changes, release
-- [ ] Task F: create feature/wave-2-rbac, middleware + role views, release
-- [ ] Task G: create feature/wave-2-google-login, confirm OAuth active, replace login form, release
+- [ ] Task 0: release to main + sync session files
+- [ ] Batch A: Google login + RBAC on `feature/batch-a-auth`, release
+- [ ] Batch B: Calendar bugs + rebuild + reminders on `feature/batch-b-calendar`, release
+- [ ] Batch C: Multiple payments + cumulative TDS on `feature/batch-c-agreement-data`, release
+- [ ] Batch D: Dashboard + polish on `feature/batch-d-dashboard`, release
 
 ## Work Completed
 - **Task 0:** E2E tests removed. Build and unit tests pass.

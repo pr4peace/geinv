@@ -1,30 +1,77 @@
-## Backlog
+## Backlog — Release Batches
 
-| # | Title | Priority | Notes |
-|---|-------|----------|-------|
-| 0 | **Remove E2E tests** | 🟢 Wave 2 | Delete `e2e/` folder and `playwright.config.ts`. Remove `test:e2e` script from `package.json`. Update `AGENTS.md` verification steps to remove E2E. Update `CLAUDE.md`. Rely on `npm run build` + `npm test` (Vitest) as the only gate. Reason: E2E runs against live prod, requires credentials no agent has, creates noise every session. |
-| 1 | **Calendar phantom payouts + rebuild with react-big-calendar** | 🔴 Bug | Three bugs in `src/app/(app)/calendar/page.tsx`: (1) **Phantom payout events** — Supabase aliased join filter `.eq('agreement.status', 'active')` is silently ignored (alias vs table name mismatch), so payout rows for deleted/inactive agreements appear. Fix: fetch active agreement IDs first, then filter payout rows with `.in('agreement_id', ids)`. (2) **Draft payouts showing** — no `is_draft` filter, draft agreements' full payout schedules show on calendar. Fix: exclude `is_draft = true` agreements. (3) **Cumulative double-count** — cumulative agreements show both a payout event and a maturity event on the same day. Fix: skip payout events where the agreement's `payout_frequency = 'cumulative'` (maturity event is sufficient). Also: replace custom `CalendarGrid.tsx` with `react-big-calendar` (already installed) to get month/week/agenda views with correct navigation. |
-| 2 | **Reminders firing on wrong dates** | 🔴 Bug | Reminders are only being set for the due date; monthly report reminders may not be triggering correctly. Investigate `generatePayoutReminders` in `src/lib/reminders.ts` and the monthly summary logic in `src/lib/reminders-monthly-summary.ts`. |
-| 3 | **Cumulative agreements — TDS-only row** | 🟠 High | For cumulative agreements the single maturity payout row should be flagged `is_tds_only = true`. Design: (1) add `is_tds_only boolean default false` column to `payout_schedule` via migration; (2) set it to `true` when `payout_frequency = 'cumulative'` in `POST /api/agreements`; (3) reminder system skips investor-facing emails for `is_tds_only` rows; (4) dashboard/payout table shows a distinct "TDS Filing" status badge for these rows so coordinators can track internally with a separate status (e.g. `tds_filed`). No payout reminder to investor — internal tracking only. |
-| 4 | **Multiple payment entries** | 🟠 High | Payment received in tranches. Replace `payment_date/mode/bank` single fields with `payments jsonb` array `[{date, mode, bank, amount}]`. Requires migration `013_multiple_payments.sql` + UI update in ExtractionReview and ManualAgreementForm + update Gemini extraction prompt. |
-| 6 | **Role-based access control** | 🟠 High | Coordinators / accountants / salespersons see different views. Middleware checks email against `team_members`; blocks unknown users. Page-level conditional rendering per role. Blocks adding new users safely. |
-| 7 | **Offer letter generation** | 🟠 High | Generate PDF offer letter from agreement form data. Completes the no-PDF-upload path. |
-| 8 | **Weekly reminder cron** | 🟡 Medium | Add Monday-morning cron entry in `vercel.json` to auto-trigger the summary email. Narrow change. |
-| 9 | **Dashboard segmentation** | 🟡 Medium | Split into Upcoming Payouts / Portfolio Health / Compliance Checklist. Data exists; pure UI reorganisation. |
-| 10 | **Google-based login** | 🟡 Medium | Supabase OAuth config + Sign in with Google button on login page. |
-| 11 | **Version number in sidebar** | 🟢 Polish | Show `v{x.y.z}` below logo in `layout.tsx`. Bump on each release. |
-| 12 | **Changelog / What's new modal** | 🟢 Polish | Show "What's new" on first load after version bump using localStorage. |
-| 13 | **Sortable table headers** | 🟢 Polish | Investors table — sort by name, PAN, principal, agreement count. Pure frontend, no API/DB changes. |
-| 14 | **Slack integration** | ⚫ Future | Automated notifications. Adds external dependency. |
+Each batch = one branch + one release. Gemini works through all items in a batch before releasing.
+
+---
+
+### 🔴 Batch A — Auth & Access (branch: `feature/batch-a-auth`)
+*Everything needed to safely onboard the team. Do this first.*
+
+| Item | Notes |
+|---|---|
+| **Google login** | Replace email/password form with Google-only button. `src/app/login/page.tsx`. OAuth config already done in Supabase. |
+| **Role-based access control** | Middleware checks email against `team_members`; blocks unknowns. Salespersons see only their agreements. Settings page coordinator-only. |
+
+---
+
+### 🔴 Batch B — Calendar & Reminders (branch: `feature/batch-b-calendar`)
+*Fix the broken calendar and reminder dates together — same data layer.*
+
+| Item | Notes |
+|---|---|
+| **Calendar phantom payouts** | Supabase aliased join filter silently ignored. Fix: fetch active non-draft IDs first, filter with `.in()`. Also exclude `is_draft` and skip cumulative payout events (maturity event is sufficient). |
+| **Calendar rebuild** | Replace custom `CalendarGrid.tsx` with `react-big-calendar` (already installed). Month/Week/Agenda views. Dark slate theme. |
+| **Reminders wrong dates** | Investigate `generatePayoutReminders` in `src/lib/reminders.ts` and monthly summary logic. Fix whatever's causing wrong schedule dates. |
+| **Weekly reminder cron** | Add Monday-morning cron to `vercel.json` to auto-trigger summary email. 1-line change. |
+
+---
+
+### 🟠 Batch C — Agreement Data (branch: `feature/batch-c-agreement-data`)
+*All changes to the agreement model together — one migration run.*
+
+| Item | Notes |
+|---|---|
+| **Multiple payment entries** | Replace `payment_date/mode/bank` with `payments jsonb []`. Migration `013_multiple_payments.sql`. Update ExtractionReview, ManualAgreementForm, API route, detail page, Gemini extraction prompt. |
+| **Cumulative TDS-only row** | Add `is_tds_only boolean default false` to `payout_schedule`. Set `true` when `payout_frequency = 'cumulative'`. Skip investor reminders for these rows. Show "TDS Filing" badge in payout table with trackable `tds_filed` status. Migration needed. |
+
+---
+
+### 🟡 Batch D — Dashboard & UI Polish (branch: `feature/batch-d-dashboard`)
+*Pure frontend, no API/DB changes. Fast to build and review.*
+
+| Item | Notes |
+|---|---|
+| **Dashboard segmentation** | Split into Upcoming Payouts / Portfolio Health / Compliance Checklist sections. Data already fetched. |
+| **Version number in sidebar** | `v{x.y.z}` below logo in `layout.tsx`. Bump on each release. |
+| **Sortable table headers** | Investors table — sort by name, PAN, principal, agreement count. Pure `useState` sort. |
+| **Changelog / What's new modal** | Show on first load after version bump using localStorage. |
+
+---
+
+### 🟠 Batch E — Offer Letter (branch: `feature/batch-e-offer-letter`)
+*Standalone — needs PDF template design. Separate session.*
+
+| Item | Notes |
+|---|---|
+| **Offer letter generation** | Generate PDF offer letter from agreement form data. Needs template design + PDF renderer library choice. |
+
+---
+
+### ⚫ Future
+
+| Item | Notes |
+|---|---|
+| **Slack integration** | Automated notifications. External dependency. |
 
 ---
 
 ### ✅ Done
 
 | Title | Notes |
-|-------|-------|
+|---|---|
+| Remove E2E tests | In progress on `feature/wave-2-remove-e2e` — release pending |
 | Sidebar collapse/expand | Merged to main |
-| Digital agreement flow | Manual form + live payout calculator. |
-| Document URL expiry fix | Permanent storage path + 1-year signed URL on save. |
-| Doc lifecycle auto-advance | Scanned signed uploads auto-set to `doc_status: 'uploaded'`. |
-| Investor delete safety | `DELETE /api/investors/[id]` with agreement guard + UI button. |
+| Digital agreement flow | Manual form + live payout calculator |
+| Document URL expiry fix | Permanent storage path + 1-year signed URL |
+| Doc lifecycle auto-advance | Scanned signed uploads → `doc_status: 'uploaded'` |
+| Investor delete safety | `DELETE /api/investors/[id]` with agreement guard + UI |
