@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, User } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'

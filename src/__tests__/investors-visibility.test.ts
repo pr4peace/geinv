@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { headers } from 'next/headers'
-import { notFound } from 'next/navigation'
 import { getInvestors, checkInvestorAccess } from '@/lib/investors-page'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GET as downloadGET } from '@/app/api/investors/download/route'
