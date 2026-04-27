@@ -7,6 +7,13 @@ export type PayoutStatus = 'pending' | 'notified' | 'paid' | 'overdue'
 export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_forecast' | 'payout_monthly_summary'
 export type ReminderStatus = 'pending' | 'sent' | 'failed'
 
+export interface PaymentEntry {
+  date: string | null
+  mode: string | null
+  bank: string | null
+  amount: number | null
+}
+
 export interface Investor {
   id: string
   name: string
@@ -51,9 +58,7 @@ export interface Agreement {
   interest_type: InterestType
   lock_in_years: number
   maturity_date: string
-  payment_date: string | null
-  payment_mode: string | null
-  payment_bank: string | null
+  payments: PaymentEntry[]
   salesperson_id: string | null
   salesperson_custom: string | null
   tds_filing_name: string | null
@@ -89,6 +94,8 @@ export interface PayoutSchedule {
   is_principal_repayment: boolean
   status: PayoutStatus
   paid_date: string | null
+  is_tds_only: boolean
+  tds_filed: boolean
   created_at: string
   // Joined
   agreement?: Agreement

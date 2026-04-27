@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
           is_principal_repayment: forecastPayout.is_principal_repayment,
           status: forecastPayout.status as PayoutSchedule['status'],
           paid_date: null,
+          is_tds_only: false,
+          tds_filed: false,
           created_at: '',
         },
       })

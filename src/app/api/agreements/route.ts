@@ -244,6 +244,23 @@ export async function POST(request: NextRequest) {
         }))
         .filter((row) => row.period_from && row.period_to && row.due_by)
 
+      // Add internal TDS tracking row for cumulative/compound if missing
+      const isCumulative = frequency === 'cumulative' || agreementFields.interest_type === 'compound'
+      const hasTdsOnly = (rows as Array<ExtractedPayoutRow & { is_tds_only?: boolean }>).some(r => r.is_tds_only)
+      
+      if (isCumulative && !hasTdsOnly) {
+        const lastRow = rows[rows.length - 1]
+        if (lastRow) {
+          (rows as Array<ExtractedPayoutRow & { is_tds_only?: boolean }>).push({
+            ...lastRow,
+            gross_interest: 0,
+            net_interest: 0,
+            is_principal_repayment: false,
+            is_tds_only: true,
+          })
+        }
+      }
+
       if (rows.length > 0) {
         const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
 

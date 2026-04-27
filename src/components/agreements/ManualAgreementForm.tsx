@@ -30,6 +30,13 @@ interface NomineeRow {
   pan: string
 }
 
+interface PaymentEntryRow {
+  date: string | null
+  mode: string | null
+  bank: string | null
+  amount: number | null
+}
+
 type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative'
 type InterestType = 'simple' | 'compound'
 
@@ -50,9 +57,7 @@ interface FormState {
   interest_type: InterestType
   lock_in_years: string
   maturity_date: string
-  payment_date: string
-  payment_mode: string
-  payment_bank: string
+  payments: PaymentEntryRow[]
   is_draft: boolean
   salesperson_id: string
   salesperson_custom: string
@@ -105,9 +110,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
     interest_type: 'simple',
     lock_in_years: '',
     maturity_date: '',
-    payment_date: '',
-    payment_mode: '',
-    payment_bank: '',
+    payments: [],
     is_draft: false,
     salesperson_id: '',
     salesperson_custom: '',
@@ -154,6 +157,8 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
         tds_amount: row.tds_amount,
         net_interest: row.net_interest,
         is_principal_repayment: row.is_principal_repayment,
+        is_tds_only: row.is_tds_only,
+        tds_filed: row.tds_filed,
       }))
     } catch (err) {
       console.error('Failed to calculate payout schedule:', err)
@@ -308,9 +313,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
         interest_type: form.interest_type,
         lock_in_years: lockInVal,
         maturity_date: form.maturity_date,
-        payment_date: form.payment_date || null,
-        payment_mode: form.payment_mode || null,
-        payment_bank: form.payment_bank || null,
+        payments: form.payments,
         salesperson_id: (form.salesperson_id === '' || form.salesperson_id === 'other') ? null : (form.salesperson_id || null),
         salesperson_custom: form.salesperson_custom || null,
         document_url: null,
@@ -646,39 +649,95 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
           </div>
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Payment Info</h2>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Payment Date</label>
-                <input
-                  type="date"
-                  value={form.payment_date}
-                  onChange={e => update('payment_date', e.target.value)}
-                  className={inputBaseClass}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Payment Mode</label>
-                <input
-                  type="text"
-                  value={form.payment_mode}
-                  onChange={e => update('payment_mode', e.target.value)}
-                  className={inputBaseClass}
-                  placeholder="NEFT / UPI"
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Payments</h2>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({
+                  ...f,
+                  payments: [...f.payments, { date: null, mode: null, bank: null, amount: null }]
+                }))}
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+              >
+                + Add payment
+              </button>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Payment Bank</label>
-              <input
-                type="text"
-                value={form.payment_bank}
-                onChange={e => update('payment_bank', e.target.value)}
-                className={inputBaseClass}
-                placeholder="HDFC Bank"
-              />
+            {form.payments.length === 0 && (
+              <p className="text-xs text-slate-600 italic">No payments recorded</p>
+            )}
+
+            <div className="space-y-3">
+              {form.payments.map((p, i) => (
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 relative group">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Date</label>
+                    <input
+                      type="date"
+                      value={p.date ?? ''}
+                      onChange={e => {
+                        const updated = [...form.payments]
+                        updated[i] = { ...updated[i], date: e.target.value || null }
+                        setForm(f => ({ ...f, payments: updated }))
+                      }}
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Mode</label>
+                    <input
+                      type="text"
+                      value={p.mode ?? ''}
+                      onChange={e => {
+                        const updated = [...form.payments]
+                        updated[i] = { ...updated[i], mode: e.target.value || null }
+                        setForm(f => ({ ...f, payments: updated }))
+                      }}
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      placeholder="NEFT, RTGS..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Bank</label>
+                    <input
+                      type="text"
+                      value={p.bank ?? ''}
+                      onChange={e => {
+                        const updated = [...form.payments]
+                        updated[i] = { ...updated[i], bank: e.target.value || null }
+                        setForm(f => ({ ...f, payments: updated }))
+                      }}
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      placeholder="Bank name"
+                    />
+                  </div>
+                  <div className="space-y-1 pr-6">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={p.amount ?? ''}
+                      onChange={e => {
+                        const updated = [...form.payments]
+                        updated[i] = { ...updated[i], amount: e.target.value ? Number(e.target.value) : null }
+                        setForm(f => ({ ...f, payments: updated }))
+                      }}
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      payments: f.payments.filter((_, j) => j !== i)
+                    }))}
+                    className="absolute top-2 right-2 text-slate-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove payment"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 

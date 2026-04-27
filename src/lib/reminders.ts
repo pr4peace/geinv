@@ -28,6 +28,7 @@ export function generatePayoutReminders(
   internalEmail: string,
   salespersonEmail: string | null
 ): ReminderInput[] {
+  if (payoutRow.is_tds_only) return []
   const reminders: ReminderInput[] = []
   const dueDate = new Date(payoutRow.due_by)
   const emailTo = [internalEmail, salespersonEmail].filter(Boolean) as string[]

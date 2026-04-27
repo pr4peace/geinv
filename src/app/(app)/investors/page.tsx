@@ -1,6 +1,5 @@
-import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { User } from 'lucide-react'
+import { InvestorsTable } from '@/components/investors/InvestorsTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -103,83 +102,7 @@ export default async function InvestorsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700 text-xs text-slate-500 uppercase tracking-wide">
-              <th className="text-left px-5 py-3">Investor</th>
-              <th className="text-left px-4 py-3">PAN</th>
-              <th className="text-left px-4 py-3">Aadhaar</th>
-              <th className="text-left px-4 py-3 hidden lg:table-cell">Address</th>
-              <th className="text-left px-4 py-3 hidden xl:table-cell">Payout Bank</th>
-              <th className="text-center px-4 py-3">Agreements</th>
-              <th className="text-center px-4 py-3">Active</th>
-              <th className="text-right px-5 py-3">Total Principal</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700/50">
-            {investors.length === 0 && (
-              <tr>
-                <td colSpan={8} className="py-10 text-center text-slate-500 text-sm">
-                  No investors found.
-                </td>
-              </tr>
-            )}
-            {investors.map((inv) => (
-              <tr key={inv.id} className="hover:bg-slate-700/20 transition-colors">
-                <td className="px-5 py-3">
-                  <Link href={`/investors/${inv.id}`} className="flex items-center gap-2.5 group">
-                    <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-                      <User className="w-3.5 h-3.5 text-slate-400" />
-                    </div>
-                    <span className="font-medium text-slate-200 group-hover:text-indigo-400 transition-colors">
-                      {inv.name}
-                    </span>
-                  </Link>
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-400">
-                  {inv.pan ?? '—'}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-400">
-                  {inv.aadhaar ?? '—'}
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-400 hidden lg:table-cell max-w-xs truncate">
-                  {inv.address ?? '—'}
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-400 hidden xl:table-cell">
-                  {inv.payout_bank_name
-                    ? `${inv.payout_bank_name} · ${inv.payout_bank_account ?? '—'}`
-                    : '—'}
-                </td>
-                <td className="px-4 py-3 text-center text-slate-300">{inv.total_agreements}</td>
-                <td className="px-4 py-3 text-center">
-                  {inv.active_agreements > 0 ? (
-                    <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-green-900/40 text-green-400">
-                      {inv.active_agreements}
-                    </span>
-                  ) : (
-                    <span className="text-slate-600">—</span>
-                  )}
-                </td>
-                <td className="px-5 py-3 text-right font-medium text-slate-200">
-                  {inv.total_principal > 0 ? fmt(inv.total_principal) : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot className="border-t border-slate-700 bg-slate-900/50">
-            <tr>
-              <td colSpan={7} className="px-5 py-2 text-xs text-slate-500 font-medium">
-                {investors.length} investor{investors.length !== 1 ? 's' : ''}
-              </td>
-              <td className="px-5 py-2 text-right text-sm font-semibold text-slate-100">
-                {fmt(totalPrincipal)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <InvestorsTable investors={investors} />
     </div>
   )
 }

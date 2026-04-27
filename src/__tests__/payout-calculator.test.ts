@@ -21,13 +21,20 @@ describe('calculatePayoutSchedule', () => {
     expect(rows[0].period_to).toBe('2026-04-01')
   })
 
-  it('calculates cumulative schedule as a single row', () => {
+  it('calculates cumulative schedule as two rows (interest + TDS tracking)', () => {
     const rows = calculatePayoutSchedule({
       ...params,
       payoutFrequency: 'cumulative',
     })
-    expect(rows).toHaveLength(1)
+    expect(rows).toHaveLength(2)
+    // Row 1: Interest
     expect(rows[0].gross_interest).toBe(120000) // 1M * 12% * 1yr
+    expect(rows[0].is_tds_only).toBe(false)
+    // Row 2: TDS Tracking
+    expect(rows[1].gross_interest).toBe(0)
+    expect(rows[1].tds_amount).toBe(12000)
+    expect(rows[1].is_tds_only).toBe(true)
+    
     expect(rows[0].period_from).toBe('2026-01-01')
     expect(rows[0].period_to).toBe('2027-01-01')
   })

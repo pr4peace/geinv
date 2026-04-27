@@ -272,11 +272,27 @@ export default async function AgreementDetailPage({
             <Field label="Interest Type" value={fmtInterestType(agreement.interest_type)} />
             <Field label="Lock-in Years" value={agreement.lock_in_years != null ? `${agreement.lock_in_years} yrs` : '—'} />
             <Field label="Maturity Date" value={fmtDate(agreement.maturity_date)} />
-            <Field label="Payment Date" value={fmt(agreement.payment_date)} />
-            <Field label="Payment Mode" value={fmt(agreement.payment_mode)} />
-            <Field label="Payment Bank" value={fmt(agreement.payment_bank)} />
             <Field label="Salesperson" value={salespersonName} />
             <Field label="TDS Filing Name" value={fmt(agreement.tds_filing_name)} />
+            
+            {/* Payments */}
+            {(agreement.payments ?? []).length > 0 ? (
+              <div className="sm:col-span-3">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Payments</p>
+                <div className="space-y-1">
+                  {(agreement.payments ?? []).map((p, i) => (
+                    <div key={i} className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-slate-200">
+                      {p.date && <span>{fmtDate(p.date)}</span>}
+                      {p.mode && <span className="text-slate-400">{p.mode}</span>}
+                      {p.bank && <span className="text-slate-400">{p.bank}</span>}
+                      {p.amount != null && <span className="font-medium">{fmtCurrency(p.amount)}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Field label="Payment" value="—" />
+            )}
           </div>
         </SectionCard>
 

@@ -12,6 +12,8 @@ export interface PayoutRow {
   tds_amount: number
   net_interest: number
   is_principal_repayment: boolean
+  is_tds_only: boolean
+  tds_filed: boolean
   status: 'paid'
 }
 
@@ -77,6 +79,23 @@ export function calculatePayoutSchedule({
       tds_amount: tds,
       net_interest: net,
       is_principal_repayment: false,
+      is_tds_only: false,
+      tds_filed: false,
+      status: 'paid',
+    })
+
+    // TDS filing tracking row — internal use only, no investor reminder
+    rows.push({
+      period_from: toISO(start),
+      period_to: toISO(maturity),
+      due_by: toISO(maturity),
+      no_of_days: totalDays,
+      gross_interest: 0,
+      tds_amount: tds,
+      net_interest: 0,
+      is_principal_repayment: false,
+      is_tds_only: true,
+      tds_filed: false,
       status: 'paid',
     })
 
@@ -129,6 +148,8 @@ export function calculatePayoutSchedule({
       tds_amount: tds,
       net_interest: net,
       is_principal_repayment: false,
+      is_tds_only: false,
+      tds_filed: false,
       status: 'paid',
     })
 
