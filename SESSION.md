@@ -43,8 +43,8 @@ git push
 - [x] Fix: Improve storage move failure handling in `POST /api/agreements` (minor)
 - [x] Add unit tests for investor deletion API
 - [x] `npm run build` + `npm test` + push
-- [x] Release: merge `feature/investor-delete-safety` → `main`
-- [x] Release: sync session files + push `main`
+- [ ] Release: merge `feature/investor-delete-safety` → `main`
+- [ ] Release: sync session files + push `main`
 
 ## Work Completed
 - **Task 1: Document URL Expiry Fix** (Merged from feature/doc-url-fix)
@@ -56,10 +56,12 @@ git push
 - **Task C: Doc lifecycle auto-advance**
   - Updated `POST /api/agreements` to auto-set `doc_status: 'uploaded'` for scanned signed PDFs, but ONLY after successful storage move.
 - **Codex Fixes:**
-  - **Resolved Blocking:** Prevented destructive race condition in `DeleteInvestorButton` by adding `check_only` support to the `DELETE` endpoint. The UI now checks for blocking agreements without risk of accidental deletion.
-  - **Resolved Blocking:** `doc_status: 'uploaded'` is now set AFTER the storage move succeeds, even if signed URL generation fails, ensuring database accuracy regarding file location.
-  - **Resolved Minor:** Updated `DELETE` error message to "linked agreements" to be factually accurate for all agreement states.
-  - **Resolved Minor:** Added automated unit tests for `check_only` behavior and doc-storage failure paths (move success vs URL failure) in `src/__tests__/investors-api.test.ts` and `src/__tests__/agreements-api.test.ts`.
+  - **Resolved Blocking:** Prevented destructive race condition in `DeleteInvestorButton` by adding `check_only` support to the `DELETE` endpoint.
+  - **Resolved Blocking:** `doc_status: 'uploaded'` is now only set after successful storage move AND database record update.
+  - **Resolved Minor:** `DeleteInvestorButton` now handles and displays errors for 404/500 responses during blocking checks.
+  - **Resolved Minor:** `DELETE` endpoint now returns 404 if investor is missing.
+  - **Resolved Minor:** Added unit test coverage for the new race-condition guard and post-move update failure paths.
+  - **E2E Status:** Attempted `npm run test:e2e`; failed on setup due to missing `E2E_USER_EMAIL` secret in CLI environment. Blockage is environmental.
 
 ## Files Changed
 - `src/app/api/extract/route.ts`
@@ -68,7 +70,6 @@ git push
 - `src/app/api/agreements/route.ts`
 - `src/app/api/investors/[id]/route.ts`
 - `src/components/investors/DeleteInvestorButton.tsx`
-- `src/app/(app)/investors/[id]/page.tsx`
 - `src/__tests__/investors-api.test.ts`
 - `src/__tests__/agreements-api.test.ts`
 
@@ -80,11 +81,11 @@ git push
 - **Race Condition Prevention:** The `DELETE` endpoint now supports a `check_only` query parameter to allow the UI to safely refresh blocking status.
 
 ## Codex Review Notes
-- **Resolved** Destructive race condition: `DeleteInvestorButton` now uses `check_only=true` to fetch blocking agreements safely.
-- **Resolved** Accuracy: `DELETE` error message updated to "linked agreements".
-- **Resolved** Doc-storage risk: `doc_status` now advances if move succeeds, even if URL generation fails (file is safe in permanent path).
-- **Resolved** Regression coverage: Added tests for the destructive race condition and doc-storage edge cases.
-- **Note on E2E** Playwright tests continue to fail in the CLI environment due to missing auth credentials. Gemini has verified the logic via expanded unit tests.
+- **Resolved** Destructive race condition: `DeleteInvestorButton` uses `check_only=true` and handles errors.
+- **Resolved** Doc-storage consistency: `doc_status` and `document_url` updates are now fatal if move succeeds but update fails.
+- **Resolved** Regression coverage: Tests added for new edge cases.
+- **Note on E2E** Playwright tests fail in this environment due to missing auth credentials. Verified by Gemini via expanded unit tests.
 
 ## Next Agent Action
-- Codex: Final validation of Wave 1 unified release.
+- Awaiting release approval.
+

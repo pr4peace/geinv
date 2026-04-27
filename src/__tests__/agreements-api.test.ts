@@ -295,4 +295,62 @@ describe('Agreements API POST validation', () => {
       doc_status: 'uploaded'
     }))
   })
+
+  it('returns 500 if update fails after successful move', async () => {
+    const mockInsert = vi.fn().mockReturnThis()
+    const mockUpdate = vi.fn().mockReturnThis()
+    const mockSelect = vi.fn().mockReturnThis()
+    const mockSingle = vi.fn().mockResolvedValueOnce({ data: { id: 'a1', reference_id: 'GE-1' }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'Update failed' } })
+    
+    const mockMove = vi.fn().mockResolvedValue({ error: null })
+    const mockCreateSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl: 'http://signed' }, error: null })
+
+    const mockQuery: Record<string, unknown> = {
+      insert: mockInsert,
+      update: mockUpdate,
+      select: mockSelect,
+      single: mockSingle,
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+    }
+    mockInsert.mockReturnValue(mockQuery)
+    mockUpdate.mockReturnValue(mockQuery)
+    mockSelect.mockReturnValue(mockQuery)
+
+    const mockFrom = vi.fn().mockReturnValue(mockQuery)
+
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+      storage: {
+        from: vi.fn().mockReturnValue({
+          move: mockMove,
+          createSignedUrl: mockCreateSignedUrl,
+        }),
+      },
+    } as unknown as ReturnType<typeof createAdminClient>)
+
+    const req = createReq({
+      payout_frequency: 'quarterly',
+      is_draft: false,
+      investor_name: 'Test',
+      temp_path: 'temp/file.pdf',
+      principal_amount: 1000,
+      roi_percentage: 12,
+      lock_in_years: 1,
+      agreement_date: '2026-01-01',
+      investment_start_date: '2026-01-01',
+      maturity_date: '2027-01-01',
+      payout_schedule: [{ due_by: '2026-04-01', gross_interest: 100, tds_amount: 10, net_interest: 90 }],
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(500)
+    const data = await res.json()
+    expect(data.error).toContain('Document moved but failed to update')
+  })
 })

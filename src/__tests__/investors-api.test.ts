@@ -102,4 +102,23 @@ describe('Investors API DELETE', () => {
     expect(data.success).toBe(true)
     expect(mockFrom).not.toHaveBeenCalledWith('investors') // Should not call delete
   })
+
+  it('check_only returns 409 if agreements exist', async () => {
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockResolvedValue({ data: [{ id: 'agr-1' }], error: null }),
+    })
+    
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+    } as unknown as ReturnType<typeof createAdminClient>)
+
+    const req = new NextRequest('http://localhost:3000/api/investors/inv-1?check_only=true', {
+      method: 'DELETE',
+    })
+    const res = await DELETE(req, { params: Promise.resolve({ id: 'inv-1' }) })
+    expect(res.status).toBe(409)
+    expect(mockFrom).not.toHaveBeenCalledWith('investors')
+  })
 })

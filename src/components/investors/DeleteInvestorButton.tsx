@@ -74,6 +74,9 @@ export default function DeleteInvestorButton({
       } else if (res.ok) {
         // Edge case: agreements were removed since page load
         setConfirming(true)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || `Check failed (${res.status})`)
       }
     } catch {
       setError('Failed to fetch blocking agreements.')

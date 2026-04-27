@@ -204,6 +204,10 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
               console.error('Failed to update agreement with permanent document details:', updateError.message)
+              return NextResponse.json(
+                { error: `Document moved but failed to update agreement record: ${updateError.message}` },
+                { status: 500 }
+              )
             } else if (updated) {
               finalAgreement = updated
             }
