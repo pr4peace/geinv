@@ -95,8 +95,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ### ✅ Done
 
-| Title | Notes |
-|---|---|
+| **Batch C.1 — Extraction Fixes + Post-V1 Patch** | Gemini extraction fixes (monthly/biannual, prompt tuning), Sign out button, Apple-style sidebar toggle, Full-width dashboard layout. |
 | **Batch C — Agreement Data & Polish (V1)** | Migrations 015+016, multiple payments, cumulative TDS-only, splash screen, v0.1.0, collapsible sidebar, global search, sortable investors, salesperson scoping fixes. |
 | **Batch B — Calendar & Reminders** | Fixed phantom payouts, rebuilt calendar with react-big-calendar, fixed reminder lead times, added Monday cron. |
 | **Batch A — Auth & Access** | Google Login, Middleware RBAC with header propagation, API-level access control. |

@@ -132,7 +132,7 @@ Rules:
 - **Merge before next batch:** The completed branch must be merged and deleted before starting the next batch.
 - **Session file sync:** At the end of every session, all session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md) must be committed and pushed. Never leave a session with uncommitted session files.
 - **Branch hygiene:** Only two long-lived branches exist at any time: `main` and the current active batch branch. All other branches must be deleted from remote immediately after merging. Never leave stale feature branches on the remote.
-- **Vercel deployment:** After every push to `main`, also run `git push origin main:feature/investment-tracker` to trigger the Vercel production deployment.
+- **Vercel deployment:** Vercel production branch is set to `main`. Every push to `main` triggers a production deployment automatically.
 
 ---
 
@@ -152,7 +152,6 @@ git checkout main
 git pull
 git merge --no-ff feature/<task-name> -m "feat: merge feature/<task-name> into main"
 git push origin main
-git push origin main:feature/investment-tracker  # triggers Vercel production deployment
 git branch -d feature/<task-name>
 git push origin --delete feature/<task-name>
 ```
