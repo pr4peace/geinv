@@ -1,4 +1,4 @@
-export type TeamMemberRole = 'coordinator' | 'accountant' | 'financial_analyst' | 'salesperson'
+export type TeamMemberRole = 'coordinator' | 'accountant' | 'financial_analyst' | 'salesperson' | 'admin'
 export type AgreementStatus = 'active' | 'matured' | 'cancelled' | 'combined'
 export type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' | 'biannual'
 export type InterestType = 'simple' | 'compound'

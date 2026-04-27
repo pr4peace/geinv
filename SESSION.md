@@ -189,7 +189,11 @@ Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redi
 - `dotenv` reinstalled as devDependency as it is needed for migration scripts.
 
 ## Codex Review Notes
--
+- **Blocking:** `## Branch` in [`SESSION.md`](/Users/prashanthpalanisamy/Developer/geinv/SESSION.md) now lists five branches at once instead of the single active branch. That breaks the repo’s own rule that `SESSION.md` be the source of truth for the current branch and makes the “verify current branch matches `## Branch`” step ambiguous.
+- **Blocking:** `SESSION.md` says “Task 0 code cleanup is complete. Proceed to release Task 0 to main,” but `## Work Completed` also claims build/tests are already verified and `## Todos` still leaves “build + test + push + release” unchecked. The session state is internally inconsistent, so it is not reliable enough for release handoff yet.
+- **Minor:** [`PROMPTS.md`](/Users/prashanthpalanisamy/Developer/geinv/PROMPTS.md) was heavily rewritten as part of an E2E-removal task. Several changes are unrelated to Playwright removal, including a new “wait for user confirmation before proceeding” requirement in the Gemini build prompt. That is scope creep and risks changing the team workflow unintentionally.
+- **Minor / unsafe assumption:** `SESSION.md` marks the Google OAuth prerequisite as “✅ DONE” with a specific Supabase callback URL. That is environment-specific operational state, not repository state, and can easily be false on another machine or workspace clone.
+- **Minor / docs drift:** [`BACKLOG.md`](/Users/prashanthpalanisamy/Developer/geinv/BACKLOG.md) replaces “Add Byju as default salesperson” with “Added Byju to team_members” using a different role and email. That operational change is unrelated to Task 0 and records a production data mutation that is not verifiable from this repo diff.
 
 ## Next Agent Action
 - Gemini: Task 0 code cleanup is complete. Proceed to release Task 0 to main, then start Task D.
