@@ -20,8 +20,6 @@ npm run migrate      # run migration scripts via tsx
 npm run check-db     # verify DB connectivity
 ```
 
-E2E tests require a `.env.test` file with Supabase credentials and run against the live Vercel deployment, not localhost. They will fail in environments without auth state.
-
 ## Architecture
 
 **Stack:** Next.js 14 App Router · Supabase (Postgres + Storage + Auth) · Tailwind CSS · Resend (email) · Vercel (hosting + cron)

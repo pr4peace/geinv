@@ -97,8 +97,7 @@ Rules:
 - **Verification order after every implementation:**
   1. `npm run build` — must be clean
   2. `npm test` — all unit tests must pass
-  3. `npm run test:e2e` — run Playwright against localhost; all existing tests must pass
-- Update SESSION.md after work, including E2E result
+- Update SESSION.md after work
 
 ---
 
