@@ -16,7 +16,7 @@ export interface ReminderInput {
 
 // Default lead days configuration
 export const REMINDER_CONFIG = {
-  payout: [0],            // day-of reminder only (monthly summary handled separately by cron)
+  payout: [7, 0],         // lead days: 7 days before, and day-of
   maturity: [90, 30, 7],  // 3 months, 1 month, 1 week before maturity
   doc_return: 14,         // days after sent_to_client before first reminder
   doc_return_repeat: 7,   // repeat interval

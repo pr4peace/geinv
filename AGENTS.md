@@ -20,14 +20,13 @@ All agents must read:
 
 ## Core Principles
 
-- One task at a time
-- One agent edits code at a time
-- Keep changes small and reversible
+- Work is organised into **batches** — a batch is a group of related items shipped as one branch and one release
+- One batch active at a time, one agent edits code at a time
+- Keep changes small and reversible within each batch item
 - Plan before implementation
 - SESSION.md is the single source of truth for current work
-- BACKLOG.md is the source of tasks
-- Local-Only Development: All work is kept local to the active branch. Push to GitHub (and thus trigger Vercel deployment) ONLY at the end of the session after everything is verified and approved.
-- Session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) are committed and pushed at the end of every session — they must always be in sync across devices
+- BACKLOG.md is the source of batches and items
+- Session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md) are committed and pushed at the end of every session — they must always be in sync across devices
 
 ---
 
@@ -36,25 +35,24 @@ All agents must read:
 At the start of every session:
 
 1. Claude MUST read BACKLOG.md
-2. Select ONE task (prefer High Priority)
-3. Convert it into:
-   - a clear task
-   - a goal
+2. Select the next unstarted **batch** (in order: A → B → C → D)
+3. For each item in the batch, define:
+   - a clear goal
    - a step-by-step plan
-   - a todo list
-4. Propose a descriptive, semantic branch name (e.g., `feature/activity-log-auth` instead of `feature/your-task-name`).
+   - a todo entry
+4. The branch name is already defined in BACKLOG.md per batch.
 5. **Create the branch immediately** before writing SESSION.md:
    ```bash
    git checkout main
    git pull
-   git checkout -b feature/<task-name>
+   git checkout -b feature/<batch-branch>
    ```
-6. Write everything into SESSION.md with the correct branch name in the `## Branch` field.
+6. Write everything into SESSION.md with the correct branch name in `## Branch`.
 
-Then STOP and wait for implementation.
+Then STOP and wait for Gemini to implement.
 
-If the user provides a task explicitly:
-→ Ignore BACKLOG.md and use the provided task.
+If the user provides a specific task:
+→ Ignore BACKLOG.md and use the provided task, still scoped tightly.
 
 ---
 
@@ -63,19 +61,16 @@ If the user provides a task explicitly:
 ### Claude Code — Planner + Integrator (Primary Agent)
 
 Responsibilities:
-- Select task from BACKLOG.md
-- Define goal and plan
-- Break work into steps
-- Maintain system coherence
-- Refine Gemini output
-- Prepare release
+- Select next batch from BACKLOG.md
+- Define goals and plans for all items in the batch
+- Maintain system coherence across the codebase
+- Refine Gemini output when needed
 
 Rules:
 - Always start the workflow
 - Do NOT write code during planning phase
-- Keep scope tight (one task only)
+- Keep scope to the current batch only
 - Prefer simple solutions
-- Do not expand scope unnecessarily
 - Must update SESSION.md planning sections
 
 ---
@@ -83,21 +78,20 @@ Rules:
 ### Gemini CLI — Builder + Releaser
 
 Responsibilities:
-- Implement planned tasks
-- Build base-layer code
+- Implement all items in the current batch
 - Apply fixes from Codex review
-- Prepare and execute releases (merge to main, push, clean up branch)
+- Release the batch (merge to main, push, clean up branch)
 
 Rules:
 - Follow SESSION.md strictly
 - **Before writing any code, confirm you are on the branch named in `## Branch`.** Run `git branch --show-current` and switch if needed.
-- Implement ONLY the current task
-- Do NOT refactor unrelated code
+- **Before starting, post a plain-English summary of every item you will build and wait for user confirmation**
+- Implement ONLY items in the current batch — no unrelated refactor
 - Keep changes minimal and controlled
-- **Verification order after every implementation:**
+- **Verification after completing the full batch:**
   1. `npm run build` — must be clean
   2. `npm test` — all unit tests must pass
-- Update SESSION.md after work
+- Update SESSION.md after completing the batch
 
 ---
 
@@ -123,21 +117,19 @@ Rules:
 
 ## Default Workflow
 
-1. Claude → selects task and plans
-2. Gemini → implements base layer
-3. Codex → reviews changes
+1. Claude → selects next batch from BACKLOG.md, plans all items, creates branch
+2. Gemini → summarises the batch to user, waits for confirmation, then builds all items
+3. Codex → reviews the full batch diff
 4. Gemini → fixes Codex issues
 5. Repeat 3–4 until clean
-6. Gemini → prepares release (runs checks, proposes plan)
-7. User → approves
-8. Gemini → executes release (merge to main, push, delete branch, sync session files)
+6. Gemini → releases batch (build + test + merge to main + delete branch + sync session files)
+7. Mark batch as done in BACKLOG.md, start next batch
 
 ### Safety Mandates
-- **Post-Build Review:** Never deploy to production (Vercel --prod) without first running a full build (`npm run build`) and having the **Codex** agent review the final state and any build warnings/logs.
-- **Semantic Branching:** Propose descriptive, semantic branch names (e.g., `feature/activity-log-auth` instead of `feature/your-task-name`).
-- **Branch hygiene:** Every task gets its own branch cut from `main`. Claude creates the branch at planning time. Gemini verifies the branch before touching any code. Work never accumulates on a stale or misnamed branch.
-- **Merge before next task:** Before starting a new task, the completed branch must be merged into `main` and deleted. Gemini executes this via the GEMINI — EXECUTE RELEASE prompt.
-- **Session file sync:** At the end of every session, all four session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) must be committed and pushed — to whichever branch is active. This keeps both devices (MacBook Pro and Mac Mini) in sync. Never leave a session with uncommitted session files.
+- **Build gate:** Never merge to main without `npm run build` and `npm test` both passing cleanly.
+- **Batch branching:** Every batch gets one branch cut from `main`. Branch name is defined in BACKLOG.md. Claude creates it at planning time. Gemini verifies the branch before touching any code.
+- **Merge before next batch:** The completed branch must be merged and deleted before starting the next batch.
+- **Session file sync:** At the end of every session, all session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md) must be committed and pushed. Never leave a session with uncommitted session files.
 
 ---
 
