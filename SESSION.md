@@ -21,20 +21,15 @@ E2E tests run against live prod, require credentials no agent has, and block eve
 1. Delete `e2e/` directory entirely
 2. Delete `playwright.config.ts`
 3. Remove `"test:e2e": "playwright test"` from `package.json` scripts
-4. Remove `@playwright/test` and `dotenv` from `devDependencies` in `package.json` (run `npm uninstall @playwright/test dotenv --save-dev`)
+4. Remove `@playwright/test` from `devDependencies` in `package.json` (keep `dotenv` as it is needed for migration scripts)
 5. In `AGENTS.md`: remove all references to `npm run test:e2e` from the Gemini verification steps
 6. In `CLAUDE.md`: remove the E2E section that references `.env.test` and Playwright
 7. `npm run build` + `npm test` — must be clean
 8. Push: `git add -A && git commit -m "chore: remove E2E tests — rely on vitest unit tests only" && git push -u origin feature/wave-2-remove-e2e`
 
 ### Release
-```bash
-git checkout main && git pull
-git merge --no-ff feature/wave-2-remove-e2e -m "chore: remove E2E tests"
-git push origin main
-git branch -d feature/wave-2-remove-e2e
-git push origin --delete feature/wave-2-remove-e2e
-```
+1. Merge feature/wave-2-remove-e2e → main
+2. Sync session files
 
 ---
 
@@ -156,7 +151,7 @@ Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redi
 
 ## Todos
 - [x] Task 0: delete e2e/ + playwright.config.ts + remove from package.json + update AGENTS.md + CLAUDE.md
-- [x] Task 0: build + test + push + release to main
+- [ ] Task 0: build + test + push + release to main
 - [ ] Task D: fix 3 calendar data bugs in calendar/page.tsx
 - [ ] Task D: rebuild CalendarGrid with react-big-calendar (month/week/agenda)
 - [ ] Task D: build + test + push + release to main
@@ -174,6 +169,7 @@ Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redi
   - Deleted `e2e/` directory and `playwright.config.ts`.
   - Removed `test:e2e` script and `@playwright/test` from `package.json`.
   - Updated `AGENTS.md` and `CLAUDE.md` to remove references to E2E testing.
+  - Removed accidentally committed screenshot.
   - Verified clean build and unit tests.
 
 ## Files Changed
@@ -196,4 +192,4 @@ Google Cloud Console OAuth 2.0 credentials created and enabled in Supabase. Redi
 -
 
 ## Next Agent Action
-- Gemini: Task 0 is complete. Proceed to release Task 0 to main, then start Task D.
+- Gemini: Task 0 code cleanup is complete. Proceed to release Task 0 to main, then start Task D.

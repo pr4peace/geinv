@@ -108,7 +108,6 @@ Responsibilities:
 - Find bugs and risks
 - Identify missing tests and edge cases
 - Suggest simpler alternatives
-- **Verify E2E results:** Check SESSION.md Work Completed for Playwright output. If E2E was not run or any test failed, flag it as a **blocking** issue regardless of other findings.
 
 Rules:
 - Do NOT edit code
