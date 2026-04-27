@@ -130,6 +130,8 @@ Rules:
 - **Batch branching:** Every batch gets one branch cut from `main`. Branch name is defined in BACKLOG.md. Claude creates it at planning time. Gemini verifies the branch before touching any code.
 - **Merge before next batch:** The completed branch must be merged and deleted before starting the next batch.
 - **Session file sync:** At the end of every session, all session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md) must be committed and pushed. Never leave a session with uncommitted session files.
+- **Branch hygiene:** Only two long-lived branches exist at any time: `main` and the current active batch branch. All other branches must be deleted from remote immediately after merging. Never leave stale feature branches on the remote.
+- **Vercel deployment:** After every push to `main`, also run `git push origin main:feature/investment-tracker` to trigger the Vercel production deployment.
 
 ---
 
