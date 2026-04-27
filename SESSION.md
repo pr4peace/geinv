@@ -1,98 +1,119 @@
 # SESSION
 
 ## Branch
-- main
+- feature/doc-url-fix  ← start here
+- feature/investor-delete-safety  ← do second, after #1 is pushed
 
 ## Current Task
-- Add a "Create manually" path to the New Agreement flow so agreements can be created via form entry without uploading a PDF.
+- Two sequential fixes for Gemini. Do them in order — finish and push #1 before switching to #2.
 
-## Goal
-- Users can create a new agreement by filling in a form directly (no PDF upload). The payout schedule is computed live from principal, ROI%, frequency, and dates using the existing `calculatePayoutSchedule` utility. On save, the agreement and payout schedule rows are written to the database using the existing `POST /api/agreements` endpoint. Offer letter generation is out of scope for this session.
+---
 
-## Plan
+## TASK 1 — Document URL expiry (branch: feature/doc-url-fix)
 
-### Step 1 — Entry point: two paths on /agreements/new
-**File:** `src/app/(app)/agreements/new/page.tsx`
-- Replace the current single-step (upload only) page with a choice screen: two cards — "Upload PDF" and "Create manually"
-- "Upload PDF" → existing flow (UploadStep → extract → ExtractionReview)
-- "Create manually" → renders the new `ManualAgreementForm` component directly
+### Goal
+Uploaded PDFs are saved with a 24-hour signed URL as `document_url`. After 24 hours every document link breaks. Fix: pass the storage `temp_path` back from the extract route, then on agreement save move the file to a permanent path and store a 1-year signed URL instead.
 
-### Step 2 — Create ManualAgreementForm component
-**File:** `src/components/agreements/ManualAgreementForm.tsx`
-- `'use client'` component
-- Same `FormState` shape as `ExtractionReview` — all fields start empty (or sensible defaults: `reference_id` auto-generated, `payout_frequency: 'quarterly'`, `interest_type: 'simple'`)
-- Same field sections as ExtractionReview: investor details, financial terms, payment info, salesperson, nominees
-- No PDF preview pane, no extraction warnings
-- Salesperson dropdown loaded via `GET /api/team` (same fetch as ExtractionReview)
+### Plan
 
-### Step 3 — Live payout schedule preview
-- Import `calculatePayoutSchedule` from `@/lib/payout-calculator`
-- Use `useMemo` over `[principal, roi, frequency, interestType, startDate, maturityDate]` to compute the schedule whenever those fields change
-- Render the result using the existing `PayoutScheduleTable` component
-- Show the preview section only when all required numeric/date fields are filled
+**Step 1 — `src/app/api/extract/route.ts`**
+- Add `temp_path` to the JSON response alongside `file_url`
+- Response becomes: `{ extracted, file_url, temp_path }`
+- No other changes — `file_url` (24-hour URL) stays for in-browser preview only
 
-### Step 4 — Save
-- On submit: same validation as ExtractionReview (required fields, numeric checks)
-- POST to `/api/agreements` with `document_url: null` and `payout_schedule` from the live calculator
-- On success: `router.push('/agreements/' + created.id)`
-- Duplicate detection: same 409 handling as ExtractionReview
+**Step 2 — `src/app/(app)/agreements/new/page.tsx`**
+- Extend `ExtractResult` interface: add `temp_path: string`
+- Pass `tempPath={extractResult.temp_path}` to `ExtractionReview`
 
-### Step 5 — Verify
-- `npm run build` — no errors
+**Step 3 — `src/components/agreements/ExtractionReview.tsx`**
+- Add `tempPath: string` to props interface
+- In the save body, replace `document_url: fileUrl` with `temp_path: tempPath` (remove `document_url` from the client — the server will set it after moving the file)
+
+**Step 4 — `src/app/api/agreements/route.ts`**
+- Receive `temp_path` from the request body
+- After inserting the agreement, if `temp_path` is present:
+  - Derive extension from the filename in `temp_path`
+  - Permanent path: `${reference_id}/original.${ext}`
+  - Move: `supabase.storage.from('agreements').move(temp_path, permanentPath)`
+  - Generate 1-year signed URL: `createSignedUrl(permanentPath, 60 * 60 * 24 * 365)`
+  - Update the agreement: `supabase.from('agreements').update({ document_url: permanentUrl }).eq('id', agreement.id)`
+  - If move fails: log the error but do not fail the request — agreement data is more important than the file move
+
+**Step 5 — Verify**
+- `npm run build` — clean
 - `npm test` — no regressions
+- Push: `git add -A && git commit -m "fix: move uploaded docs to permanent path with 1-year URL" && git push -u origin feature/doc-url-fix`
+
+---
+
+## TASK 2 — Investor delete safety (branch: feature/investor-delete-safety)
+
+After Task 1 is pushed, switch branches:
+```bash
+git checkout feature/investor-delete-safety
+git pull
+```
+
+### Goal
+No DELETE endpoint exists for investors. Add one that blocks if the investor still has non-deleted agreements, and add a delete button to the investor detail page.
+
+### Plan
+
+**Step 1 — `src/app/api/investors/[id]/route.ts`**
+- Add `export async function DELETE`
+- Query `agreements` where `investor_id = id` AND `deleted_at IS NULL`
+- If any found: return 409 `{ error: 'Investor has active agreements', agreements: [{ id, reference_id, status }] }`
+- If none: `supabase.from('investors').delete().eq('id', id)`
+- Return 200 `{ success: true }`
+
+**Step 2 — `src/components/investors/DeleteInvestorButton.tsx`** (new file)
+- `'use client'` component
+- Props: `investorId: string`, `investorName: string`, `agreementCount: number`
+- If `agreementCount > 0`: disabled button, tooltip "Cannot delete — investor has linked agreements"
+- If `agreementCount === 0`:
+  - "Delete investor" button (red/destructive style)
+  - On click: show inline confirm "Permanently delete {name}? This cannot be undone."
+  - On confirm: `DELETE /api/investors/{id}`
+  - On success: `router.push('/investors')`
+  - On 409: show the blocking agreement list (server check takes precedence)
+  - On error: show red message
+
+**Step 3 — `src/app/(app)/investors/[id]/page.tsx`**
+- Import `DeleteInvestorButton`
+- Pass `investorId={investor.id}`, `investorName={investor.name}`, `agreementCount={agreements?.length ?? 0}`
+- Place in the page header next to the back link
+
+**Step 4 — Verify**
+- `npm run build` — clean
+- `npm test` — no regressions
+- Push: `git add -A && git commit -m "feat: add safe investor deletion with agreement guard" && git push`
+
+---
 
 ## Todos
-- [x] Add two-path choice to `/agreements/new/page.tsx` ("Upload PDF" / "Create manually")
-- [x] Create `ManualAgreementForm.tsx` with all form fields and empty initial state
-- [x] Wire live payout calculator using `calculatePayoutSchedule` + `useMemo`
-- [x] Render live schedule with `PayoutScheduleTable`
-- [x] Save: POST to `/api/agreements` with calculated `payout_schedule`, handle 409, redirect on success
-- [x] `npm run build` — clean
-- [x] `npm test` — no regressions
+- [ ] Task 1: return `temp_path` from extract route
+- [ ] Task 1: pass `temp_path` through `new/page.tsx` → `ExtractionReview`
+- [ ] Task 1: move file + generate 1-year URL in `POST /api/agreements`
+- [ ] Task 1: `npm run build` + `npm test` + push
+- [ ] Task 2: `DELETE /api/investors/[id]` with agreement guard
+- [ ] Task 2: `DeleteInvestorButton.tsx` with confirm dialog
+- [ ] Task 2: Add button to investor detail page
+- [ ] Task 2: `npm run build` + `npm test` + push
 
 ## Work Completed
-- Added a "Choice" screen to `/agreements/new` with two paths: "Upload PDF / DOCX" and "Create Manually".
-- Created `ManualAgreementForm.tsx` component providing a full form for manual agreement entry.
-- Integrated `calculatePayoutSchedule` in `ManualAgreementForm` using `useMemo` for live payout schedule preview.
-- Reused `PayoutScheduleTable` to display the computed schedule.
-- Implemented `handleSave` in `ManualAgreementForm` to POST to `/api/agreements` with calculated schedule.
-- Handled duplicate detection (409) in the manual flow with confirmation bypass.
-- Added `onBack` support to `UploadStep` for returning to the choice screen.
-- **Fixed Codex blocking issues:**
-  - Restricted Payout Frequency to allowed DB values (`quarterly`, `annual`, `cumulative`).
-  - Forced Lock-in Years to be an integer in both frontend and backend.
-  - Added frontend and backend validation to ensure `maturity_date > investment_start_date`.
-  - Added frontend and backend validation to ensure a payout schedule is actually generated/provided before saving non-draft agreements.
-  - Added server-side validation for `payout_frequency` and `lock_in_years` in `POST /api/agreements`.
-  - Committed missing regression coverage in `src/__tests__/payout-calculator.test.ts`.
-  - Added new regression coverage for API validation in `src/__tests__/agreements-api.test.ts` (both rejection and positive paths).
-- Fixed vitest config to exclude `e2e` directory.
-- Fixed lint errors in `ManualAgreementForm.tsx` and `agreements-api.test.ts`.
-- Added `test-results/` to `.gitignore` and removed artifacts from git history.
-- Verified build with `npm run build` (success).
-- Verified unit tests with `npm test` (success).
+-
 
 ## Files Changed
-- `src/app/(app)/agreements/new/page.tsx`: Added choice step and routing.
-- `src/components/agreements/ManualAgreementForm.tsx`: New component for manual entry with validation.
-- `src/components/agreements/UploadStep.tsx`: Added back button.
-- `src/app/api/agreements/route.ts`: Added backend validation for manual/digital agreements.
-- `src/__tests__/payout-calculator.test.ts`: New unit tests for payout calculation.
-- `src/__tests__/agreements-api.test.ts`: New unit tests for API validation.
-- `vitest.config.ts`: Excluded `e2e` directory from unit tests.
-- `.gitignore`: Added `test-results/`.
+-
 
 ## Decisions
-- Used `useMemo` for live payout schedule to ensure it updates whenever financial terms or dates change.
-- Explicitly mapped payout rows in `ManualAgreementForm` to remove the `status` field (which is set to 'paid' by the utility but should be 'pending' for new agreements), allowing the database default to take over.
-- Simplified `ManualAgreementForm` by removing PDF preview and extraction-specific logic.
-- **Local-Only Rule:** All work remains local. No pushing to GitHub or Vercel until final verification and explicit approval at the end of the session.
-- **Rejection over Mutation:** Changed from rounding fractional `lock_in_years` to rejecting them in both UI and API to avoid silent mutation of financial terms.
+- `file_url` (24-hour URL) stays for in-browser preview — only `document_url` stored in DB changes
+- File move failure is non-fatal — agreement data must not be rolled back over a storage failure
+- Investor hard-delete (not soft) — no audit trail requirement; agreements carry the financial history
+- Block on ANY non-deleted agreement (active, matured, cancelled) — not just active ones
 
 ## Codex Review Notes
-- **Resolved** Lint errors and positive-path test coverage added.
-- **Resolved** `test-results/` artifacts removed and ignored.
-- **Note on E2E** Playwright tests are failing due to missing `E2E_USER_EMAIL` in the CLI environment. This is expected as per `CLAUDE.md` and does not block the release of the logic changes which are verified by unit tests and manual local verification.
+-
 
 ## Next Agent Action
-- Awaiting release approval.
+- Gemini: Do Task 1 on `feature/doc-url-fix` first. Push when done. Then switch to `feature/investor-delete-safety` and do Task 2. Push when done. Update this SESSION.md Work Completed after both.
