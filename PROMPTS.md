@@ -1,78 +1,59 @@
 # PROMPTS.md
 
+Copy-paste prompts for each agent. Use in order: Claude plans → Gemini builds → Codex reviews → Gemini fixes → Gemini releases.
+
 ---
 
-## CLAUDE — START SESSION (BACKLOG → PLAN)
+## CLAUDE — START SESSION
 
-First — sync before anything else:
+First — sync:
 ```bash
 git pull
 ```
 
 Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
 
-You are the primary planner.
+You are the primary planner. Pick ONE high-impact task from BACKLOG.md (prefer High Priority), explain why, then:
+- Define goal
+- Create step-by-step plan
+- Create todos
+- Propose branch name and create it
 
-First:
-- scan BACKLOG.md
-- pick ONE high-impact task (prefer High Priority)
-- briefly explain why
+Update SESSION.md with Current Task, Goal, Plan, Todos, Next Agent Action → Gemini.
 
-Then:
-- define goal
-- create a simple step-by-step plan
-- create todos
-- propose branch name
-
-Update SESSION.md:
-- Current Task
-- Goal
-- Plan
-- Todos
-- Next Agent Action → Gemini
-
-Do NOT write code.
-Keep scope tight (one task only).
+Do NOT write code. Keep scope tight (one task only).
 
 ---
 
-## CLAUDE — DIRECT TASK (OVERRIDE BACKLOG)
+## CLAUDE — DIRECT TASK
 
-First — sync before anything else:
+First — sync:
 ```bash
 git pull
 ```
 
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
+Read CLAUDE.md, AGENTS.md, and SESSION.md. Ignore BACKLOG.md.
 
-You are the primary planner.
+Task: [insert task]
 
-Ignore BACKLOG.md.
+Define goal, step-by-step plan, todos, branch name. Update SESSION.md. Do NOT write code.
 
-Task:
-[insert task]
+---
 
-Do:
-- define goal
-- create a simple step-by-step plan
-- create todos
-- propose branch name
+## CLAUDE — RESUME SESSION
 
-Update SESSION.md:
-- Current Task
-- Goal
-- Plan
-- Todos
-- Next Agent Action → Gemini
+First — sync:
+```bash
+git pull
+```
 
-Do NOT write code.
-Keep scope tight.
+Read CLAUDE.md, AGENTS.md, and SESSION.md. Review current state. Propose next clean step or select from BACKLOG.md. Update Plan and Todos in SESSION.md. Then STOP and wait.
 
 ---
 
 ## GEMINI — BUILD
 
-First — sync before anything else:
+First — sync:
 ```bash
 git pull
 ```
@@ -80,289 +61,111 @@ git pull
 Read CLAUDE.md, AGENTS.md, and SESSION.md.
 
 **Before writing any code — post a summary to the user:**
-List exactly what you are about to do:
-- Which task from SESSION.md you are working on
+- Which task you are working on
 - Which files you will create or modify
 - What each change does in one line
 - Any migrations or manual steps the user needs to do
 
 Wait for the user to confirm before proceeding.
 
-Follow the plan and todos.
-
 Rules:
-- implement only current task
-- keep changes small
-- no unrelated refactor
-- preserve architecture
+- Implement only the current task
+- Keep changes small, no unrelated refactor
+- Preserve architecture
 
-After work, update SESSION.md:
-- Work Completed
-- Files Changed
-- Decisions
-- Next Agent Action → Codex
-
-Then — push before closing:
+After work, update SESSION.md (Work Completed, Files Changed, Decisions, Next Agent Action → Codex). Then push:
 ```bash
 git add -A && git commit -m "wip: gemini build progress" && git push
 ```
 
 ---
 
-## CODEX — REVIEW
-
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
-
-Review the current git diff.
-
-Find:
-- bugs
-- unsafe assumptions
-- missing tests
-- edge cases
-- type issues
-- production risks
-
-Update SESSION.md:
-- ONLY "## Codex Review Notes"
-- Replace fully
-- Max 5–7 bullets
-
-Do NOT edit code.
-
----
-
 ## GEMINI — FIX CODEX ISSUES
 
-First — sync before anything else:
+First — sync:
 ```bash
 git pull
 ```
 
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
+Read CLAUDE.md, AGENTS.md, and SESSION.md. Fix ONLY the issues listed in "Codex Review Notes". Minimal changes, no refactor, preserve structure.
 
-Fix ONLY issues in "Codex Review Notes".
-
-Rules:
-- minimal changes
-- no refactor
-- preserve structure
-
-After fixing:
-- update Work Completed
-- update Files Changed
-- Next Agent Action → Codex
-
-Then — push before closing:
+Update SESSION.md (Work Completed, Files Changed, Next Agent Action → Codex). Then push:
 ```bash
 git add -A && git commit -m "fix: apply codex review fixes" && git push
 ```
 
 ---
 
+## CODEX — REVIEW
+
+Read CLAUDE.md, AGENTS.md, and SESSION.md. Review the current git diff.
+
+Find: bugs, unsafe assumptions, missing tests, edge cases, type issues, production risks.
+
+Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 5 bullets. Mark each as **blocking** or **minor**. Do NOT edit code.
+
+---
+
 ## GEMINI — RELEASE PREPARATION
 
-First — sync before anything else:
+First — sync:
 ```bash
 git pull
 ```
 
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
-
-You are preparing this feature branch for release.
-
-Run all checks:
+Read CLAUDE.md, AGENTS.md, and SESSION.md. Run all checks:
 ```bash
 npm run lint
 npm run build
 npm test
 ```
 
-Then:
-- Confirm all checks pass (stop and report if any fail)
-- Summarize what changed (files, behaviour, any new env vars)
-- Check if any new Supabase migration files exist in `supabase/migrations/`
-- Verify SESSION.md Codex Review Notes has no outstanding **blocking** issues
+Confirm all pass. Summarize what changed. Check for new Supabase migrations in `supabase/migrations/`. Verify no blocking Codex issues.
 
-Propose the release plan:
+Propose release plan:
 1. Merge `feature/<branch>` → `main` (no-ff)
-2. Apply Supabase migration in SQL Editor (if needed)
-3. Vercel auto-deploys on push to main — confirm no manual step needed
+2. Apply Supabase migration in SQL Editor (if needed — list the file)
+3. Vercel auto-deploys on push to main
 
-Do NOT execute.
-Update SESSION.md → Next Agent Action: "Awaiting release approval."
-Then push SESSION.md.
+Do NOT execute. Update SESSION.md → Next Agent Action: "Awaiting release approval." Push SESSION.md.
 
 ---
 
 ## GEMINI — EXECUTE RELEASE
 
-Read SESSION.md to confirm the branch name.
-
-Run:
+Read SESSION.md for the branch name. Run:
 ```bash
-git checkout main
-git pull
+git checkout main && git pull
 git merge --no-ff feature/<branch> -m "feat: merge feature/<branch> into main"
 git push origin main
 git branch -d feature/<branch>
 git push origin --delete feature/<branch>
 ```
 
-Then:
-- Update SESSION.md → Branch: `main`
-- Commit and push session files:
+Then sync session files:
 ```bash
 git add AGENTS.md SESSION.md BACKLOG.md PROMPTS.md CLAUDE.md
 git commit -m "chore: post-release session sync"
 git push
 ```
-- Confirm Vercel deployment triggered (check that push succeeded)
-- Report: branch merged, remote branch deleted, session files synced
 
-If a Supabase migration is needed, list the file path and instruct the user to run it manually in the Supabase SQL Editor before confirming deploy success.
-
----
-
-## CLAUDE — RELEASE PREPARATION
-
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
-
-Prepare this for release.
-
-Do:
-- run lint, type-check, tests, build
-- summarize what changed
-- check if Supabase migration exists
-
-Then propose:
-1. GitHub push
-2. Supabase (if needed)
-3. Vercel deploy
-
-Do NOT execute.
-Wait for approval.
-
----
-
-## APPROVAL PROMPT
-
-Proceed with release.
-
----
-
-## GEMINI — BROAD FIX (OPTIONAL)
-
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
-
-Apply fixes across relevant files based on Codex review.
-
-Rules:
-- only apply listed fixes
-- keep changes minimal and consistent
-- do not change architecture
-
-Update SESSION.md after work.
-
----
-
-## GEMINI — QUICK GAP CHECK
-
-Scan the repository and current task.
-
-What am I missing?
-List gaps, risks, and edge cases.
-
-Do NOT edit code.
-
----
-
-## CODEX — STRICT REVIEW (ALT)
-
-Review the current git diff.
-
-Be strict.
-
-Find:
-- bugs
-- edge cases
-- production risks
-- type issues
-- missing validations
-
-Give concise bullet points only.
-
-Do NOT edit files.
-
----
-
-## CLAUDE — SIMPLIFY
-
-Review current implementation.
-
-Can this be simpler?
-
-Reduce complexity.
-Avoid over-engineering.
-
----
-
-## ANY AGENT — PRE-CLOSE HANDOFF
-
-Prepare for session handoff.
-
-Do:
-- Update SESSION.md with "Work Completed", "Files Changed", and "Next Steps".
-- Ensure all feature changes are committed and pushed to the current branch.
-- **Commit and push session files** (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md) even if only SESSION.md changed — this keeps both devices (MacBook Pro and Mac Mini) in sync.
-- Check if the current feature branch meets the Stability Gate in AGENTS.md. If yes, propose merging to `main`.
-- Save core context to project memory.
-- Provide a summary and a "Resume Prompt" for the next session.
+Report: branch merged, remote deleted, Vercel deploy triggered. If a migration is needed, list the file and instruct the user to run it in Supabase SQL Editor.
 
 ---
 
 ## ANY AGENT — CONTINUE SESSION (CROSS-DEVICE)
 
-Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
+```bash
+git pull
+```
 
-Resume the session based on the "Handoff State" in SESSION.md.
-
-Do:
-- Run `git pull` first to ensure you have the latest session files.
-- Verify current branch matches `## Branch` in SESSION.md. If not, run `git checkout <branch>`.
-- Check "Next Steps" and "Next Agent Action" in SESSION.md.
-- Summarize the current state in 1-2 sentences.
-
-Then:
-- Proceed with the Next Agent Action.
+Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md. Verify current branch matches `## Branch` in SESSION.md (switch if not). Check Next Agent Action. Summarize state in 1–2 sentences. Proceed.
 
 ---
 
-## CLAUDE — RESUME SESSION (PLANNER)
+## ANY AGENT — PRE-CLOSE HANDOFF
 
-Read CLAUDE.md, AGENTS.md, and SESSION.md.
-
-Resume as primary planner.
-
-Do:
-- Review current state and "Handoff State".
-- Propose the next clean step or select a task from BACKLOG.md.
-- Update Plan and Todos in SESSION.md.
-
-Then STOP and wait for implementation.
-
----
-
-## IDEA CAPTURE
-
-This sounds like a new task.
-
-Do you want me to add it to BACKLOG.md?
-
----
-
-## MANUAL BACKLOG ADD (TERMINAL)
-
-echo "- [ ] new task" >> BACKLOG.md
-
----
+- Update SESSION.md: Work Completed, Files Changed, Next Steps
+- Commit and push all changes including session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md)
+- Check if Stability Gate in AGENTS.md is met — if yes, propose merging to `main`
+- Provide a one-paragraph summary and a copy-paste Resume Prompt for the next session
