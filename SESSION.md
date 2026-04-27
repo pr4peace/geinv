@@ -1,49 +1,33 @@
 # SESSION
 
 ## Branch
-- main
+- feature/batch-c1-patch
 
 ## Phase
-- releasing
+- building
 
 ## Active Batch
-- Batch C — Agreement Data + Quick Polish (`feature/batch-c-agreement-data`)
+- Batch C.1 — Extraction Fixes + Post-V1 Patch (`feature/batch-c1-patch`)
 
 ## Items
-- [x] Migrations: `015_multiple_payments.sql` + `016_tds_only_payout.sql`
-- [x] Multiple payment entries (`payments jsonb[]`)
-- [x] Cumulative TDS-only row (`is_tds_only` + `tds_filed`)
-- [x] Splash screen
-- [x] Version number in sidebar (`v0.1.0`)
-- [x] Grey out Quarterly Review + Reports nav
-- [x] Collapsible sidebar (localStorage persistence + tooltips)
-- [x] Global search bar (agreements + investors)
-- [x] Sortable investors table
-- [x] Search sanitisation + AbortController stale-response fix
-- [x] mark-tds-filed returns 404 when no row matched
-- [x] Investor list scoped for salesperson role
-- [x] Investor detail page scoped for salesperson
-- [x] Investor CSV download scoped for salesperson
-- [x] Tests for both ^ above
-- [x] Build + test clean, release to main
+- [ ] `src/lib/claude.ts`: add `monthly`/`biannual` to frequency type + prompt rules
+- [ ] Fix `investment_start_date` prompt
+- [ ] Add `maxOutputTokens: 8192`
+- [ ] Better truncation error handling
+- [ ] Add frequency validation
+- [ ] Build + test clean, release to main
 
 ## Work Completed
-- Batch C features built, Codex-reviewed, and blocking fixes applied.
-- All tests pass, build is clean.
-- Merged to main.
+- Branch created from main (post-V1).
 
 ## Files Changed
-- Multiple files in src/app, src/components, src/lib, src/__tests__, and supabase/migrations.
+- TBD
 
 ## Codex Review Notes
-- All blocking issues from Batch C review resolved.
+- TBD
 
 ## Decisions
-- `payments jsonb[]` entries: `{ date, mode, bank, amount }`
-- `is_tds_only` rows injected at API level for cumulative agreements
-- Client-side sort for investors table (small dataset)
-- RBAC via `x-user-role` / `x-user-team-id` headers set by middleware
-- Extracted investor detail access check to helper in `lib/investors-page.ts` for testability.
+- No migrations, no new features — patch only.
 
 ## Next Agent Action
-- Batch C complete. Claude to select Batch D from BACKLOG.md.
+- Gemini: implement all items in `src/lib/claude.ts`, then run `npm run build && npm test`.
