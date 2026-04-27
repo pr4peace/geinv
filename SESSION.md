@@ -1,76 +1,70 @@
 # SESSION
 
 ## Branch
-- feature/sidebar-collapse
+- feature/digital-agreement-form
 
 ## Current Task
-- Add collapse/expand toggle to the sidebar.
+- Add a "Create manually" path to the New Agreement flow so agreements can be created via form entry without uploading a PDF.
 
 ## Goal
-- A toggle button lets users collapse the sidebar to a narrow icon-only rail (~56px) and expand it back to full width (240px). State persists in localStorage so it survives page navigation. No API changes, no DB changes, no new dependencies.
+- Users can create a new agreement by filling in a form directly (no PDF upload). The payout schedule is computed live from principal, ROI%, frequency, and dates using the existing `calculatePayoutSchedule` utility. On save, the agreement and payout schedule rows are written to the database using the existing `POST /api/agreements` endpoint. Offer letter generation is out of scope for this session.
 
 ## Plan
 
-### Step 1 — Add collapsed state
-**File:** `src/app/(app)/layout.tsx`
-- Add `const [collapsed, setCollapsed] = useState(false)`
-- On mount, read from `localStorage.getItem('sidebar-collapsed')` to restore the last state
-- On toggle, write back to localStorage
+### Step 1 — Entry point: two paths on /agreements/new
+**File:** `src/app/(app)/agreements/new/page.tsx`
+- Replace the current single-step (upload only) page with a choice screen: two cards — "Upload PDF" and "Create manually"
+- "Upload PDF" → existing flow (UploadStep → extract → ExtractionReview)
+- "Create manually" → renders the new `ManualAgreementForm` component directly
 
-### Step 2 — Animate the sidebar width
-- When `collapsed`: sidebar width = `w-14` (56px), otherwise `w-60` (240px)
-- Add `transition-all duration-200` for smooth animation
+### Step 2 — Create ManualAgreementForm component
+**File:** `src/components/agreements/ManualAgreementForm.tsx`
+- `'use client'` component
+- Same `FormState` shape as `ExtractionReview` — all fields start empty (or sensible defaults: `reference_id` auto-generated, `payout_frequency: 'quarterly'`, `interest_type: 'simple'`)
+- Same field sections as ExtractionReview: investor details, financial terms, payment info, salesperson, nominees
+- No PDF preview pane, no extraction warnings
+- Salesperson dropdown loaded via `GET /api/team` (same fetch as ExtractionReview)
 
-### Step 3 — Hide/show text and logo label
-- When collapsed: hide label text ("Good Earth" / "Investments"), nav labels, user name/role, sign out button text, search box
-- When collapsed: show only icons — logo icon, nav icons, user avatar icon
-- Use `overflow-hidden` + conditional rendering or `opacity-0 w-0` to suppress text
+### Step 3 — Live payout schedule preview
+- Import `calculatePayoutSchedule` from `@/lib/payout-calculator`
+- Use `useMemo` over `[principal, roi, frequency, interestType, startDate, maturityDate]` to compute the schedule whenever those fields change
+- Render the result using the existing `PayoutScheduleTable` component
+- Show the preview section only when all required numeric/date fields are filled
 
-### Step 4 — Add toggle button
-- Place a small chevron button at the top-right of the sidebar header
-- `ChevronLeft` when expanded (click to collapse), `ChevronRight` when collapsed (click to expand)
-- Import `ChevronLeft`, `ChevronRight` from lucide-react
+### Step 4 — Save
+- On submit: same validation as ExtractionReview (required fields, numeric checks)
+- POST to `/api/agreements` with `document_url: null` and `payout_schedule` from the live calculator
+- On success: `router.push('/agreements/' + created.id)`
+- Duplicate detection: same 409 handling as ExtractionReview
 
-### Step 5 — Tooltip on collapsed nav items
-- When collapsed, wrap each `NavLink` in the existing `Tooltip` component (`src/components/ui/Tooltip.tsx`) showing the label on hover
-
-### Step 6 — Verify
+### Step 5 — Verify
 - `npm run build` — no errors
 - `npm test` — no regressions
 
 ## Todos
-- [x] Add `collapsed` state with localStorage persistence
-- [x] Toggle sidebar width between `w-14` and `w-60` with transition
-- [x] Hide text/search/user details when collapsed, show icons only
-- [x] Add `ChevronLeft`/`ChevronRight` toggle button in the header
-- [x] Wrap collapsed nav items with `Tooltip` for label on hover
-- [x] `npm run build` — clean
-- [x] `npm test` — no regressions
+- [ ] Add two-path choice to `/agreements/new/page.tsx` ("Upload PDF" / "Create manually")
+- [ ] Create `ManualAgreementForm.tsx` with all form fields and empty initial state
+- [ ] Wire live payout calculator using `calculatePayoutSchedule` + `useMemo`
+- [ ] Render live schedule with `PayoutScheduleTable`
+- [ ] Save: POST to `/api/agreements` with calculated `payout_schedule`, handle 409, redirect on success
+- [ ] `npm run build` — clean
+- [ ] `npm test` — no regressions
 
 ## Work Completed
-- Implemented collapsible sidebar in `src/app/(app)/layout.tsx`.
-- Sidebar toggles between 240px (`w-60`) and 56px (`w-14`).
-- Collapse state persists in `localStorage` as `sidebar-collapsed`.
-- Nav items show icons only and display labels via `Tooltip` when collapsed.
-- Global Search, user name/role, sign out text, and footer copyright are hidden in collapsed mode.
-- Added a toggle button with `ChevronLeft`/`ChevronRight` icons in the sidebar header.
-- Verified build and tests pass.
+-
 
 ## Files Changed
-- `src/app/(app)/layout.tsx`
+-
 
 ## Decisions
-- State persisted in localStorage — survives page nav and hard refresh
-- Collapsed width: `w-14` (56px) — enough for icons only
-- Tooltip component already exists at `src/components/ui/Tooltip.tsx` — reuse it, do not create a new one
-- Search box hidden entirely when collapsed (too narrow to be useful)
-- Tailwind `transition-all duration-200` is sufficient — no animation library needed
+- Offer letter generation is deferred — it requires template design and PDF rendering, a separate session
+- `document_url` is `null` for manually-created agreements — the API already supports this
+- Live payout schedule uses `useMemo` not `useEffect` — no async, pure calculation, no extra state
+- Reuse `PayoutScheduleTable` and `calculatePayoutSchedule` — no new calculation logic needed
+- Two-path entry replaces the old single upload page — cleaner than hiding/showing within the same component
 
 ## Codex Review Notes
-- No **blocking** issues found in the current diff. The collapse state is client-only, persisted safely in `localStorage`, and the sidebar still preserves navigation and toggle access in both states.
-- **Minor:** there is no automated coverage for the new collapse behavior in `src/app/(app)/layout.tsx`. The persisted state restore, toggle interaction, and collapsed tooltip path are currently untested by unit or E2E tests.
-- **Minor:** the persisted `localStorage` state is restored in `useEffect`, so users who previously collapsed the sidebar will still get an initial expanded render before it snaps closed after hydration. That is a visible UX flash on reload, not a functional bug.
-- **Minor:** collapsed nav items are wrapped in `Tooltip`, whose container is `inline-block`. That reduces the clickable area to the icon-sized content rather than the full rail width, which is acceptable but a small usability regression in the collapsed state.
+-
 
 ## Next Agent Action
-- Codex: Review the sidebar collapse implementation.
+- Gemini: Implement the plan in SESSION.md. Confirm you are on branch `feature/digital-agreement-form` before writing any code. Verify with `npm run build` and `npm test` after implementation.
