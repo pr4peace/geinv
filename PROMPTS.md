@@ -1,54 +1,8 @@
+> Claude Code does not need prompts here — standing instructions live in CLAUDE.md.
+
 # PROMPTS.md
 
 Copy-paste prompts for each agent. Workflow: Claude plans batch → Gemini builds all items in batch → Codex reviews → Gemini fixes → Gemini releases batch.
-
----
-
-## CLAUDE — START SESSION
-
-First — sync:
-```bash
-git pull
-```
-
-Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md.
-
-You are the primary planner. Pick the next unstarted **batch** from BACKLOG.md, explain why, then:
-- List all items in the batch with their goals
-- Define the branch name (already in BACKLOG.md)
-- Write step-by-step plan for each item
-- Create todos covering all items in the batch
-- Create the branch
-
-Update SESSION.md: Branch, Current Task, Plan (per item), Todos, Next Agent Action → Gemini.
-
-Do NOT write code.
-
----
-
-## CLAUDE — DIRECT TASK
-
-First — sync:
-```bash
-git pull
-```
-
-Read CLAUDE.md, AGENTS.md, and SESSION.md. Ignore BACKLOG.md.
-
-Task: [insert task]
-
-Define goal, step-by-step plan, todos, branch name. Update SESSION.md. Do NOT write code.
-
----
-
-## CLAUDE — RESUME SESSION
-
-First — sync:
-```bash
-git pull
-```
-
-Read CLAUDE.md, AGENTS.md, SESSION.md, and BACKLOG.md. Review current state. Identify which batch is active and what items remain. Update Plan and Todos in SESSION.md. Then STOP and wait.
 
 ---
 
