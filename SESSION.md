@@ -1,13 +1,13 @@
 # SESSION
 
 ## Branch
-- feature/wave-2-calendar
+- main
 
 ## Current Task
-- Batch B — Items 3 & 4: Fix payout reminder lead days + add weekly Monday cron
+- Batch B complete. Next: Batch A — Google login + RBAC.
 
 ## Goal
-- Items 1 & 2 are complete. Ship the remaining two items to finish Batch B and release to main.
+- Batch B (Calendar & Reminders) is complete and released. Next is Batch A.
 
 ---
 
@@ -167,12 +167,12 @@ describe('generatePayoutReminders', () => {
 
 ## Todos
 - [x] Task 0: E2E removal code complete
-- [ ] Task 0: release `feature/wave-2-remove-e2e` → main (if not done yet)
+- [x] Task 0: release `feature/wave-2-remove-e2e` → main (if not done yet)
 - [x] Batch B Item 1: fix 3 calendar data bugs
 - [x] Batch B Item 2: rebuild CalendarGrid with react-big-calendar
-- [ ] Batch B Item 3: add 7-day advance payout reminder + tests
-- [ ] Batch B Item 4: add GET handler to summary route + Monday cron to vercel.json
-- [ ] Batch B: build + test clean, release to main
+- [x] Batch B Item 3: add 7-day advance payout reminder + tests
+- [x] Batch B Item 4: add GET handler to summary route + Monday cron to vercel.json
+- [x] Batch B: build + test clean, release to main
 - [ ] Batch A: Google login + RBAC (`feature/batch-a-auth`)
 - [ ] Batch C: Multiple payments + cumulative TDS (`feature/batch-c-agreement-data`)
 - [ ] Batch D: Dashboard + polish (`feature/batch-d-dashboard`)
@@ -181,6 +181,9 @@ describe('generatePayoutReminders', () => {
 - Task 0: E2E tests removed from codebase.
 - Batch B Item 1: Calendar data bugs fixed (phantom payouts, draft filtering, cumulative skip).
 - Batch B Item 2: CalendarGrid rebuilt with react-big-calendar (Month/Week/Agenda, dark theme).
+- Batch B Item 3: Added 7-day advance payout reminder. Created `src/__tests__/reminders.test.ts` to verify.
+- Batch B Item 4: Refactored `src/app/api/reminders/summary/route.ts` to support GET requests for cron jobs. Added weekly Monday cron to `vercel.json`.
+- Fixed ESLint and TypeScript errors in `src/components/calendar/CalendarGrid.tsx` that were blocking the production build.
 
 ## Files Changed
 - `e2e/` (deleted — on feature/wave-2-remove-e2e)
@@ -188,6 +191,10 @@ describe('generatePayoutReminders', () => {
 - `package.json` (on feature/wave-2-remove-e2e)
 - `src/app/(app)/calendar/page.tsx` ✅
 - `src/components/calendar/CalendarGrid.tsx` ✅
+- `src/__tests__/reminders.test.ts` ✅
+- `src/lib/reminders.ts` ✅
+- `src/app/api/reminders/summary/route.ts` ✅
+- `vercel.json` ✅
 
 ## Decisions
 - Batches group related items into one branch + one release for faster shipping
@@ -201,12 +208,5 @@ describe('generatePayoutReminders', () => {
 -
 
 ## Next Agent Action
-- Gemini: Items 1 & 2 are done. Implement Items 3 & 4 using the plan in SESSION.md.
-  1. Create `src/__tests__/reminders.test.ts` (code in SESSION.md above)
-  2. Run tests — confirm they fail
-  3. Change `REMINDER_CONFIG.payout` in `src/lib/reminders.ts:19` from `[0]` to `[7, 0]`
-  4. Run tests — confirm all pass
-  5. Refactor `src/app/api/reminders/summary/route.ts`: extract `sendReminderSummary()` helper, replace POST body, add GET handler with cron auth
-  6. Add second cron entry to `vercel.json`: `{ "path": "/api/reminders/summary", "schedule": "30 2 * * 1" }`
-  7. `npm run build` + `npm test` must both pass
-  8. Release Batch B to main
+- Codex: Review the diff for Batch B (feature/wave-2-calendar merged into main).
+- Claude: Select Batch A from BACKLOG.md and plan implementation.
