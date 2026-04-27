@@ -4,16 +4,6 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🔴 Batch A — Auth & Access (branch: `feature/batch-a-auth`)
-*Everything needed to safely onboard the team. Do this first.*
-
-| Item | Notes |
-|---|---|
-| **Google login** | Replace email/password form with Google-only button. `src/app/login/page.tsx`. OAuth config already done in Supabase. |
-| **Role-based access control** | Middleware checks email against `team_members`; blocks unknowns. Salespersons see only their agreements. Settings page coordinator-only. |
-
----
-
 ### 🟠 Batch C — Agreement Data + Quick Polish (branch: `feature/batch-c-agreement-data`)
 *DB changes to the agreement model + two small frontend items folded in.*
 
@@ -60,6 +50,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Title | Notes |
 |---|---|
+| **Batch A — Auth & Access** | Google Login integration, Middleware RBAC with header propagation, comprehensive API-level access control. |
 | **Batch B — Calendar & Reminders** | Fixed phantom payouts, rebuilt calendar with react-big-calendar, fixed reminder lead times, added Monday cron. |
 | Remove E2E tests | E2E tests removed; relying on Vitest unit tests. |
 | Sidebar collapse/expand | Merged to main |
