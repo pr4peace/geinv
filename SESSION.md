@@ -15,6 +15,7 @@
 - [ ] Add `maxOutputTokens: 8192`
 - [ ] Better truncation error handling
 - [ ] Add frequency validation
+- [ ] **Sign out button** in sidebar (`src/app/(app)/layout.tsx`) — call `supabase.auth.signOut()` then redirect to `/login`
 - [ ] Build + test clean, release to main
 
 ## Work Completed

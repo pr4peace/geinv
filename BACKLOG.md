@@ -19,6 +19,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 | Item | Notes |
 |---|---|
 | **Gemini extraction fixes** | `src/lib/claude.ts`: add `monthly`/`biannual` to frequency type + prompt rules, fix `investment_start_date` prompt, add `maxOutputTokens: 8192`, better truncation error, add frequency validation. |
+| **Sign out button** | Add to sidebar in `src/app/(app)/layout.tsx`. Call `supabase.auth.signOut()` then redirect to `/login`. |
 | **Post-V1 bugs** | Any issues surfaced from real team usage after V1 ships. Tracked here as they come in. |
 
 ---
