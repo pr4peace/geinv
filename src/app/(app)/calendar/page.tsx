@@ -11,30 +11,40 @@ function formatCurrency(amount: number | null): string {
 export default async function CalendarPage() {
   const supabase = createAdminClient()
 
-  // Fetch payout schedule joined with agreements
-  const { data: payouts } = await supabase
-    .from('payout_schedule')
-    .select(
-      'id, agreement_id, due_by, gross_interest, tds_amount, net_interest, status, is_principal_repayment, agreement:agreements!inner(id, investor_name, reference_id, is_draft, maturity_date, status, deleted_at)'
-    )
-    .eq('is_principal_repayment', false)
-    .eq('agreement.status', 'active')
-    .is('agreement.deleted_at', null)
-
-  // Fetch active agreements for maturity dates
-  const { data: agreements } = await supabase
+  // 1. Fetch active non-draft agreement IDs
+  // This avoids the bug where joined filters are silently ignored
+  const { data: activeAgreements } = await supabase
     .from('agreements')
     .select('id, investor_name, reference_id, maturity_date, is_draft, status')
     .eq('status', 'active')
+    .eq('is_draft', false)
     .is('deleted_at', null)
 
-  // Fetch pending reminders with agreement info
+  const activeIds = (activeAgreements ?? []).map(a => a.id)
+
+  if (activeIds.length === 0) {
+    return (
+      <div className="h-full flex flex-col bg-slate-950 text-slate-100">
+        <CalendarGrid events={[]} initialYear={new Date().getFullYear()} initialMonth={new Date().getMonth()} />
+      </div>
+    )
+  }
+
+  // 2. Fetch payout schedule for active agreements
+  const { data: payouts } = await supabase
+    .from('payout_schedule')
+    .select(
+      'id, agreement_id, due_by, gross_interest, net_interest, status, is_principal_repayment, agreement:agreements(investor_name, payout_frequency)'
+    )
+    .in('agreement_id', activeIds)
+    .eq('is_principal_repayment', false)
+
+  // 3. Fetch pending reminders for active agreements
   const { data: reminders } = await supabase
     .from('reminders')
-    .select('id, agreement_id, reminder_type, scheduled_at, agreements!inner(investor_name, status, deleted_at)')
+    .select('id, agreement_id, reminder_type, scheduled_at, agreements(investor_name)')
+    .in('agreement_id', activeIds)
     .eq('status', 'pending')
-    .eq('agreements.status', 'active')
-    .is('agreements.deleted_at', null)
     .gte('scheduled_at', new Date().toISOString())
 
   const events: CalendarEvent[] = []
@@ -49,6 +59,9 @@ export default async function CalendarPage() {
 
     if (!agreement) continue
 
+    // SKIP payout events for cumulative agreements to avoid double-count with maturity event
+    if (agreement.payout_frequency === 'cumulative') continue
+
     const status = payout.status as string
     let type: CalendarEvent['type']
     if (status === 'overdue') {
@@ -56,7 +69,6 @@ export default async function CalendarPage() {
     } else if (status === 'paid') {
       type = 'payout_paid'
     } else {
-      // pending, notified, etc.
       type = 'payout_pending'
     }
 
@@ -71,13 +83,13 @@ export default async function CalendarPage() {
       date: payout.due_by,
       label,
       type,
-      agreementId: agreement.id,
-      isDraft: agreement.is_draft ?? false,
+      agreementId: payout.agreement_id,
+      isDraft: false,
     })
   }
 
   // Process maturity events
-  for (const agreement of agreements ?? []) {
+  for (const agreement of activeAgreements ?? []) {
     if (!agreement.maturity_date) continue
 
     events.push({
@@ -86,7 +98,7 @@ export default async function CalendarPage() {
       label: `Matures: ${agreement.investor_name}`,
       type: 'maturity',
       agreementId: agreement.id,
-      isDraft: agreement.is_draft ?? false,
+      isDraft: false,
     })
   }
 

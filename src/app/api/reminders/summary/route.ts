@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email'
 import { getPayoutReminders, getMaturingAgreements, getDocsPendingReturn } from '@/lib/dashboard-reminders'
@@ -180,42 +180,64 @@ function buildSummaryEmail(
 </html>`.trim()
 }
 
+async function sendReminderSummary() {
+  const supabase = createAdminClient()
+
+  const { data: accountants } = await supabase
+    .from('team_members')
+    .select('email, name')
+    .eq('role', 'accountant')
+    .eq('is_active', true)
+
+  if (!accountants?.length) {
+    throw new Error('No active accountant found')
+  }
+
+  const emailTo = accountants.map(a => a.email)
+  const monthLabel = format(new Date(), 'MMMM yyyy')
+
+  const [payouts, maturing, docs] = await Promise.all([
+    getPayoutReminders(),
+    getMaturingAgreements(),
+    getDocsPendingReturn(),
+  ])
+
+  const html = buildSummaryEmail(monthLabel, payouts.overdue, payouts.thisMonth, maturing.agreements, docs)
+
+  const result = await sendEmail({
+    to: emailTo,
+    subject: `Reminder Summary — ${monthLabel}`,
+    html,
+  })
+
+  if (!result.success) {
+    throw new Error(result.error ?? 'Failed to send email')
+  }
+
+  return { success: true, sentTo: emailTo }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const isCron = request.headers.get('x-vercel-cron') === '1'
+    if (!isCron) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const result = await sendReminderSummary()
+    return NextResponse.json(result)
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST() {
   try {
-    const supabase = createAdminClient()
-
-    const { data: accountants } = await supabase
-      .from('team_members')
-      .select('email, name')
-      .eq('role', 'accountant')
-      .eq('is_active', true)
-
-    if (!accountants?.length) {
-      return NextResponse.json({ error: 'No active accountant found' }, { status: 404 })
-    }
-
-    const emailTo = accountants.map(a => a.email)
-    const monthLabel = format(new Date(), 'MMMM yyyy')
-
-    const [payouts, maturing, docs] = await Promise.all([
-      getPayoutReminders(),
-      getMaturingAgreements(),
-      getDocsPendingReturn(),
-    ])
-
-    const html = buildSummaryEmail(monthLabel, payouts.overdue, payouts.thisMonth, maturing.agreements, docs)
-
-    const result = await sendEmail({
-      to: emailTo,
-      subject: `Reminder Summary — ${monthLabel}`,
-      html,
-    })
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error ?? 'Failed to send email' }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, sentTo: emailTo })
+    const result = await sendReminderSummary()
+    return NextResponse.json(result)
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
