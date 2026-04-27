@@ -13,16 +13,6 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🚀 Pre-Launch Finalisation (after Batch C.1, before team onboarding)
-
-| Step | Notes |
-|---|---|
-| **Final Codex review** | Full review of all code on `main` after C.1 merges. Fix any blocking issues before real data goes in. |
-| **Data wipe** | Delete all test agreements, payout schedules, reminders, investors from the database. Start clean for real team use. Run via Supabase dashboard or a one-off script. |
-| **Vercel production branch → main** | Change Vercel project production branch from `feature/investment-tracker` to `main`. Settings → Git → Production Branch. Then delete `origin/feature/investment-tracker` and `origin/feature/sidebar-collapse`. |
-
----
-
 ### 🩹 Batch C.1 — Extraction Fixes + Post-V1 Patch (branch: `feature/batch-c1-patch`)
 *Quick patch after V1. No migrations, no new features.*
 
@@ -96,6 +86,8 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 ### ✅ Done
 
 | **Batch C.1 — Extraction Fixes + Post-V1 Patch** | Gemini extraction fixes (monthly/biannual, prompt tuning), Sign out button, Apple-style sidebar toggle, Full-width dashboard layout. |
+| **Pre-Launch Finalisation** | Codex final review, security fixes (role gates, salesperson scoping, atomic reminders), data wipe, Vercel → main, GitHub default branch → main, stale branches deleted. |
+| **Batch C.1 — Extraction Fixes + Post-V1 Patch** | Gemini extraction fixes (monthly/biannual, maxOutputTokens, validation), sign-out button, Apple-style sidebar toggle, dashboard full-width layout fix. |
 | **Batch C — Agreement Data & Polish (V1)** | Migrations 015+016, multiple payments, cumulative TDS-only, splash screen, v0.1.0, collapsible sidebar, global search, sortable investors, salesperson scoping fixes. |
 | **Batch B — Calendar & Reminders** | Fixed phantom payouts, rebuilt calendar with react-big-calendar, fixed reminder lead times, added Monday cron. |
 | **Batch A — Auth & Access** | Google Login, Middleware RBAC with header propagation, API-level access control. |
