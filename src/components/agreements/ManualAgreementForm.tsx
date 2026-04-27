@@ -30,7 +30,7 @@ interface NomineeRow {
   pan: string
 }
 
-type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' | 'biannual'
+type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative'
 type InterestType = 'simple' | 'compound'
 
 interface FormState {
@@ -242,6 +242,20 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
       return
     }
 
+    // Validate dates: maturity must be after start date
+    const start = new Date(form.investment_start_date)
+    const maturity = new Date(form.maturity_date)
+    if (maturity <= start) {
+      setSaveError('Maturity Date must be after Investment Start Date.')
+      return
+    }
+
+    // Validate payout schedule generated
+    if (payoutSchedule.length === 0) {
+      setSaveError('Could not generate a payout schedule with the current dates and frequency.')
+      return
+    }
+
     // Require duplicate confirmation before saving
     if (duplicates.length > 0 && !bypassDuplicate) {
       setSaveError('Possible duplicate detected. Please check the box below to confirm this is a new agreement.')
@@ -261,10 +275,16 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
     // Validate numeric fields before POST
     const principalVal = parseFloat(form.principal_amount)
     const roiVal = parseFloat(form.roi_percentage)
-    const lockInVal = parseFloat(form.lock_in_years)
+    const lockInFloat = parseFloat(form.lock_in_years)
+    const lockInVal = Math.round(lockInFloat)
 
-    if (isNaN(principalVal) || isNaN(roiVal) || isNaN(lockInVal)) {
+    if (isNaN(principalVal) || isNaN(roiVal) || isNaN(lockInFloat)) {
       setSaveError('Principal Amount, ROI Percentage, and Lock-in Years must be valid numbers.')
+      return
+    }
+
+    if (lockInFloat !== lockInVal) {
+      setSaveError('Lock-in Years must be an integer.')
       return
     }
 
@@ -583,9 +603,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                   onChange={e => update('payout_frequency', e.target.value as PayoutFrequency)}
                   className={inputBaseClass}
                 >
-                  <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
-                  <option value="biannual">Biannual</option>
                   <option value="annual">Annual</option>
                   <option value="cumulative">Cumulative</option>
                 </select>
@@ -605,10 +623,10 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Lock-in Years *</label>
+                <label className="text-xs text-slate-400">Lock-in Years (Integer) *</label>
                 <input
                   type="number"
-                  step="0.5"
+                  step="1"
                   value={form.lock_in_years}
                   onChange={e => update('lock_in_years', e.target.value)}
                   className={inputBaseClass}

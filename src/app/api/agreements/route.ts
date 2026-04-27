@@ -70,6 +70,39 @@ export async function POST(request: NextRequest) {
       [key: string]: unknown
     }
 
+    // Server-side validation
+    const isDraft = agreementFields.is_draft === true
+    const frequency = agreementFields.payout_frequency as string
+    const allowedFrequencies = ['quarterly', 'annual', 'cumulative']
+    
+    if (!allowedFrequencies.includes(frequency)) {
+      return NextResponse.json({ error: `Invalid payout frequency: ${frequency}` }, { status: 400 })
+    }
+
+    if (!isDraft && (!Array.isArray(payoutScheduleRows) || payoutScheduleRows.length === 0)) {
+      return NextResponse.json({ error: 'Payout schedule is required for non-draft agreements' }, { status: 400 })
+    }
+
+    // Date validation
+    const startDateStr = agreementFields.investment_start_date as string
+    const maturityDateStr = agreementFields.maturity_date as string
+    if (startDateStr && maturityDateStr) {
+      const start = new Date(startDateStr)
+      const maturity = new Date(maturityDateStr)
+      if (maturity <= start) {
+        return NextResponse.json({ error: 'Maturity date must be after investment start date' }, { status: 400 })
+      }
+    }
+
+    // Ensure lock_in_years is integer
+    if (agreementFields.lock_in_years !== undefined) {
+      const lockInVal = Number(agreementFields.lock_in_years)
+      if (!Number.isInteger(lockInVal)) {
+        return NextResponse.json({ error: 'Lock-in years must be an integer' }, { status: 400 })
+      }
+      agreementFields.lock_in_years = lockInVal
+    }
+
     // Duplicate check — skip only if caller explicitly sets force: true
     if (!force) {
       const investorName = (agreementFields.investor_name as string) ?? ''
