@@ -4,39 +4,30 @@
 - main
 
 ## Phase
-- releasing
+- pre-launch
 
 ## Active Batch
-- Batch C.1 — Extraction Fixes + Post-V1 Patch (`feature/batch-c1-patch`)
+- Pre-Launch Finalisation
 
 ## Items
-- [x] `src/lib/claude.ts`: add `monthly`/`biannual` to frequency type + prompt rules
-- [x] Fix `investment_start_date` prompt
-- [x] Add `maxOutputTokens: 8192`
-- [x] Better truncation error handling
-- [x] Add frequency validation
-- [x] **Sign out button** in sidebar (`src/app/(app)/layout.tsx`) — call `supabase.auth.signOut()` then redirect to `/login`
-- [x] Build + test clean, release to main
+- [ ] **Final Codex review** — full review of all code on `main`
+- [ ] **Data wipe** — delete all test data (agreements, investors, payout_schedule, reminders) via Supabase dashboard
+- [ ] **Vercel production branch → main** — Settings → Git → Production Branch → `main`
+- [ ] Delete stale remote branches: `origin/feature/investment-tracker`, `origin/feature/sidebar-collapse`
+- [ ] Remove `git push origin main:feature/investment-tracker` lines from AGENTS.md and PROMPTS.md
 
 ## Work Completed
-- Implemented all Gemini extraction fixes in `src/lib/claude.ts`.
-- Added Sign Out button and logic to `src/app/(app)/layout.tsx`.
-- Updated `PayoutFrequency` local types in `ManualAgreementForm.tsx` and `ExtractionReview.tsx` to match the expanded database types.
-- Verified build and tests pass cleanly.
-- Reviewed `Codex Review Notes`; no actionable issues were listed, so no additional code changes were applied in this pass.
+- Batch C.1 merged to main. Build + 45 tests pass.
+- Extraction fixes, sign-out, Apple-style sidebar toggle, dashboard full-width layout all in.
 
 ## Files Changed
-- `src/lib/claude.ts`
-- `src/app/(app)/layout.tsx`
-- `src/components/agreements/ExtractionReview.tsx`
-- `src/components/agreements/ManualAgreementForm.tsx`
-- `SESSION.md`
+- See `git log` on main.
 
 ## Codex Review Notes
-- No actionable review notes were present in this session; previous entry was `TBD`.
+- TBD — awaiting full final review.
 
 ## Decisions
-- Patch only, ensuring type consistency across components for new frequencies.
+- Pre-launch = final code review + data wipe before real team use begins.
 
 ## Next Agent Action
-- Codex: review the changes.
+- Codex: do a full review of all changed files across Batch C and C.1. Flag anything blocking for production use.
