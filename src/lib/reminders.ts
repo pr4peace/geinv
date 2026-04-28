@@ -139,7 +139,7 @@ export function generateDocReturnReminders(
   return reminders
 }
 
-function buildPayoutReminderBody(agreement: Agreement, payout: PayoutSchedule, leadDays: number): string {
+export function buildPayoutReminderBody(agreement: Agreement, payout: PayoutSchedule, leadDays: number): string {
   return `
     <h2>Interest Payout Reminder</h2>
     <p>This is a reminder that an interest payout is due in <strong>${leadDays} days</strong>.</p>
@@ -156,7 +156,7 @@ function buildPayoutReminderBody(agreement: Agreement, payout: PayoutSchedule, l
   `.trim()
 }
 
-function buildMaturityReminderBody(agreement: Agreement, leadDays: number): string {
+export function buildMaturityReminderBody(agreement: Agreement, leadDays: number): string {
   return `
     <h2>Investment Maturity Notice</h2>
     <p>The following investment agreement matures in <strong>${leadDays} days</strong>.</p>
@@ -170,11 +170,25 @@ function buildMaturityReminderBody(agreement: Agreement, leadDays: number): stri
   `.trim()
 }
 
-function buildDocReturnReminderBody(agreement: Agreement, daysSinceSent: number): string {
+export function buildDocReturnReminderBody(agreement: Agreement, daysSinceSent: number): string {
   return `
     <h2>Agreement Document Not Yet Returned (Follow-up)</h2>
     <p>The signed agreement for <strong>${esc(agreement.investor_name)}</strong> was sent to the client on ${esc(agreement.doc_sent_to_client_date ?? '')} and has not been returned after <strong>${daysSinceSent} days</strong>.</p>
     <p>Please follow up with the salesperson to collect the signed document.</p>
+    <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/agreements/${agreement.id}">View Agreement →</a></p>
+  `.trim()
+}
+
+export function buildTdsFilingReminderBody(agreement: Agreement, marchDate: string): string {
+  return `
+    <h2>TDS Filing Due</h2>
+    <p>The following cumulative/compound agreement requires TDS filing by <strong>${marchDate}</strong>.</p>
+    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
+      <tr><td><strong>Investor</strong></td><td>${esc(agreement.investor_name)}</td></tr>
+      <tr><td><strong>Agreement Ref</strong></td><td>${esc(agreement.reference_id)}</td></tr>
+      <tr><td><strong>Principal Amount</strong></td><td>₹${agreement.principal_amount.toLocaleString('en-IN')}</td></tr>
+      <tr><td><strong>TDS Filing Date</strong></td><td>${marchDate}</td></tr>
+    </table>
     <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/agreements/${agreement.id}">View Agreement →</a></p>
   `.trim()
 }
