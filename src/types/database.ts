@@ -145,3 +145,31 @@ export interface ReconciliationEntry {
   due_by?: string
   notes?: string
 }
+
+export type NotificationType =
+  | 'payout'
+  | 'maturity'
+  | 'tds_filing'
+  | 'doc_return'
+  | 'monthly_summary'
+  | 'quarterly_forecast'
+
+export type NotificationStatus = 'pending' | 'sent' | 'dismissed'
+
+export interface NotificationQueue {
+  id: string
+  agreement_id: string | null
+  payout_schedule_id: string | null
+  notification_type: NotificationType
+  due_date: string | null       // ISO date
+  status: NotificationStatus
+  recipients: {
+    accounts: string[]
+    salesperson: string | null
+  }
+  suggested_subject: string | null
+  suggested_body: string | null
+  sent_at: string | null
+  sent_by: string | null
+  created_at: string
+}
