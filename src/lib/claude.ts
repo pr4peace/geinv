@@ -249,14 +249,17 @@ export async function extractAgreementData(
     throw new Error(`Extracted invalid payout_frequency: ${data.payout_frequency}`)
   }
 
-  // Validate payout schedule
+  // Validate and coerce payout schedule numeric fields — null/missing → 0
   if (!Array.isArray(data.payout_schedule)) {
     throw new Error('Extracted payout_schedule is not an array')
   }
   for (const row of data.payout_schedule) {
     for (const f of ['gross_interest', 'tds_amount', 'net_interest'] as const) {
-      if (typeof row[f] !== 'number') {
-        throw new Error(`Payout row field '${f}' is not a number: ${JSON.stringify(row[f])}`)
+      if (row[f] == null) {
+        row[f] = 0
+      } else if (typeof row[f] !== 'number') {
+        const coerced = parseFloat(String(row[f]).replace(/,/g, ''))
+        row[f] = isNaN(coerced) ? 0 : coerced
       }
     }
   }
