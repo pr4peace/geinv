@@ -240,68 +240,59 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert payout schedule rows
-    if (Array.isArray(payoutScheduleRows) && payoutScheduleRows.length > 0) {
-      const rows = payoutScheduleRows
-        .map((row) => ({
-          ...row,
-          agreement_id: agreement.id,
-          // Fall back to due_by if period dates are missing
-          period_from: row.period_from ?? row.due_by ?? null,
-          period_to: row.period_to ?? row.due_by ?? null,
-        }))
-        .filter((row) => row.period_from && row.period_to && row.due_by)
-
-      // Add internal TDS tracking rows for cumulative/compound if missing
-      const isCumulative = frequency === 'cumulative' || agreementFields.interest_type === 'compound'
-      const hasTdsOnly = (rows as Array<ExtractedPayoutRow & { is_tds_only?: boolean }>).some(r => r.is_tds_only)
-      
-      if (isCumulative && !hasTdsOnly && startDateStr && maturityDateStr) {
-        const start = new Date(startDateStr)
-        const maturity = new Date(maturityDateStr)
-        
-        let currentYear = start.getUTCFullYear()
-        let lastDate = start
-
-        while (true) {
-          // March 31 of currentYear in UTC
-          const march31 = new Date(Date.UTC(currentYear, 2, 31))
-          
-          if (march31 < start) {
-            currentYear++
-            continue
-          }
-          
-          if (march31 > maturity) break
-
-          const periodFrom = lastDate === start 
-            ? start 
-            : new Date(lastDate.getTime() + 24 * 60 * 60 * 1000);
-
-          (rows as Array<ExtractedPayoutRow & { is_tds_only?: boolean }>).push({
+    const rows: Array<ExtractedPayoutRow & { is_tds_only?: boolean }> = Array.isArray(payoutScheduleRows)
+      ? payoutScheduleRows
+          .map((row) => ({
+            ...row,
             agreement_id: agreement.id,
-            period_from: periodFrom.toISOString().split('T')[0],
-            period_to: march31.toISOString().split('T')[0],
-            due_by: march31.toISOString().split('T')[0],
-            gross_interest: 0,
-            tds_amount: 0,
-            net_interest: 0,
-            is_tds_only: true,
-            is_principal_repayment: false,
-            no_of_days: null,
-          } as ExtractedPayoutRow & { is_tds_only: boolean })
-          
-          lastDate = march31
-          currentYear++
-        }
+            period_from: row.period_from ?? row.due_by ?? null,
+            period_to: row.period_to ?? row.due_by ?? null,
+          }))
+          .filter((row) => row.period_from && row.period_to && row.due_by)
+      : []
+
+    // Generate TDS-only rows for cumulative/compound — one per 31 March in the term.
+    // This runs regardless of whether extracted rows exist (compounded docs often have none).
+    const isCumulative = frequency === 'cumulative' || agreementFields.interest_type === 'compound'
+    const hasTdsOnly = rows.some(r => r.is_tds_only)
+
+    if (isCumulative && !hasTdsOnly && startDateStr && maturityDateStr) {
+      const start = new Date(startDateStr)
+      const maturity = new Date(maturityDateStr)
+      let currentYear = start.getUTCFullYear()
+      let lastDate = start
+
+      while (true) {
+        const march31 = new Date(Date.UTC(currentYear, 2, 31))
+        if (march31 < start) { currentYear++; continue }
+        if (march31 > maturity) break
+
+        const periodFrom = lastDate === start
+          ? start
+          : new Date(lastDate.getTime() + 24 * 60 * 60 * 1000)
+
+        rows.push({
+          agreement_id: agreement.id,
+          period_from: periodFrom.toISOString().split('T')[0],
+          period_to: march31.toISOString().split('T')[0],
+          due_by: march31.toISOString().split('T')[0],
+          gross_interest: 0,
+          tds_amount: 0,
+          net_interest: 0,
+          is_tds_only: true,
+          is_principal_repayment: false,
+          no_of_days: null,
+        } as ExtractedPayoutRow & { is_tds_only: boolean })
+
+        lastDate = march31
+        currentYear++
       }
+    }
 
-      if (rows.length > 0) {
-        const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
-
-        if (payoutError) {
-          console.error('Failed to insert payout schedule:', payoutError.message)
-          // Non-fatal — agreement saved, payout rows can be added manually
-        }
+    if (rows.length > 0) {
+      const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
+      if (payoutError) {
+        console.error('Failed to insert payout schedule:', payoutError.message)
       }
     }
 
