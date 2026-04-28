@@ -37,12 +37,16 @@ export default function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
+    const sessionKey = `geinv_whats_new_${WHATS_NEW_VERSION}_session`
+    if (sessionStorage.getItem(sessionKey)) return
+
     const key = `geinv_whats_new_${WHATS_NEW_VERSION}_count`
     const viewCount = parseInt(localStorage.getItem(key) || '0', 10)
 
     if (viewCount < MAX_VIEWS) {
-      setIsOpen(true)
+      sessionStorage.setItem(sessionKey, '1')
       localStorage.setItem(key, (viewCount + 1).toString())
+      setIsOpen(true)
     }
   }, [])
 

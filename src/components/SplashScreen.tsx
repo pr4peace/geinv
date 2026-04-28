@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react'
 import { Leaf } from 'lucide-react'
 
 export function SplashScreen() {
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible] = useState(false)
   const [fading, setFading] = useState(false)
 
   useEffect(() => {
+    if (sessionStorage.getItem('geinv_splash_shown')) return
+    sessionStorage.setItem('geinv_splash_shown', '1')
+    setVisible(true)
     const fadeTimer = setTimeout(() => setFading(true), 1200)
     const hideTimer = setTimeout(() => setVisible(false), 1700)
     return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
