@@ -1,7 +1,7 @@
 # SESSION
 
 ## Branch
-- feature/batch-c2-hotfixes
+- main
 
 ## Phase
 - releasing
