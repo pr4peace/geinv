@@ -165,6 +165,10 @@ export async function extractAgreementData(
     throw err
   }
 
+  // Check if Gemini hit token limit
+  const finishReason = result.response.candidates?.[0]?.finishReason
+  const hitTokenLimit = finishReason === 'MAX_TOKENS'
+
   // Strip markdown code fences if present
   const json = text
     .replace(/^```(?:json)?\n?/m, '')
@@ -172,10 +176,57 @@ export async function extractAgreementData(
     .trim()
 
   let parsed: unknown
-  try {
-    parsed = JSON.parse(json)
-  } catch {
+
+  // Try parsing as-is first
+  const directParse = (() => { try { return JSON.parse(json) } catch { return null } })()
+
+  if (directParse) {
+    parsed = directParse
+  } else if (hitTokenLimit) {
+    // Gemini hit MAX_TOKENS — attempt to repair partial JSON by closing unclosed structures
+    const repaired = repairPartialJson(json)
+    const repairedParse = (() => { try { return JSON.parse(repaired) } catch { return null } })()
+    if (repairedParse) {
+      // Add warning about truncation
+      if (!repairedParse.confidence_warnings) repairedParse.confidence_warnings = []
+      repairedParse.confidence_warnings.push(
+        'WARNING: Gemini hit output token limit — some fields may be incomplete. Check investor address and payout schedule carefully.'
+      )
+      if (!Array.isArray(repairedParse.payout_schedule)) repairedParse.payout_schedule = []
+      parsed = repairedParse
+    } else {
+      throw new Error(
+        'Gemini hit its output limit and the response could not be recovered. ' +
+        'Try splitting the document into smaller sections, or use the manual entry form.'
+      )
+    }
+  } else {
     throw new Error(`Gemini returned invalid JSON. Response: ${json.slice(0, 300)}`)
+  }
+
+  // Repair helper — closes unclosed JSON strings, arrays, and objects
+  function repairPartialJson(partial: string): string {
+    let s = partial.trimEnd()
+    // Close unclosed string — if odd number of unescaped quotes
+    const quoteCount = (s.match(/(?<!\\)"/g) ?? []).length
+    if (quoteCount % 2 !== 0) s += '"'
+    // Count unclosed braces/brackets
+    let braces = 0, brackets = 0
+    let inStr = false
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i]
+      if (c === '"' && (i === 0 || s[i - 1] !== '\\')) inStr = !inStr
+      if (!inStr) {
+        if (c === '{') braces++
+        if (c === '}') braces--
+        if (c === '[') brackets++
+        if (c === ']') brackets--
+      }
+    }
+    // Close any open array/object with null values to make valid JSON
+    if (brackets > 0) s += ']'.repeat(brackets)
+    if (braces > 0) s += '}'.repeat(braces)
+    return s
   }
 
   const data = parsed as ExtractedAgreement
