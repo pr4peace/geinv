@@ -127,6 +127,8 @@ export async function extractAgreementData(
     generationConfig: {
       maxOutputTokens: 65536,
       responseMimeType: 'application/json',
+      // @ts-expect-error — thinkingConfig is supported but not yet in type definitions
+      thinkingConfig: { thinkingBudget: 0 },
     }
   })
 
