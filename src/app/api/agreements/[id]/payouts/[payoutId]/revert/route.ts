@@ -6,6 +6,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string; payoutId: string }> }
 ) {
   try {
+    const userRole = request.headers.get('x-user-role') ?? ''
+    if (userRole === 'salesperson') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
     const { id, payoutId } = await params
     const supabase = createAdminClient()
 

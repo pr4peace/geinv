@@ -12,6 +12,7 @@ import {
   Settings,
   Leaf,
   Users,
+  Bell,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -24,6 +25,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/agreements', label: 'Agreements', icon: FileText },
   { href: '/investors', label: 'Investors', icon: Users },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
