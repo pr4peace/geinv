@@ -112,10 +112,11 @@ export async function extractAgreementData(
     throw new Error('GEMINI_API_KEY is not set')
   }
 
-  const model = genAI.getGenerativeModel({ 
+  const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
-      maxOutputTokens: 8192,
+      maxOutputTokens: 65536,
+      responseMimeType: 'application/json',
     }
   })
 
