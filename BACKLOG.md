@@ -13,6 +13,29 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
+### 🩹 Batch C.2 — Post-Launch Hotfixes (branch: `feature/batch-c2-hotfixes`)
+*Fixes from first real upload session. Applied urgently — some already on main.*
+
+| Item | Status | Notes |
+|---|---|---|
+| **Gemini model → gemini-2.5-flash** | ✅ main | Old model retired |
+| **maxOutputTokens 65536 + JSON mode** | ✅ main | Fixes JSON truncation on large agreements |
+| **investment_start_date prompt fix** | ✅ main | Body paragraph priority over payment table |
+| **Biannual/compound extraction mapping** | ✅ main | bi-annual/half-yearly → biannual; compounded → cumulative |
+| **Biannual + monthly in dropdown** | ✅ main | ExtractionReview form was missing these options |
+| **Agreements list refresh after upload** | ✅ main | router.refresh() before push |
+| **Cancel button during extraction** | ✅ main | AbortController on in-flight fetch |
+| **"Add another agreement" post-upload** | ✅ main | Button on detail page after new upload |
+| **Overdue filter fix** | ✅ main | due_by < today instead of period_to < monthStart |
+| **Maturity reminder catch-up** | ✅ main | Immediate reminder if all lead-day dates are past |
+| **Mark past payouts as paid on import** | ✅ main | Checkbox in ExtractionReview + API |
+| **TDS rows on 31st March (cumulative/compound)** | 🔲 todo | One row per 31 Mar in term, is_tds_only |
+| **Re-scan without re-upload** | 🔲 todo | Button on detail page, re-runs Gemini from stored doc |
+| **Per-agreement mark-past-paid + row revert** | 🔲 todo | Bulk button with confirm + per-row undo |
+| **Splash screen "What's New"** | 🔲 todo | Max 3 views per user, localStorage count |
+
+---
+
 ### 🩹 Batch C.1 — Extraction Fixes + Post-V1 Patch (branch: `feature/batch-c1-patch`)
 *Quick patch after V1. No migrations, no new features.*
 
