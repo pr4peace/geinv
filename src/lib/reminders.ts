@@ -1,4 +1,4 @@
-import { addDays, subDays, isBefore, startOfDay } from 'date-fns'
+import { addDays, subDays, isBefore, startOfDay, differenceInDays } from 'date-fns'
 import type { Agreement, PayoutSchedule, Reminder } from '@/types/database'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -61,25 +61,46 @@ export function generateMaturityReminders(
   salespersonEmail: string | null
 ): ReminderInput[] {
   const maturityDate = new Date(agreement.maturity_date)
+  const today = startOfDay(new Date())
   const emailTo = [internalEmail, salespersonEmail].filter(Boolean) as string[]
   if (emailTo.length === 0) return []
 
+  // Agreement already matured — no reminders needed
+  if (!isBefore(today, maturityDate)) return []
+
   const reminders: ReminderInput[] = []
+  let catchUpGenerated = false
 
   for (const leadDays of REMINDER_CONFIG.maturity) {
     const scheduledAt = subDays(maturityDate, leadDays)
-    if (isBefore(startOfDay(new Date()), scheduledAt)) {
-      reminders.push({
-        agreement_id: agreement.id,
-        payout_schedule_id: undefined,
-        reminder_type: 'maturity',
-        lead_days: leadDays,
-        scheduled_at: scheduledAt,
-        email_to: emailTo,
-        email_subject: `Maturity Notice: ${agreement.investor_name} — ₹${agreement.principal_amount.toLocaleString('en-IN')} matures in ${leadDays} days`,
-        email_body: buildMaturityReminderBody(agreement, leadDays),
-      })
+    if (!isBefore(today, scheduledAt)) {
+      // This lead-day reminder is already past. Generate one immediate catch-up.
+      if (!catchUpGenerated) {
+        catchUpGenerated = true
+        const daysLeft = Math.max(1, differenceInDays(maturityDate, today))
+        reminders.push({
+          agreement_id: agreement.id,
+          payout_schedule_id: undefined,
+          reminder_type: 'maturity',
+          lead_days: daysLeft,
+          scheduled_at: new Date(),
+          email_to: emailTo,
+          email_subject: `Maturity Notice: ${agreement.investor_name} — ₹${agreement.principal_amount.toLocaleString('en-IN')} matures in ${daysLeft} days`,
+          email_body: buildMaturityReminderBody(agreement, daysLeft),
+        })
+      }
+      continue
     }
+    reminders.push({
+      agreement_id: agreement.id,
+      payout_schedule_id: undefined,
+      reminder_type: 'maturity',
+      lead_days: leadDays,
+      scheduled_at: scheduledAt,
+      email_to: emailTo,
+      email_subject: `Maturity Notice: ${agreement.investor_name} — ₹${agreement.principal_amount.toLocaleString('en-IN')} matures in ${leadDays} days`,
+      email_body: buildMaturityReminderBody(agreement, leadDays),
+    })
   }
 
   return reminders

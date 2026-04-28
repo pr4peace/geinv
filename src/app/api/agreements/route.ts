@@ -78,10 +78,11 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const body = await request.json()
 
-    const { payout_schedule: payoutScheduleRows, force, temp_path, ...agreementFields } = body as {
+    const { payout_schedule: payoutScheduleRows, force, temp_path, mark_historical_paid, ...agreementFields } = body as {
       payout_schedule: ExtractedPayoutRow[]
       force?: boolean
       temp_path?: string
+      mark_historical_paid?: boolean
       [key: string]: unknown
     }
 
@@ -269,6 +270,17 @@ export async function POST(request: NextRequest) {
           // Non-fatal — agreement saved, payout rows can be added manually
         }
       }
+    }
+
+    // Mark past payouts as paid if requested (for historical agreements)
+    if (mark_historical_paid) {
+      const todayStr = new Date().toISOString().split('T')[0]
+      await supabase
+        .from('payout_schedule')
+        .update({ status: 'paid', paid_date: todayStr })
+        .eq('agreement_id', agreement.id)
+        .lt('due_by', todayStr)
+        .eq('is_tds_only', false)
     }
 
     // Fetch the payout_schedule rows with ids for reminder generation

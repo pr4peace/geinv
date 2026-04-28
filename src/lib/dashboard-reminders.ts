@@ -44,7 +44,6 @@ export type PayoutRemindersResult = {
 export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
   const supabase = createAdminClient()
   const today = new Date()
-  const monthStart = format(startOfMonth(today), 'yyyy-MM-dd')
   const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd')
 
   const { data, error } = await supabase
@@ -58,8 +57,8 @@ export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
     .eq('is_principal_repayment', false)
     .eq('is_tds_only', false)
     .eq('agreements.status', 'active')
-    .is('agreements.deleted_at', null)   // PostgREST !inner join filter — excludes soft-deleted agreements
-    .lte('period_to', monthEnd)
+    .is('agreements.deleted_at', null)
+    .lte('due_by', monthEnd)
 
   if (error || !data) return { overdue: [], thisMonth: [], netTotal: 0 }
 
@@ -87,13 +86,15 @@ export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
     payout_frequency: r.agreements.payout_frequency,
   }))
 
+  const todayStr = format(today, 'yyyy-MM-dd')
+
   const overdue = rows
-    .filter(r => r.period_to < monthStart)
-    .sort((a, b) => a.period_to.localeCompare(b.period_to))
+    .filter(r => r.due_by < todayStr)
+    .sort((a, b) => a.due_by.localeCompare(b.due_by))
 
   const thisMonth = rows
-    .filter(r => r.period_to >= monthStart && r.period_to <= monthEnd)
-    .sort((a, b) => a.period_to.localeCompare(b.period_to))
+    .filter(r => r.due_by >= todayStr && r.due_by <= monthEnd)
+    .sort((a, b) => a.due_by.localeCompare(b.due_by))
 
   const netTotal = rows.reduce((s, r) => s + r.net_interest, 0)
 

@@ -72,6 +72,7 @@ interface FormState {
   maturity_date: string
   payments: PaymentEntryRow[]
   is_draft: boolean
+  mark_historical_paid: boolean
   salesperson_id: string
   salesperson_custom: string
 }
@@ -168,6 +169,7 @@ export default function ExtractionReview({
       amount: p.amount,
     })),
     is_draft: isDraft,
+    mark_historical_paid: false,
     salesperson_id: salespersonId ?? '',
     salesperson_custom: salespersonCustom ?? '',
   })
@@ -327,6 +329,7 @@ export default function ExtractionReview({
         salesperson_custom: form.salesperson_custom || null,
         temp_path: tempPath,
         payout_schedule: extracted.payout_schedule ?? [],
+        mark_historical_paid: form.mark_historical_paid,
       }
 
       const res = await fetch('/api/agreements', {
@@ -669,7 +672,9 @@ export default function ExtractionReview({
                   onChange={e => update('payout_frequency', e.target.value as PayoutFrequency)}
                   className={fieldClass('payout_frequency', 'w-full')}
                 >
+                  <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
+                  <option value="biannual">Biannual (6-monthly)</option>
                   <option value="annual">Annual</option>
                   <option value="cumulative">Cumulative</option>
                 </select>
@@ -817,6 +822,20 @@ export default function ExtractionReview({
                 className="accent-amber-500 w-4 h-4"
               />
               <span className="text-sm text-slate-100">Is Draft</span>
+            </label>
+
+            {/* Mark historical payouts as paid */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.mark_historical_paid}
+                onChange={e => update('mark_historical_paid', e.target.checked)}
+                className="accent-emerald-500 w-4 h-4 mt-0.5"
+              />
+              <span className="text-sm text-slate-100">
+                Mark all past payouts as paid
+                <span className="block text-xs text-slate-400 mt-0.5">For existing agreements — marks all payout rows with due date before today as paid</span>
+              </span>
             </label>
 
             {/* Salesperson */}
