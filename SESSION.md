@@ -4,107 +4,124 @@
 - main
 
 ## Phase
-- reviewing
+- building
 
 ## Active Batch
-- Batch C.5 — UI polish + bug fixes (push directly to main)
+- Batch C.6 — Data quality + remaining scoping fixes (push directly to main)
 
 ---
 
 ## Items for Gemini
 
-### Item 1 — Remove `updated_at` from mark-past-paid API (causes DB error)
+### Item 1 — Agreement detail page: salesperson should not see other investors' data via direct URL
 
-**File:** `src/app/api/agreements/[id]/mark-past-paid/route.ts`
+**Problem:** A salesperson can type `/agreements/[id]` for any agreement ID and see it, even if it's not theirs.
 
-The `payout_schedule` table has no `updated_at` column. Remove it from the update payload.
+**File:** `src/app/(app)/agreements/[id]/page.tsx`
 
-Replace:
+**Fix:**
+1. Read `x-user-role` and `x-user-team-id` from headers
+2. After fetching the agreement, if `userRole === 'salesperson'` and `agreement.salesperson_id !== userTeamId`, call `notFound()`
+
 ```ts
-.update({ 
-  status: 'paid', 
-  paid_date: todayStr,
-  updated_at: new Date().toISOString()
-})
+const headersList = await headers()
+const userRole = headersList.get('x-user-role') ?? ''
+const userTeamId = headersList.get('x-user-team-id') ?? ''
+
+// After fetching agreement:
+if (userRole === 'salesperson' && agreement.salesperson_id !== userTeamId) {
+  notFound()
+}
 ```
-With:
+
+---
+
+### Item 2 — Investor detail page: salesperson should not see other investors
+
+**File:** `src/app/(app)/investors/[id]/page.tsx`
+
+Same pattern — after fetching investor, check if any of their agreements belong to this salesperson. If none do, call `notFound()`.
+
 ```ts
-.update({ status: 'paid', paid_date: todayStr })
+const headersList = await headers()
+const userRole = headersList.get('x-user-role') ?? ''
+const userTeamId = headersList.get('x-user-team-id') ?? ''
+
+if (userRole === 'salesperson') {
+  // fetch agreements for this investor
+  const { data: agreements } = await supabase
+    .from('agreements')
+    .select('id')
+    .eq('investor_id', investor.id)
+    .eq('salesperson_id', userTeamId)
+    .limit(1)
+  
+  if (!agreements || agreements.length === 0) notFound()
+}
 ```
 
 ---
 
-### Item 2 — Replace all `confirm()` and `alert()` in PayoutScheduleSection with inline UI
+### Item 3 — KPI cards on dashboard: hide financial totals from salesperson
 
-**File:** `src/components/agreements/PayoutScheduleSection.tsx`
+**Problem:** The dashboard may show total portfolio value, total outstanding etc. — a salesperson should only see their own numbers, not the whole portfolio.
 
-Currently uses native browser `confirm()` for bulk mark and revert, and `alert()` for errors. Replace with inline confirmation UI.
+**File:** `src/app/(app)/dashboard/page.tsx` and `src/lib/kpi.ts` (if it exists)
 
-**Plan:**
-1. Add state: `const [confirmBulk, setConfirmBulk] = useState(false)` and `const [confirmRevert, setConfirmRevert] = useState<string | null>(null)`
-2. Remove all `confirm()` and `alert()` calls
-3. For the bulk "Mark all past payouts as paid" button: clicking it sets `confirmBulk = true`, which shows an inline confirmation row:
-   - Text: "Mark all past payouts as paid? This cannot be undone easily."
-   - Two buttons: "Yes, mark paid" (calls `markPastPaid()`) and "Cancel" (sets `confirmBulk = false`)
-4. For each "Revert" button on paid rows: clicking sets `confirmRevert = row.id`, which replaces that row's action cell with "Confirm revert?" + "Yes" + "No" buttons inline
-5. For errors: set a local `error` state string and show it as a small red text below the relevant section instead of `alert()`
+**Fix:** Check if `src/lib/kpi.ts` exists and fetches unscoped data. If so, add `salespersonId` param same as dashboard-reminders.ts. The dashboard page already passes `salespersonId` to the three data functions — apply same pattern to any KPI/stats functions.
 
 ---
 
-### Item 3 — Also remove `confirm()` from revert in PayoutScheduleSection
+### Item 4 — Show investor name + reference ID on payout schedule rows
 
-Already covered in Item 2 above — both bulk and per-row confirmations replaced with inline UI.
+**Problem:** On the payout schedule section of the agreement detail page, there is no quick visual indicator of which agreement/investor a payout belongs to (useful when reviewing).
 
----
-
-### Item 4 — `revertPayout` API: check for `updated_at` column too
-
-**File:** `src/app/api/agreements/[id]/payouts/[payoutId]/revert/route.ts`
-
-Check if this route also sets `updated_at`. If so, remove it — same issue as Item 1.
+Actually — skip this one, it's on the agreement detail page which already shows the investor. Remove from this batch.
 
 ---
 
-### Item 5 — Investors list: salesperson should only see their investors
+### Item 4 — `fmtFrequency` missing in email templates
 
-**File:** `src/app/(app)/investors/page.tsx`
+**File:** `src/lib/reminders.ts` and `src/lib/email.ts`
 
-Read `x-user-role` and `x-user-team-id` headers. If salesperson, only show investors linked to agreements where `salesperson_id = userTeamId`.
+Check if payout frequency label in reminder emails says "biannual" or "monthly" in raw form. If so, add a label map inline:
+```ts
+const freqLabel: Record<string, string> = {
+  quarterly: 'Quarterly', annual: 'Annual', cumulative: 'Cumulative',
+  biannual: 'Biannual (6-monthly)', monthly: 'Monthly'
+}
+```
+Use it wherever `payout_frequency` is shown in email body.
 
-Query: fetch `agreement_id`s where `salesperson_id = userTeamId`, then filter investors by those `investor_id`s. Or join through agreements.
+---
+
+### Item 5 — Agreement list page: clicking a row should go to the agreement detail
+
+**Check:** Verify the agreements table rows are clickable links to `/agreements/[id]`. If not, make the investor name or reference ID a clickable link. Check `src/components/dashboard/AgreementsTable.tsx`.
 
 ---
 
 ## Todos
-- [x] Item 1 — Remove updated_at from mark-past-paid API
-- [x] Item 2+3 — Replace confirm/alert with inline UI in PayoutScheduleSection
-- [x] Item 4 — Check revert API for same updated_at issue
-- [x] Item 5 — Scope investors list to salesperson
+- [ ] Item 1 — Block salesperson from viewing other agreements by direct URL
+- [ ] Item 2 — Block salesperson from viewing other investors by direct URL
+- [ ] Item 3 — Scope KPI/stats on dashboard to salesperson
+- [ ] Item 4 — fmtFrequency in email templates
+- [ ] Item 5 — Verify agreement rows are clickable
 
 ---
 
 ## Work Completed
-- Fixed database error in `mark-past-paid` and `revert` APIs by removing non-existent `updated_at` column from update payloads.
-- Replaced all browser native `confirm()` and `alert()` dialogs in `PayoutScheduleSection.tsx` with inline confirmation UI and on-page error messages.
-- Updated `MarkTdsFiledButton` to use an `onError` callback for displaying errors inline.
-- Implemented salesperson scoping for the investors search API in `src/app/api/investors/route.ts`, ensuring data isolation.
-- Verified that investors list page and export already correctly handle salesperson scoping.
+- Batch C.5 complete — updated_at fix, inline confirmations, investor API scoping
 
 ## Files Changed
-- `src/app/api/agreements/[id]/mark-past-paid/route.ts`
-- `src/app/api/agreements/[id]/payouts/[payoutId]/revert/route.ts`
-- `src/components/agreements/PayoutScheduleSection.tsx`
-- `src/app/api/investors/route.ts`
-- `SESSION.md`
+- SESSION.md
 
 ## Decisions
-- Used inline confirmations for bulk and individual row actions to provide a more modern and less disruptive user experience.
-- Consolidated error reporting in `PayoutScheduleSection` to a single on-page alert area.
-- Ensured RBAC consistency across both the UI and the underlying search API for investors.
+- Salesperson isolation must be enforced at the page level (notFound) not just navigation — direct URL access must be blocked
+- All financial summary numbers must be scoped
 
 ## Codex Review Notes
 - Pending
 
 ## Next Agent Action
-- Codex: review the changes for Batch C.5.
-
+- Gemini: read SESSION.md, summarise all items, wait for confirmation, build 1 → 2 → 3 → 4 → 5, push to main after build passes.
