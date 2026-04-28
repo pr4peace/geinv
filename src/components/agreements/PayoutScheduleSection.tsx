@@ -94,12 +94,63 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
     }
   }
 
+  async function revertPayout(payoutId: string) {
+    if (!confirm('Are you sure you want to revert this payout to pending?')) return
+    setLoading(payoutId)
+    try {
+      const res = await fetch(`/api/agreements/${agreementId}/payouts/${payoutId}/revert`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error ?? 'Failed to revert payout')
+      } else {
+        router.refresh()
+      }
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  async function markPastPaid() {
+    if (!confirm('Are you sure you want to mark all past pending payouts as paid?')) return
+    setLoading('bulk')
+    try {
+      const res = await fetch(`/api/agreements/${agreementId}/mark-past-paid`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error ?? 'Failed to mark past payouts as paid')
+      } else {
+        router.refresh()
+      }
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const hasPastPending = interestRows.some(r => r.status !== 'paid' && r.due_by < todayStr)
+
   if (payouts.length === 0) {
     return <p className="text-slate-500 text-sm italic">No payout schedule available.</p>
   }
 
   return (
     <div className="space-y-6">
+      {hasPastPending && (
+        <div className="flex justify-end">
+          <button
+            onClick={markPastPaid}
+            disabled={loading === 'bulk'}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/40 text-emerald-400 hover:bg-emerald-800/40 border border-emerald-800/50 transition-colors disabled:opacity-50"
+          >
+            {loading === 'bulk' ? 'Updating...' : 'Mark all past payouts as paid'}
+          </button>
+        </div>
+      )}
+
       {/* ── Interest Payouts ── */}
       {interestRows.length > 0 && (
         <div className="overflow-x-auto">
@@ -133,13 +184,21 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                   </td>
                   <td className="py-2 pr-3 whitespace-nowrap text-slate-400 text-xs">{fmtDate(row.paid_date)}</td>
                   <td className="py-2 text-center">
-                    {row.status !== 'paid' && (
+                    {row.status !== 'paid' ? (
                       <button
                         onClick={() => markAsPaid(row.id)}
                         disabled={loading === row.id}
                         className="px-2 py-1 text-xs rounded bg-green-800/40 text-green-400 hover:bg-green-800/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                       >
                         {loading === row.id ? 'Saving…' : 'Mark Paid'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => revertPayout(row.id)}
+                        disabled={loading === row.id}
+                        className="px-2 py-1 text-xs rounded bg-slate-800/40 text-slate-400 hover:bg-slate-700/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                      >
+                        {loading === row.id ? 'Saving…' : 'Revert'}
                       </button>
                     )}
                   </td>
@@ -204,13 +263,21 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
             </div>
             <div>
               <p className="text-xs text-slate-500 mb-0.5">Action</p>
-              {row.status !== 'paid' && (
+              {row.status !== 'paid' ? (
                 <button
                   onClick={() => markAsPaid(row.id)}
                   disabled={loading === row.id}
                   className="px-2 py-1 text-xs rounded bg-green-800/40 text-green-400 hover:bg-green-800/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading === row.id ? 'Saving…' : 'Mark Paid'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => revertPayout(row.id)}
+                  disabled={loading === row.id}
+                  className="px-2 py-1 text-xs rounded bg-slate-800/40 text-slate-400 hover:bg-slate-700/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading === row.id ? 'Saving…' : 'Revert'}
                 </button>
               )}
             </div>

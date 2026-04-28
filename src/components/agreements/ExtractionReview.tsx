@@ -158,7 +158,7 @@ export default function ExtractionReview({
     })),
     principal_amount: extracted.principal_amount != null ? String(extracted.principal_amount) : '',
     roi_percentage: extracted.roi_percentage != null ? String(extracted.roi_percentage) : '',
-    payout_frequency: extracted.payout_frequency ?? 'quarterly',
+    payout_frequency: extracted.interest_type === 'compound' ? 'cumulative' : (extracted.payout_frequency ?? 'quarterly'),
     interest_type: extracted.interest_type ?? 'simple',
     lock_in_years: extracted.lock_in_years != null ? String(extracted.lock_in_years) : '',
     maturity_date: toDateInput(extracted.maturity_date),

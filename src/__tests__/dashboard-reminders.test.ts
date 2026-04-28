@@ -20,8 +20,8 @@ describe('getPayoutReminders', () => {
       .toISOString().split('T')[0]
 
     const rows = [
-      { id: '1', period_to: '2026-03-31', status: 'pending', net_interest: 1000, tds_amount: 100, gross_interest: 1100, is_principal_repayment: false, agreement_id: 'a1', agreements: { investor_name: 'Alice', reference_id: 'REF-001', payout_frequency: 'quarterly', id: 'a1' } },
-      { id: '2', period_to: lastOfMonth, status: 'pending', net_interest: 2000, tds_amount: 200, gross_interest: 2200, is_principal_repayment: false, agreement_id: 'a2', agreements: { investor_name: 'Bob', reference_id: 'REF-002', payout_frequency: 'annual', id: 'a2' } },
+      { id: '1', period_to: '2026-03-31', due_by: '2026-03-31', status: 'pending', net_interest: 1000, tds_amount: 100, gross_interest: 1100, is_principal_repayment: false, agreement_id: 'a1', agreements: { investor_name: 'Alice', reference_id: 'REF-001', payout_frequency: 'quarterly', id: 'a1' } },
+      { id: '2', period_to: lastOfMonth, due_by: lastOfMonth, status: 'pending', net_interest: 2000, tds_amount: 200, gross_interest: 2200, is_principal_repayment: false, agreement_id: 'a2', agreements: { investor_name: 'Bob', reference_id: 'REF-002', payout_frequency: 'annual', id: 'a2' } },
     ]
 
     const chain = {
