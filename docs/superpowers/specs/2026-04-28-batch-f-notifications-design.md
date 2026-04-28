@@ -196,6 +196,30 @@ Creates `notification_queue` table with indexes as defined above.
 
 ---
 
+---
+
+## Salesperson Role Restrictions
+
+Salesperson role is **view + create only**. All processing actions are coordinator/accountant only.
+
+**Salesperson can:**
+- View their own agreements and investors (scoped by salesperson_id)
+- Create new agreements (upload or manual)
+- View their dashboard and calendar (already scoped)
+
+**Salesperson cannot (hide UI, gate API):**
+- Mark payout as paid
+- Revert payout to pending
+- Mark TDS as filed
+- Bulk mark past payouts as paid
+- Re-scan documents
+- Delete agreements
+- Send or dismiss notifications
+
+**Implementation:** In `PayoutScheduleSection`, `RescanModal`, and `AgreementDetailPage` — conditionally hide action buttons when `userRole === 'salesperson'`. Pass role down as a prop from the server page. Gate all action API routes (`/api/agreements/[id]/payouts/[id]/paid`, `/revert`, `/mark-past-paid`, `/api/payout-schedule/[id]/mark-tds-filed`, `/api/agreements/[id]/rescan`) with a role check returning 403 for salesperson.
+
+---
+
 ## Out of Scope (Future)
 
 - Push notifications / Slack
