@@ -101,7 +101,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Invalid payout frequency: ${frequency}` }, { status: 400 })
     }
 
-    if (!isDraft && (!Array.isArray(payoutScheduleRows) || payoutScheduleRows.length === 0)) {
+    // Cumulative/compound agreements have no periodic payouts — TDS rows are generated server-side
+    const isCumulativeType = frequency === 'cumulative' || agreementFields.interest_type === 'compound'
+    if (!isDraft && !isCumulativeType && (!Array.isArray(payoutScheduleRows) || payoutScheduleRows.length === 0)) {
       return NextResponse.json({ error: 'Payout schedule is required for non-draft agreements' }, { status: 400 })
     }
 
