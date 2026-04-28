@@ -352,7 +352,6 @@ export default function ExtractionReview({
 
       const created = await res.json()
       if (!created?.id) throw new Error('Agreement saved but ID missing in response.')
-      router.refresh()
       router.push(`/agreements/${created.id}?new=1`)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Unknown error saving agreement')
