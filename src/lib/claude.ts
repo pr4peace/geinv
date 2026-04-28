@@ -38,9 +38,12 @@ const EXTRACTION_PROMPT = `You are an expert at extracting structured data from 
 
 Extract ALL fields exactly as they appear in the document. Follow these rules:
 
-1. DATES: Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed. The investment_start_date is when the money was actually received/paid. 
-   - CRITICAL: Check the payment/funding table for the actual date(s) funds were received. If multiple tranches exist, use the date of the earliest tranche as investment_start_date.
-   - If no specific funding date is found, use the agreement_date.
+1. DATES: Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed.
+   - investment_start_date is the date from which interest starts accruing. Use this priority order:
+     a. FIRST: Look in the body paragraphs of the agreement for an explicit investment commencement date, interest accrual start date, or a statement like "interest shall accrue from [date]" or "investment commences on [date]". This is the most reliable source.
+     b. SECOND: If not found in paragraphs, look at the first row of the payout schedule — period_from of the first row is the interest start date.
+     c. LAST RESORT: If still not found, use the earliest date from the payment/funding table.
+   - NEVER use the agreement_date as investment_start_date unless it is explicitly stated as the commencement date.
 
 2. PAYOUT SCHEDULE: Extract EVERY row from the interest payout table. Each row has:
    - period_from and period_to (the interest accrual period)
