@@ -59,9 +59,9 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
 4. PAYOUT FREQUENCY:
    - "monthly" if interest is paid every month
    - "quarterly" if interest is paid every quarter
-   - "biannual" if interest is paid every 6 months
-   - "annual" if interest is paid annually
-   - "cumulative" if interest is paid at maturity only
+   - "biannual" if interest is paid every 6 months (also: "bi-annual", "half-yearly", "semi-annual", "half yearly", "semi annual")
+   - "annual" if interest is paid annually (once per year)
+   - "cumulative" if interest is paid at maturity only (also: "compounded", "compound", "on maturity", "at maturity")
 
 5. INTEREST TYPE:
    - "compound" if principal grows each period

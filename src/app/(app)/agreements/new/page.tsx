@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2, FileUp, FileSignature } from 'lucide-react'
 import UploadStep from '@/components/agreements/UploadStep'
 import ExtractionReview from '@/components/agreements/ExtractionReview'
@@ -40,6 +40,9 @@ export default function NewAgreementPage() {
   // Extraction result
   const [extractResult, setExtractResult] = useState<ExtractResult | null>(null)
 
+  // Abort controller for in-flight extraction
+  const abortRef = useRef<AbortController | null>(null)
+
   useEffect(() => {
     fetch('/api/team')
       .then(r => r.json())
@@ -63,6 +66,9 @@ export default function NewAgreementPage() {
     setSalespersonCustom(params.salespersonCustom)
     setStep('loading')
 
+    const controller = new AbortController()
+    abortRef.current = controller
+
     try {
       const formData = new FormData()
       formData.append('file', params.file)
@@ -71,6 +77,7 @@ export default function NewAgreementPage() {
       const res = await fetch('/api/extract', {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       })
 
       const data = await res.json()
@@ -82,9 +89,20 @@ export default function NewAgreementPage() {
       setExtractResult(data as ExtractResult)
       setStep('review')
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
       setUploadError(err instanceof Error ? err.message : 'Extraction failed. Please try again.')
       setStep('upload')
+    } finally {
+      abortRef.current = null
     }
+  }
+
+  function handleCancel() {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setExtractResult(null)
+    setUploadError(null)
+    setStep('choice')
   }
 
   function handleBack() {
@@ -203,10 +221,18 @@ export default function NewAgreementPage() {
 
       {/* Step 3: Loading */}
       {step === 'loading' && (
-        <div className="flex flex-col items-center justify-center py-32 space-y-4">
+        <div className="flex flex-col items-center justify-center py-32 space-y-6">
           <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
-          <p className="text-slate-300 text-base font-medium">Claude is reading the agreement...</p>
-          <p className="text-slate-500 text-sm">This usually takes 10–30 seconds</p>
+          <div className="text-center space-y-1">
+            <p className="text-slate-300 text-base font-medium">Reading the agreement...</p>
+            <p className="text-slate-500 text-sm">This usually takes 10–30 seconds</p>
+          </div>
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 text-sm transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       )}
 

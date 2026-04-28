@@ -148,10 +148,13 @@ function buildTdsSummary(rows: PayoutSchedule[]) {
 
 export default async function AgreementDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ new?: string }>
 }) {
   const { id } = await params
+  const { new: isNew } = await searchParams
   const supabase = createAdminClient()
 
   const { data: rawAgreement, error } = await supabase
@@ -204,13 +207,23 @@ export default async function AgreementDetailPage({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         {/* Back link */}
-        <Link
-          href="/agreements"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          All Agreements
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/agreements"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            All Agreements
+          </Link>
+          {isNew === '1' && (
+            <Link
+              href="/agreements/new"
+              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+            >
+              + Add another agreement
+            </Link>
+          )}
+        </div>
 
         {/* ── Header ── */}
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
