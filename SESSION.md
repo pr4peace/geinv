@@ -102,26 +102,31 @@ Use `<a href>` (not `<Link>`) so it does a full navigation and clears the form s
 ---
 
 ## Todos
-- [ ] Item 1 — Block quarterly-reports + quarterly-review in middleware
-- [ ] Item 2 — Scope calendar to salesperson's agreements
-- [ ] Item 3 — Cancel button on ExtractionReview save area
+- [x] Item 1 — Block quarterly-reports + quarterly-review in middleware
+- [x] Item 2 — Scope calendar to salesperson's agreements
+- [x] Item 3 — Cancel button on ExtractionReview save area
 
 ---
 
 ## Work Completed
-- (previous) Batch C.3 complete
-- Indian number format fix in extraction prompt (lakh/crore confusion)
-- WhatsNewModal moved to dashboard only
+- Item 1: Restricted `/quarterly-reports` and `/quarterly-review` in `src/middleware.ts` for salesperson roles.
+- Item 2: Implemented salesperson-specific filtering on the `CalendarPage` in `src/app/(app)/calendar/page.tsx`.
+- Item 3: Added a "Cancel" button to the `ExtractionReview` component to allow abandoning the upload flow.
 
 ## Files Changed
-- SESSION.md
+- `src/middleware.ts`
+- `src/app/(app)/calendar/page.tsx`
+- `src/components/agreements/ExtractionReview.tsx`
+- `SESSION.md`
 
 ## Decisions
-- Quarterly reports and review are coordinator/accountant tools — block salesperson entirely
-- Calendar stays accessible to salesperson but scoped to their own agreements only
+- Quarterly reports and review are restricted to coordinator/admin roles.
+- Calendar page is now RBAC-aware, filtering agreements based on the assigned salesperson.
+- Cancel button in ExtractionReview performs a full page reload to clear state.
 
 ## Codex Review Notes
 - Pending
 
 ## Next Agent Action
-- Gemini: read SESSION.md, confirm the 2 items, wait for approval, then fix. Push to main. Build must pass.
+- Codex: review the security fixes and UI addition in Batch C.4.
+

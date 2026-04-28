@@ -112,7 +112,8 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ### ✅ Done
 
-| **Batch C.2 — Post-Launch Hotfixes** | TDS-only rows for cumulative, Document Re-scanning, Bulk-mark payouts as paid, "What's New" modal, test fixes for overdue filter. |
+| **Batch C.4 — Salesperson RBAC Fixes** | Security: block quarterly tools for salespersons, scope calendar to assigned agreements, add cancel button to extraction flow. |
+| **Batch C.3 — Small hotfixes** | TDS-only rows for cumulative, Document Re-scanning, Bulk-mark payouts as paid, "What's New" modal, test fixes for overdue filter. |
 | **Batch C.1 — Extraction Fixes + Post-V1 Patch** | Gemini extraction fixes (monthly/biannual, prompt tuning), Sign out button, Apple-style sidebar toggle, Full-width dashboard layout. |
 | **Pre-Launch Finalisation** | Codex final review, security fixes (role gates, salesperson scoping, atomic reminders), data wipe, Vercel → main, GitHub default branch → main, stale branches deleted. |
 | **Batch C.1 — Extraction Fixes + Post-V1 Patch** | Gemini extraction fixes (monthly/biannual, maxOutputTokens, validation), sign-out button, Apple-style sidebar toggle, dashboard full-width layout fix. |

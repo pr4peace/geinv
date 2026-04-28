@@ -77,7 +77,13 @@ export async function middleware(request: NextRequest) {
       }
 
       // Gate restricted routes to coordinator/admin only
-      const restrictedRoutes = ['/settings', '/agreements/new', '/agreements/import']
+      const restrictedRoutes = [
+      '/settings',
+      '/agreements/new',
+      '/agreements/import',
+      '/quarterly-reports',
+      '/quarterly-review',
+    ]
       const isRestricted = restrictedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
       if (isRestricted && member.role !== 'coordinator' && member.role !== 'admin') {

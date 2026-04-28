@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CalendarGrid, { CalendarEvent } from '@/components/calendar/CalendarGrid'
 
@@ -9,16 +10,27 @@ function formatCurrency(amount: number | null): string {
 }
 
 export default async function CalendarPage() {
+  const headersList = await headers()
+  const userRole = headersList.get('x-user-role') ?? ''
+  const userTeamId = headersList.get('x-user-team-id') ?? ''
+  const isSalesperson = userRole === 'salesperson'
+
   const supabase = createAdminClient()
 
   // 1. Fetch active non-draft agreement IDs
   // This avoids the bug where joined filters are silently ignored
-  const { data: activeAgreements } = await supabase
+  let agreementsQuery = supabase
     .from('agreements')
     .select('id, investor_name, reference_id, maturity_date, is_draft, status, interest_type')
     .eq('status', 'active')
     .eq('is_draft', false)
     .is('deleted_at', null)
+
+  if (isSalesperson) {
+    agreementsQuery = agreementsQuery.eq('salesperson_id', userTeamId)
+  }
+
+  const { data: activeAgreements } = await agreementsQuery
 
   const activeIds = (activeAgreements ?? []).map(a => a.id)
 

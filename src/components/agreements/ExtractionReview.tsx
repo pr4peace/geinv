@@ -884,19 +884,27 @@ export default function ExtractionReview({
             </div>
           )}
 
-          {/* Save button */}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full py-3 px-6 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
-          >
-            {saving
-              ? 'Saving...'
-              : duplicates.length > 0 && !bypassDuplicate
-              ? 'Duplicate Detected — Confirm Below First'
-              : 'Save Agreement'}
-          </button>
+          {/* Save & Cancel buttons */}
+          <div className="flex gap-3">
+            <a
+              href="/agreements"
+              className="px-6 py-3 rounded-xl border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 text-sm font-semibold transition-colors flex items-center justify-center"
+            >
+              Cancel
+            </a>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-3 px-6 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
+            >
+              {saving
+                ? 'Saving...'
+                : duplicates.length > 0 && !bypassDuplicate
+                ? 'Duplicate Detected — Confirm Below First'
+                : 'Save Agreement'}
+            </button>
+          </div>
         </div>
 
         {/* Right: Document Preview (40%) */}
