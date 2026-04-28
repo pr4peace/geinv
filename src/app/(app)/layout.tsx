@@ -20,7 +20,6 @@ import {
   LogOut,
 } from 'lucide-react'
 import { SplashScreen } from '@/components/SplashScreen'
-import WhatsNewModal from '@/components/WhatsNewModal'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
@@ -150,7 +149,6 @@ export default function AppLayout({
   return (
     <>
       <SplashScreen />
-      <WhatsNewModal />
       <div className="flex h-screen bg-slate-950 overflow-hidden">
         {/* Sidebar */}
         <aside 

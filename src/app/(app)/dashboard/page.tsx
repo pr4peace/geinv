@@ -8,6 +8,7 @@ import PayoutReminders from '@/components/dashboard/PayoutReminders'
 import MaturingSection from '@/components/dashboard/MaturingSection'
 import DocReturnSection from '@/components/dashboard/DocReturnSection'
 import SendReminderSummaryButton from '@/components/dashboard/SendReminderSummaryButton'
+import WhatsNewModal from '@/components/WhatsNewModal'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +23,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-8">
+      <WhatsNewModal />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
