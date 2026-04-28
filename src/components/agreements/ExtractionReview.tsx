@@ -487,6 +487,27 @@ export default function ExtractionReview({
                   onChange={e => update('investment_start_date', e.target.value)}
                   className={fieldClass('investment_start_date', 'w-full')}
                 />
+                {(() => {
+                  if (!form.investment_start_date) return null
+                  const firstPeriodFrom = extracted.payout_schedule?.[0]?.period_from
+                  const paymentDates = (extracted.payments ?? []).map(p => p.date).filter(Boolean)
+                  const matchesPeriodFrom = firstPeriodFrom && form.investment_start_date === toDateInput(firstPeriodFrom)
+                  const differsFromAllPayments = paymentDates.length > 0 && paymentDates.every(d => toDateInput(d) !== form.investment_start_date)
+                  if (matchesPeriodFrom || differsFromAllPayments) {
+                    return (
+                      <p className="text-xs text-amber-400 mt-1 flex items-start gap-1">
+                        <span>⚠</span>
+                        <span>
+                          {matchesPeriodFrom
+                            ? 'This matches the payout schedule start — verify it reflects when funds were actually received, not a calendar alignment date.'
+                            : 'This date differs from the payment dates in the document — verify it is correct.'}
+                          {paymentDates.length > 0 && ` Payment date(s) found: ${paymentDates.map(d => toDateInput(d)).join(', ')}`}
+                        </span>
+                      </p>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
 
