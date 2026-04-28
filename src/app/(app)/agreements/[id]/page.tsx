@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, Bell, FileText, User } from 'lucide-react'
 import type {
@@ -156,6 +157,9 @@ export default async function AgreementDetailPage({
 }) {
   const { id } = await params
   const { new: isNew } = await searchParams
+  const headersList = await headers()
+  const userRole = headersList.get('x-user-role') ?? ''
+  const userTeamId = headersList.get('x-user-team-id') ?? ''
   const supabase = createAdminClient()
 
   const { data: rawAgreement, error } = await supabase
@@ -171,6 +175,11 @@ export default async function AgreementDetailPage({
     .single()
 
   if (error || !rawAgreement) {
+    notFound()
+  }
+
+  // Salesperson can only view their own agreements
+  if (userRole === 'salesperson' && rawAgreement.salesperson_id !== userTeamId) {
     notFound()
   }
 
