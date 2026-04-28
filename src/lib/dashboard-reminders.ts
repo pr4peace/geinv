@@ -41,17 +41,17 @@ export type PayoutRemindersResult = {
   netTotal: number
 }
 
-export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
+export async function getPayoutReminders(salespersonId?: string): Promise<PayoutRemindersResult> {
   const supabase = createAdminClient()
   const today = new Date()
   const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('payout_schedule')
     .select(`
       id, agreement_id, period_to, due_by,
       gross_interest, tds_amount, net_interest, status,
-      agreements!inner(id, investor_name, reference_id, payout_frequency, status, deleted_at)
+      agreements!inner(id, investor_name, reference_id, payout_frequency, status, deleted_at, salesperson_id)
     `)
     .neq('status', 'paid')
     .eq('is_principal_repayment', false)
@@ -59,6 +59,12 @@ export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
     .lte('due_by', monthEnd)
+
+  if (salespersonId) {
+    query = query.eq('agreements.salesperson_id', salespersonId)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return { overdue: [], thisMonth: [], netTotal: 0 }
 
@@ -101,13 +107,13 @@ export async function getPayoutReminders(): Promise<PayoutRemindersResult> {
   return { overdue, thisMonth, netTotal }
 }
 
-export async function getMaturingAgreements(): Promise<{ agreements: MaturingRow[]; totalPrincipal: number }> {
+export async function getMaturingAgreements(salespersonId?: string): Promise<{ agreements: MaturingRow[]; totalPrincipal: number }> {
   const supabase = createAdminClient()
   const today = new Date()
   const monthStart = format(startOfMonth(today), 'yyyy-MM-dd')
   const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('agreements')
     .select('id, investor_name, reference_id, principal_amount, maturity_date, interest_type')
     .eq('status', 'active')
@@ -115,6 +121,12 @@ export async function getMaturingAgreements(): Promise<{ agreements: MaturingRow
     .gte('maturity_date', monthStart)
     .lte('maturity_date', monthEnd)
     .order('maturity_date', { ascending: true })
+
+  if (salespersonId) {
+    query = query.eq('salesperson_id', salespersonId)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return { agreements: [], totalPrincipal: 0 }
 
@@ -130,17 +142,23 @@ export async function getMaturingAgreements(): Promise<{ agreements: MaturingRow
   return { agreements, totalPrincipal }
 }
 
-export async function getDocsPendingReturn(): Promise<DocReturnRow[]> {
+export async function getDocsPendingReturn(salespersonId?: string): Promise<DocReturnRow[]> {
   const supabase = createAdminClient()
   const today = new Date()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('agreements')
     .select('id, investor_name, reference_id, doc_sent_to_client_date, doc_return_reminder_days')
     .eq('doc_status', 'sent_to_client')
     .is('doc_returned_date', null)
     .is('deleted_at', null)
     .order('doc_sent_to_client_date', { ascending: true })
+
+  if (salespersonId) {
+    query = query.eq('salesperson_id', salespersonId)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return []
 

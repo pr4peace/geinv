@@ -1,4 +1,5 @@
 import { format } from 'date-fns'
+import { headers } from 'next/headers'
 import {
   getPayoutReminders,
   getMaturingAgreements,
@@ -13,10 +14,15 @@ import WhatsNewModal from '@/components/WhatsNewModal'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
+  const headersList = await headers()
+  const userRole = headersList.get('x-user-role') ?? ''
+  const userTeamId = headersList.get('x-user-team-id') ?? ''
+  const salespersonId = userRole === 'salesperson' ? userTeamId : undefined
+
   const [payouts, maturing, docs] = await Promise.all([
-    getPayoutReminders().catch(() => ({ overdue: [], thisMonth: [], netTotal: 0 })),
-    getMaturingAgreements().catch(() => ({ agreements: [], totalPrincipal: 0 })),
-    getDocsPendingReturn().catch(() => []),
+    getPayoutReminders(salespersonId).catch(() => ({ overdue: [], thisMonth: [], netTotal: 0 })),
+    getMaturingAgreements(salespersonId).catch(() => ({ agreements: [], totalPrincipal: 0 })),
+    getDocsPendingReturn(salespersonId).catch(() => []),
   ])
 
   const monthLabel = format(new Date(), 'MMMM yyyy')
