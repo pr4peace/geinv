@@ -64,25 +64,33 @@ onChange={e => {
 ---
 
 ## Todos
-- [ ] Item 1 — Backfill TDS rows (Settings button + API)
-- [ ] Item 2 — fmtFrequency biannual/monthly labels
-- [ ] Item 3 — ExtractionReview auto-set cumulative on compound select
+- [x] Item 1 — Backfill TDS rows (Settings button + API)
+- [x] Item 2 — fmtFrequency biannual/monthly labels
+- [x] Item 3 — ExtractionReview auto-set cumulative on compound select
 
 ---
 
 ## Work Completed
-- Full Batch C.2 complete
-- TDS row generation moved outside payoutSchedule guard
+- Item 1: Created `src/app/api/admin/backfill-tds-rows/route.ts` API and `src/components/settings/BackfillTdsButton.tsx` component. Added Maintenance section to `src/app/(app)/settings/page.tsx`.
+- Item 2: Updated `fmtFrequency` in `src/app/(app)/agreements/[id]/page.tsx` to support `biannual` and `monthly`.
+- Item 3: Updated `src/components/agreements/ExtractionReview.tsx` to auto-set `payout_frequency` to `cumulative` when `interest_type` is changed to `compound`.
 
 ## Files Changed
-- SESSION.md
+- `src/app/api/admin/backfill-tds-rows/route.ts`
+- `src/components/settings/BackfillTdsButton.tsx`
+- `src/app/(app)/settings/page.tsx`
+- `src/app/(app)/agreements/[id]/page.tsx`
+- `src/components/agreements/ExtractionReview.tsx`
+- `SESSION.md`
 
 ## Decisions
 - Working directly on main for these small safe fixes
 - Backfill button coordinator/admin only
+- Added `Maintenance` section to Settings for future admin tools
 
 ## Codex Review Notes
 - Pending
 
 ## Next Agent Action
-- Gemini: read SESSION.md, summarise all 3 items, wait for confirmation, build 1 → 2 → 3, push to main after each (build must pass).
+- Codex: review the changes for Batch C.3.
+

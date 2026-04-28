@@ -52,7 +52,7 @@ function fmtCurrency(value: number | null | undefined): string {
 }
 
 function fmtFrequency(freq: string): string {
-  return { quarterly: 'Quarterly', annual: 'Annual', cumulative: 'Cumulative' }[freq] ?? freq
+  return { quarterly: 'Quarterly', annual: 'Annual', cumulative: 'Cumulative', biannual: 'Biannual', monthly: 'Monthly' }[freq] ?? freq
 }
 
 function fmtInterestType(t: string): string {

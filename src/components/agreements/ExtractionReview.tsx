@@ -683,7 +683,11 @@ export default function ExtractionReview({
                 <label className="text-xs text-slate-400">Interest Type</label>
                 <select
                   value={form.interest_type}
-                  onChange={e => update('interest_type', e.target.value as InterestType)}
+                  onChange={e => {
+                    const val = e.target.value as InterestType
+                    update('interest_type', val)
+                    if (val === 'compound') update('payout_frequency', 'cumulative')
+                  }}
                   className={fieldClass('interest_type', 'w-full')}
                 >
                   <option value="simple">Simple</option>
