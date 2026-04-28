@@ -10,6 +10,7 @@ import type {
 import DocLifecycleStepper from '@/components/agreements/DocLifecycleStepper'
 import UploadSignedButton from '@/components/agreements/UploadSignedButton'
 import DeleteAgreementButton from '@/components/agreements/DeleteAgreementButton'
+import RescanModal from '@/components/agreements/RescanModal'
 import AuditLog from '@/components/agreements/AuditLog'
 import PayoutScheduleSection from '@/components/agreements/PayoutScheduleSection'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -258,6 +259,9 @@ export default async function AgreementDetailPage({
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-900/40 text-amber-400">
                   DRAFT
                 </span>
+              )}
+              {agreement.document_url && (
+                <RescanModal agreementId={agreement.id} />
               )}
               {(agreement.is_draft || !agreement.document_url) && (
                 <UploadSignedButton
