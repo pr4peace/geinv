@@ -103,6 +103,10 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 |---|---|
 | **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch D is stable. |
 | **Slack integration** | Automated notifications. External dependency. |
+| **Custom domain** | Move off Vercel subdomain to a proper domain. |
+| **FAQ / About the tool** | Internal page explaining the tool, how to use it, investment agreement glossary for the team. |
+| **Personal dashboards** | Role-scoped dashboard views — coordinator sees everything, salesperson sees only their agreements. Design-first. |
+| **Backfill TDS rows (Settings)** | Button in Settings to insert missing 31 Mar TDS rows for cumulative/compound agreements uploaded before the fix. API: POST /api/admin/backfill-tds-rows. |
 
 ---
 

@@ -4,93 +4,36 @@
 - main
 
 ## Phase
-- building
+- ready for next batch
 
 ## Active Batch
-- Batch C.3 — Small hotfixes (working directly on main, no branch needed)
-
----
-
-## Items for Gemini
-
-### Item 1 — Backfill TDS rows for existing cumulative/compound agreements
-
-**Goal:** A one-time repair button in the Settings page for agreements uploaded before the TDS-row fix. Finds all cumulative/compound agreements with no `is_tds_only` rows and inserts missing 31st March TDS rows.
-
-**Files:**
-- `src/app/api/admin/backfill-tds-rows/route.ts` — new API route (POST)
-- `src/app/(app)/settings/page.tsx` — add "Maintenance" section with button
-
-**API route (`POST /api/admin/backfill-tds-rows`):**
-1. Role-gate: coordinator or admin only
-2. Fetch all agreements where `payout_frequency = 'cumulative' OR interest_type = 'compound'` and `deleted_at IS NULL`
-3. For each, check if any `payout_schedule` rows with `is_tds_only = true` exist
-4. If none: generate 31 March rows for each year in `investment_start_date → maturity_date` (same loop logic as `src/app/api/agreements/route.ts` lines ~258–295)
-5. Insert the missing rows
-6. Return `{ updated: N, skipped: M }`
-
-**Settings page:**
-- Add "Maintenance" section at the bottom
-- Button: "Backfill TDS Filing Rows" with description
-- On click: `confirm()` → POST → show result
-- Extract as small `BackfillTdsButton` client component
-
----
-
-### Item 2 — fmtFrequency missing biannual and monthly
-
-**File:** `src/app/(app)/agreements/[id]/page.tsx` line 55
-
-**Fix:**
-```ts
-return { quarterly: 'Quarterly', annual: 'Annual', cumulative: 'Cumulative', biannual: 'Biannual', monthly: 'Monthly' }[freq] ?? freq
-```
-
----
-
-### Item 3 — ExtractionReview: auto-set cumulative when interest_type changes to compound
-
-**File:** `src/components/agreements/ExtractionReview.tsx`
-
-Find the `onChange` for the `interest_type` select and change to:
-```tsx
-onChange={e => {
-  const val = e.target.value as InterestType
-  update('interest_type', val)
-  if (val === 'compound') update('payout_frequency', 'cumulative')
-}}
-```
-
----
-
-## Todos
-- [x] Item 1 — Backfill TDS rows (Settings button + API)
-- [x] Item 2 — fmtFrequency biannual/monthly labels
-- [x] Item 3 — ExtractionReview auto-set cumulative on compound select
-
----
+- Batch C.3 — COMPLETE
 
 ## Work Completed
-- Item 1: Created `src/app/api/admin/backfill-tds-rows/route.ts` API and `src/components/settings/BackfillTdsButton.tsx` component. Added Maintenance section to `src/app/(app)/settings/page.tsx`.
-- Item 2: Updated `fmtFrequency` in `src/app/(app)/agreements/[id]/page.tsx` to support `biannual` and `monthly`.
-- Item 3: Updated `src/components/agreements/ExtractionReview.tsx` to auto-set `payout_frequency` to `cumulative` when `interest_type` is changed to `compound`.
+- Backfill TDS rows button in Settings (POST /api/admin/backfill-tds-rows)
+- fmtFrequency: biannual and monthly labels on agreement detail page
+- ExtractionReview: auto-sets payout_frequency to cumulative when interest_type → compound
+- WhatsNewModal moved from app layout to dashboard page only (was showing on every page)
+- TDS row generation moved outside payoutSchedule guard (compound agreements with empty schedule now work)
+- Empty payout_schedule allowed for cumulative/compound agreements (was blocking save with 400)
 
 ## Files Changed
-- `src/app/api/admin/backfill-tds-rows/route.ts`
-- `src/components/settings/BackfillTdsButton.tsx`
-- `src/app/(app)/settings/page.tsx`
-- `src/app/(app)/agreements/[id]/page.tsx`
-- `src/components/agreements/ExtractionReview.tsx`
-- `SESSION.md`
+- src/app/(app)/layout.tsx
+- src/app/(app)/dashboard/page.tsx
+- src/app/(app)/agreements/[id]/page.tsx
+- src/app/(app)/settings/page.tsx
+- src/app/api/admin/backfill-tds-rows/route.ts
+- src/app/api/agreements/route.ts
+- src/components/agreements/ExtractionReview.tsx
+- src/components/settings/BackfillTdsButton.tsx
+- BACKLOG.md, SESSION.md
 
 ## Decisions
-- Working directly on main for these small safe fixes
-- Backfill button coordinator/admin only
-- Added `Maintenance` section to Settings for future admin tools
+- WhatsNewModal only on dashboard (login landing page), not app-wide layout
+- Cumulative/compound agreements bypass empty payout_schedule validation
 
 ## Codex Review Notes
 - Pending
 
 ## Next Agent Action
-- Codex: review the changes for Batch C.3.
-
+- Claude: plan next batch. Options: Batch F (Notification Revamp) or dashboard redesign (needs design mockups first).
