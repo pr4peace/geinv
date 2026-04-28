@@ -7,126 +7,98 @@
 - building
 
 ## Active Batch
-- Batch C.4 — Salesperson RBAC Fixes (security — push directly to main)
-
----
-
-## Background
-
-Salesperson role (e.g. George) correctly cannot see agreements/investors pages.
-But data leaks via:
-- `/calendar` — shows ALL investors' payout events (no salesperson filter)
-- `/quarterly-reports` — shows full portfolio aggregate data
-- `/quarterly-review` — TDS reconciliation tool, no role gate at all
+- Batch C.5 — UI polish + bug fixes (push directly to main)
 
 ---
 
 ## Items for Gemini
 
-### Item 1 — Block quarterly-reports and quarterly-review from salespersons
+### Item 1 — Remove `updated_at` from mark-past-paid API (causes DB error)
 
-**File:** `src/middleware.ts`
+**File:** `src/app/api/agreements/[id]/mark-past-paid/route.ts`
 
-**Fix:** Add these two routes to the `restrictedRoutes` array (line ~72):
+The `payout_schedule` table has no `updated_at` column. Remove it from the update payload.
 
-Current:
+Replace:
 ```ts
-const restrictedRoutes = ['/settings', '/agreements/new', '/agreements/import']
+.update({ 
+  status: 'paid', 
+  paid_date: todayStr,
+  updated_at: new Date().toISOString()
+})
 ```
-
-Replace with:
+With:
 ```ts
-const restrictedRoutes = [
-  '/settings',
-  '/agreements/new',
-  '/agreements/import',
-  '/quarterly-reports',
-  '/quarterly-review',
-]
+.update({ status: 'paid', paid_date: todayStr })
 ```
-
-That's it. Middleware already redirects to `/dashboard` for non-coordinators on restricted routes.
 
 ---
 
-### Item 2 — Scope calendar to salesperson's agreements only
+### Item 2 — Replace all `confirm()` and `alert()` in PayoutScheduleSection with inline UI
 
-**File:** `src/app/(app)/calendar/page.tsx`
+**File:** `src/components/agreements/PayoutScheduleSection.tsx`
 
-**Fix:**
-1. Import `headers` from `next/headers` at the top
-2. Read role and team ID:
-```ts
-const headersList = await headers()
-const userRole = headersList.get('x-user-role') ?? ''
-const userTeamId = headersList.get('x-user-team-id') ?? ''
-const isSalesperson = userRole === 'salesperson'
-```
-3. Scope the agreements query — add `.eq('salesperson_id', userTeamId)` if `isSalesperson`:
-```ts
-let agreementsQuery = supabase
-  .from('agreements')
-  .select('id, investor_name, reference_id, maturity_date, is_draft, status, interest_type')
-  .eq('status', 'active')
-  .eq('is_draft', false)
-  .is('deleted_at', null)
+Currently uses native browser `confirm()` for bulk mark and revert, and `alert()` for errors. Replace with inline confirmation UI.
 
-if (isSalesperson) {
-  agreementsQuery = agreementsQuery.eq('salesperson_id', userTeamId)
-}
-
-const { data: activeAgreements } = await agreementsQuery
-```
-
-The rest of the page (payout schedule fetch by `activeIds`) automatically scopes itself since it uses `.in('agreement_id', activeIds)`.
+**Plan:**
+1. Add state: `const [confirmBulk, setConfirmBulk] = useState(false)` and `const [confirmRevert, setConfirmRevert] = useState<string | null>(null)`
+2. Remove all `confirm()` and `alert()` calls
+3. For the bulk "Mark all past payouts as paid" button: clicking it sets `confirmBulk = true`, which shows an inline confirmation row:
+   - Text: "Mark all past payouts as paid? This cannot be undone easily."
+   - Two buttons: "Yes, mark paid" (calls `markPastPaid()`) and "Cancel" (sets `confirmBulk = false`)
+4. For each "Revert" button on paid rows: clicking sets `confirmRevert = row.id`, which replaces that row's action cell with "Confirm revert?" + "Yes" + "No" buttons inline
+5. For errors: set a local `error` state string and show it as a small red text below the relevant section instead of `alert()`
 
 ---
 
-### Item 3 — Cancel button on ExtractionReview save area
+### Item 3 — Also remove `confirm()` from revert in PayoutScheduleSection
 
-**Goal:** Next to the "Save Agreement" button in ExtractionReview, add a "Cancel" button that takes the user back to `/agreements` (the agreements list) entirely — abandoning the upload flow.
+Already covered in Item 2 above — both bulk and per-row confirmations replaced with inline UI.
 
-**File:** `src/components/agreements/ExtractionReview.tsx`
+---
 
-**Fix:** Find the save button at the bottom of the form (search for "Save Agreement" or the submit button). Add a Cancel button next to it:
-```tsx
-<a
-  href="/agreements"
-  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 text-sm transition-colors"
->
-  Cancel
-</a>
-```
-Use `<a href>` (not `<Link>`) so it does a full navigation and clears the form state. Place it to the left of the Save button.
+### Item 4 — `revertPayout` API: check for `updated_at` column too
+
+**File:** `src/app/api/agreements/[id]/payouts/[payoutId]/revert/route.ts`
+
+Check if this route also sets `updated_at`. If so, remove it — same issue as Item 1.
+
+---
+
+### Item 5 — Investors list: salesperson should only see their investors
+
+**File:** `src/app/(app)/investors/page.tsx`
+
+Read `x-user-role` and `x-user-team-id` headers. If salesperson, only show investors linked to agreements where `salesperson_id = userTeamId`.
+
+Query: fetch `agreement_id`s where `salesperson_id = userTeamId`, then filter investors by those `investor_id`s. Or join through agreements.
 
 ---
 
 ## Todos
-- [x] Item 1 — Block quarterly-reports + quarterly-review in middleware
-- [x] Item 2 — Scope calendar to salesperson's agreements
-- [x] Item 3 — Cancel button on ExtractionReview save area
+- [ ] Item 1 — Remove updated_at from mark-past-paid API
+- [ ] Item 2+3 — Replace confirm/alert with inline UI in PayoutScheduleSection
+- [ ] Item 4 — Check revert API for same updated_at issue
+- [ ] Item 5 — Scope investors list to salesperson
 
 ---
 
 ## Work Completed
-- Item 1: Restricted `/quarterly-reports` and `/quarterly-review` in `src/middleware.ts` for salesperson roles.
-- Item 2: Implemented salesperson-specific filtering on the `CalendarPage` in `src/app/(app)/calendar/page.tsx`.
-- Item 3: Added a "Cancel" button to the `ExtractionReview` component to allow abandoning the upload flow.
+- Splash screen: only shows once per session (sessionStorage guard)
+- WhatsNewModal: only shows once per session (sessionStorage guard)
+- Dashboard scoped to salesperson's agreements
+- Calendar scoped to salesperson's agreements
+- quarterly-reports + quarterly-review blocked for salespersons
 
 ## Files Changed
-- `src/middleware.ts`
-- `src/app/(app)/calendar/page.tsx`
-- `src/components/agreements/ExtractionReview.tsx`
-- `SESSION.md`
+- SESSION.md
 
 ## Decisions
-- Quarterly reports and review are restricted to coordinator/admin roles.
-- Calendar page is now RBAC-aware, filtering agreements based on the assigned salesperson.
-- Cancel button in ExtractionReview performs a full page reload to clear state.
+- No native browser dialogs anywhere — all confirmations inline
+- Salesperson data isolation must be complete across all pages
 
 ## Codex Review Notes
 - Pending
 
 ## Next Agent Action
-- Codex: review the security fixes and UI addition in Batch C.4.
-
+- Gemini: read SESSION.md, summarise 5 items, wait for confirmation, build in order, push to main after build passes.
