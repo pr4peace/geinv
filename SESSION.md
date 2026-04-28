@@ -82,9 +82,29 @@ The rest of the page (payout schedule fetch by `activeIds`) automatically scopes
 
 ---
 
+### Item 3 — Cancel button on ExtractionReview save area
+
+**Goal:** Next to the "Save Agreement" button in ExtractionReview, add a "Cancel" button that takes the user back to `/agreements` (the agreements list) entirely — abandoning the upload flow.
+
+**File:** `src/components/agreements/ExtractionReview.tsx`
+
+**Fix:** Find the save button at the bottom of the form (search for "Save Agreement" or the submit button). Add a Cancel button next to it:
+```tsx
+<a
+  href="/agreements"
+  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 text-sm transition-colors"
+>
+  Cancel
+</a>
+```
+Use `<a href>` (not `<Link>`) so it does a full navigation and clears the form state. Place it to the left of the Save button.
+
+---
+
 ## Todos
 - [ ] Item 1 — Block quarterly-reports + quarterly-review in middleware
 - [ ] Item 2 — Scope calendar to salesperson's agreements
+- [ ] Item 3 — Cancel button on ExtractionReview save area
 
 ---
 
