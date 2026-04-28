@@ -54,7 +54,14 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
    - net_interest (gross_interest minus tds_amount)
    - is_principal_repayment: true ONLY for the final row if it represents principal return (see rule 9)
 
-3. AMOUNTS: Return as plain numbers without commas or currency symbols (e.g., 10000000 not "1,00,00,000").
+3. AMOUNTS: These are Indian investment agreements. Indian number formatting uses commas differently from Western format:
+   - 1,00,000 = 1 lakh = 100,000 (NOT 1 million)
+   - 10,00,000 = 10 lakhs = 1,000,000
+   - 20,00,000 = 20 lakhs = 2,000,000 (NOT 2 crores)
+   - 1,00,00,000 = 1 crore = 10,000,000
+   - 2,00,00,000 = 2 crores = 20,000,000
+   CRITICAL: Count the digit groups carefully. "20,00,000" has 7 digits = 20 lakhs. "2,00,00,000" has 9 digits = 2 crores. These are very different.
+   Return as plain integers without commas or currency symbols (e.g., 2000000 for 20 lakhs, not 20000000).
 
 4. PAYOUT FREQUENCY:
    - "monthly" if interest is paid every month
