@@ -13,8 +13,7 @@ export async function POST(
       .from('payout_schedule')
       .update({ 
         status: 'pending', 
-        paid_date: null,
-        updated_at: new Date().toISOString()
+        paid_date: null
       })
       .eq('id', payoutId)
       .eq('agreement_id', id)

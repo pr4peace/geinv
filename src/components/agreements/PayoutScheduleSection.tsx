@@ -35,17 +35,18 @@ function PayoutStatusBadge({ status }: { status: string }) {
   )
 }
 
-function MarkTdsFiledButton({ payoutId }: { payoutId: string }) {
+function MarkTdsFiledButton({ payoutId, onError }: { payoutId: string; onError: (msg: string | null) => void }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   async function handleClick() {
     setLoading(true)
+    onError(null)
     try {
       const res = await fetch(`/api/payout-schedule/${payoutId}/mark-tds-filed`, { method: 'POST' })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        alert(err.error ?? 'Failed to mark TDS as filed')
+        onError(err.error ?? 'Failed to mark TDS as filed')
       } else {
         router.refresh()
       }
@@ -68,6 +69,9 @@ function MarkTdsFiledButton({ payoutId }: { payoutId: string }) {
 export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const interestRows = payouts
     .filter(r => !r.is_principal_repayment && !r.is_tds_only)
@@ -77,6 +81,7 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
 
   async function markAsPaid(payoutId: string) {
     setLoading(payoutId)
+    setError(null)
     try {
       const res = await fetch(`/api/agreements/${agreementId}/payouts/${payoutId}/paid`, {
         method: 'POST',
@@ -85,7 +90,7 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        alert(err.error ?? 'Failed to mark as paid')
+        setError(err.error ?? 'Failed to mark as paid')
       } else {
         router.refresh()
       }
@@ -95,16 +100,17 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   }
 
   async function revertPayout(payoutId: string) {
-    if (!confirm('Are you sure you want to revert this payout to pending?')) return
     setLoading(payoutId)
+    setError(null)
     try {
       const res = await fetch(`/api/agreements/${agreementId}/payouts/${payoutId}/revert`, {
         method: 'POST',
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        alert(err.error ?? 'Failed to revert payout')
+        setError(err.error ?? 'Failed to revert payout')
       } else {
+        setConfirmRevert(null)
         router.refresh()
       }
     } finally {
@@ -113,16 +119,17 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   }
 
   async function markPastPaid() {
-    if (!confirm('Are you sure you want to mark all past pending payouts as paid?')) return
     setLoading('bulk')
+    setError(null)
     try {
       const res = await fetch(`/api/agreements/${agreementId}/mark-past-paid`, {
         method: 'POST',
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        alert(err.error ?? 'Failed to mark past payouts as paid')
+        setError(err.error ?? 'Failed to mark past payouts as paid')
       } else {
+        setConfirmBulk(false)
         router.refresh()
       }
     } finally {
@@ -140,14 +147,39 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   return (
     <div className="space-y-6">
       {hasPastPending && (
-        <div className="flex justify-end">
-          <button
-            onClick={markPastPaid}
-            disabled={loading === 'bulk'}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/40 text-emerald-400 hover:bg-emerald-800/40 border border-emerald-800/50 transition-colors disabled:opacity-50"
-          >
-            {loading === 'bulk' ? 'Updating...' : 'Mark all past payouts as paid'}
-          </button>
+        <div className="flex justify-end items-center gap-4">
+          {confirmBulk ? (
+            <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-right-2">
+              <span className="text-xs text-slate-300 font-medium">Mark all past pending as paid?</span>
+              <button
+                onClick={markPastPaid}
+                disabled={loading === 'bulk'}
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors uppercase"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setConfirmBulk(false)}
+                disabled={loading === 'bulk'}
+                className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmBulk(true)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/40 text-emerald-400 hover:bg-emerald-800/40 border border-emerald-800/50 transition-colors"
+            >
+              Mark all past payouts as paid
+            </button>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-900/20 border border-red-800/50 px-4 py-2 rounded-lg">
+          <p className="text-xs text-red-400 font-medium">{error}</p>
         </div>
       )}
 
@@ -192,9 +224,26 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                       >
                         {loading === row.id ? 'Saving…' : 'Mark Paid'}
                       </button>
+                    ) : confirmRevert === row.id ? (
+                      <div className="flex items-center justify-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                          onClick={() => revertPayout(row.id)}
+                          disabled={loading === row.id}
+                          className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setConfirmRevert(null)}
+                          disabled={loading === row.id}
+                          className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
+                        >
+                          No
+                        </button>
+                      </div>
                     ) : (
                       <button
-                        onClick={() => revertPayout(row.id)}
+                        onClick={() => setConfirmRevert(row.id)}
                         disabled={loading === row.id}
                         className="px-2 py-1 text-xs rounded bg-slate-800/40 text-slate-400 hover:bg-slate-700/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                       >
@@ -235,7 +284,7 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                       ✓ FILED
                     </span>
                   ) : (
-                    <MarkTdsFiledButton payoutId={row.id} />
+                    <MarkTdsFiledButton payoutId={row.id} onError={setError} />
                   )}
                 </div>
               </div>
@@ -271,9 +320,26 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                 >
                   {loading === row.id ? 'Saving…' : 'Mark Paid'}
                 </button>
+              ) : confirmRevert === row.id ? (
+                <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                  <button
+                    onClick={() => revertPayout(row.id)}
+                    disabled={loading === row.id}
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmRevert(null)}
+                    disabled={loading === row.id}
+                    className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
+                  >
+                    No
+                  </button>
+                </div>
               ) : (
                 <button
-                  onClick={() => revertPayout(row.id)}
+                  onClick={() => setConfirmRevert(row.id)}
                   disabled={loading === row.id}
                   className="px-2 py-1 text-xs rounded bg-slate-800/40 text-slate-400 hover:bg-slate-700/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >

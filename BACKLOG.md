@@ -112,6 +112,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ### ✅ Done
 
+| **Batch C.5 — UI polish + bug fixes** | Remove `updated_at` DB errors, inline confirmations in PayoutSchedule, salesperson scoping for investors search. |
 | **Batch C.4 — Salesperson RBAC Fixes** | Security: block quarterly tools for salespersons, scope calendar to assigned agreements, add cancel button to extraction flow. |
 | **Batch C.3 — Small hotfixes** | TDS-only rows for cumulative, Document Re-scanning, Bulk-mark payouts as paid, "What's New" modal, test fixes for overdue filter. |
 | **Batch C.1 — Extraction Fixes + Post-V1 Patch** | Gemini extraction fixes (monthly/biannual, prompt tuning), Sign out button, Apple-style sidebar toggle, Full-width dashboard layout. |

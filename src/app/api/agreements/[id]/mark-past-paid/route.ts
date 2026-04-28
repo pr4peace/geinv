@@ -17,8 +17,7 @@ export async function POST(
       .from('payout_schedule')
       .update({ 
         status: 'paid', 
-        paid_date: todayStr,
-        updated_at: new Date().toISOString()
+        paid_date: todayStr
       })
       .eq('agreement_id', id)
       .eq('is_tds_only', false)
