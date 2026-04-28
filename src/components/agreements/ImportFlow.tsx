@@ -39,12 +39,13 @@ export default function ImportFlow() {
   const router = useRouter()
   const [step, setStep] = useState<'upload' | 'checking' | 'preview' | 'importing' | 'done'>('upload')
   const [undoing, setUndoing] = useState(false)
+  const [confirmUndo, setConfirmUndo] = useState(false)
   const [undoResult, setUndoResult] = useState<string | null>(null)
 
   async function handleUndoImport() {
-    if (!confirm('This will soft-delete all agreements imported via CSV. They can be restored from the Agreements list (Deleted section). Continue?')) return
     setUndoing(true)
     setUndoResult(null)
+    setConfirmUndo(false)
     try {
       const res = await fetch('/api/agreements/import', { method: 'DELETE' })
       const data = await res.json()
@@ -255,20 +256,42 @@ export default function ImportFlow() {
 
         {/* Undo import — always visible on upload step */}
         {step === 'upload' && (
-          <div className="flex items-center justify-between px-5 py-3 bg-slate-800/50 border border-slate-700 rounded-xl">
-            <div>
-              <p className="text-sm text-slate-300 font-medium">Undo previous import</p>
-              <p className="text-xs text-slate-500 mt-0.5">Soft-deletes all agreements imported from CSV — they can be restored from the Deleted section on the Agreements page.</p>
-              {undoResult && <p className="text-xs text-green-400 mt-1">{undoResult}</p>}
+          <div className="px-5 py-3 bg-slate-800/50 border border-slate-700 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-300 font-medium">Undo previous import</p>
+                <p className="text-xs text-slate-500 mt-0.5">Soft-deletes all agreements imported from CSV — they can be restored from the Deleted section on the Agreements page.</p>
+              </div>
+              {!confirmUndo ? (
+                <button
+                  onClick={() => { setConfirmUndo(true); setUndoResult(null) }}
+                  disabled={undoing}
+                  className="ml-6 flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 border border-slate-600 hover:bg-slate-700 transition-colors disabled:opacity-40"
+                >
+                  {undoing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
+                  {undoing ? 'Undoing…' : 'Undo import'}
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2">
+                  <span className="text-xs text-amber-400 font-medium">Are you sure?</span>
+                  <button
+                    onClick={handleUndoImport}
+                    disabled={undoing}
+                    className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase"
+                  >
+                    Yes, Delete
+                  </button>
+                  <button
+                    onClick={() => setConfirmUndo(false)}
+                    disabled={undoing}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
-            <button
-              onClick={handleUndoImport}
-              disabled={undoing}
-              className="ml-6 flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 border border-slate-600 hover:bg-slate-700 transition-colors disabled:opacity-40"
-            >
-              {undoing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
-              {undoing ? 'Undoing…' : 'Undo import'}
-            </button>
+            {undoResult && <p className="text-xs text-green-400">{undoResult}</p>}
           </div>
         )}
 

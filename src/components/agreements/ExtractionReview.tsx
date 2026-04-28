@@ -955,6 +955,41 @@ export default function ExtractionReview({
           <PayoutScheduleTable rows={extracted.payout_schedule ?? []} />
         </div>
       )}
+
+      {/* TDS Filing Preview — for cumulative/compound agreements */}
+      {(form.payout_frequency === 'cumulative' || form.interest_type === 'compound') && form.investment_start_date && form.maturity_date && (() => {
+        const start = new Date(form.investment_start_date)
+        const maturity = new Date(form.maturity_date)
+        const tdsRows: { year: number; date: string }[] = []
+        let year = start.getUTCFullYear()
+        while (true) {
+          const march31 = new Date(Date.UTC(year, 2, 31))
+          if (march31 < start) { year++; continue }
+          if (march31 > maturity) break
+          tdsRows.push({ year, date: march31.toISOString().split('T')[0] })
+          year++
+        }
+        if (tdsRows.length === 0) return null
+        return (
+          <div className="bg-violet-900/10 border border-violet-800/30 rounded-xl p-5 space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-violet-300 uppercase tracking-wider">
+                TDS Filing Dates
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">These rows will be auto-generated on save — one per 31 March in the agreement term</p>
+            </div>
+            <div className="space-y-2">
+              {tdsRows.map(row => (
+                <div key={row.year} className="flex items-center gap-3 text-sm">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-900/40 text-violet-400 border border-violet-800/50 uppercase">TDS Filing</span>
+                  <span className="text-slate-300">31 Mar {row.year}</span>
+                  <span className="text-slate-500 text-xs">({row.date})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { NotificationQueue, NotificationType } from '@/types/database'
+import { UndoToast } from '@/components/UndoToast'
 
 type EnrichedItem = NotificationQueue & {
   agreement?: { id: string; investor_name: string; reference_id: string } | null
@@ -227,6 +228,7 @@ export default function NotificationsClient({
   const [tab, setTab] = useState<'queue' | 'flags' | 'history'>('queue')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null)
   const isCoordinator = userRole !== 'salesperson'
 
   async function handleSend(ids: string[]) {
@@ -249,6 +251,14 @@ export default function NotificationsClient({
 
   async function handleDismiss(id: string) {
     await fetch(`/api/notifications/${id}/dismiss`, { method: 'POST' })
+    setUndoToast({
+      message: 'Notification dismissed',
+      onUndo: async () => {
+        setUndoToast(null)
+        await fetch(`/api/notifications/${id}/revert-dismiss`, { method: 'POST' })
+        router.refresh()
+      }
+    })
     router.refresh()
   }
 
@@ -299,6 +309,14 @@ export default function NotificationsClient({
           <HistoryTable items={history} onResend={(id) => handleSend([id])} sending={sending} />
         )}
       </div>
+
+      {undoToast && (
+        <UndoToast
+          message={undoToast.message}
+          onUndo={undoToast.onUndo}
+          onDismiss={() => setUndoToast(null)}
+        />
+      )}
     </div>
   )
 }

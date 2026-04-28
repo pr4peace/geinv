@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PayoutSchedule } from '@/types/database'
+import { UndoToast } from '@/components/UndoToast'
 
 interface Props {
   agreementId: string
@@ -72,6 +73,7 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null)
 
   const interestRows = payouts
     .filter(r => !r.is_principal_repayment && !r.is_tds_only)
@@ -92,6 +94,14 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
         const err = await res.json().catch(() => ({}))
         setError(err.error ?? 'Failed to mark as paid')
       } else {
+        setUndoToast({
+          message: 'Payout marked as paid',
+          onUndo: async () => {
+            setUndoToast(null)
+            await fetch(`/api/agreements/${agreementId}/payouts/${payoutId}/revert`, { method: 'POST' })
+            router.refresh()
+          }
+        })
         router.refresh()
       }
     } finally {
@@ -130,6 +140,14 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
         setError(err.error ?? 'Failed to mark past payouts as paid')
       } else {
         setConfirmBulk(false)
+        setUndoToast({
+          message: 'Past payouts marked as paid',
+          onUndo: async () => {
+            setUndoToast(null)
+            await fetch(`/api/agreements/${agreementId}/revert-past-paid`, { method: 'POST' })
+            router.refresh()
+          }
+        })
         router.refresh()
       }
     } finally {
@@ -200,55 +218,53 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                 <th className="pb-2 text-center whitespace-nowrap">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-700/40">
               {interestRows.map((row) => (
-                <tr key={row.id} className="border-b border-slate-700/40 hover:bg-slate-700/20">
-                  <td className="py-2 pr-3 whitespace-nowrap text-slate-400 text-xs">
-                    {fmtDate(row.period_from)} → {fmtDate(row.period_to)}
+                <tr key={row.id} className="hover:bg-slate-800/30 transition-colors">
+                  <td className="py-3 pr-3 text-xs whitespace-nowrap">
+                    {fmtDate(row.period_from)} – {fmtDate(row.period_to)}
                   </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{row.no_of_days ?? '—'}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{fmtDate(row.due_by)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{fmtCurrency(row.gross_interest)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-red-400">{fmtCurrency(row.tds_amount)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums font-medium text-green-400">{fmtCurrency(row.net_interest)}</td>
-                  <td className="py-2 pr-3 text-center">
-                    <PayoutStatusBadge status={row.status} />
-                  </td>
-                  <td className="py-2 pr-3 whitespace-nowrap text-slate-400 text-xs">{fmtDate(row.paid_date)}</td>
-                  <td className="py-2 text-center">
+                  <td className="py-3 pr-3 text-right text-xs text-slate-500">{row.no_of_days}</td>
+                  <td className="py-3 pr-3 text-xs whitespace-nowrap">{fmtDate(row.due_by)}</td>
+                  <td className="py-3 pr-3 text-right font-mono text-xs">{fmtCurrency(row.gross_interest)}</td>
+                  <td className="py-3 pr-3 text-right font-mono text-xs text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
+                  <td className="py-3 pr-3 text-right font-mono text-xs text-emerald-400">{fmtCurrency(row.net_interest)}</td>
+                  <td className="py-3 pr-3 text-center"><PayoutStatusBadge status={row.status} /></td>
+                  <td className="py-3 pr-3 text-xs text-slate-500">{fmtDate(row.paid_date)}</td>
+                  <td className="py-3 text-center">
                     {row.status !== 'paid' ? (
                       <button
                         onClick={() => markAsPaid(row.id)}
                         disabled={loading === row.id}
-                        className="px-2 py-1 text-xs rounded bg-green-800/40 text-green-400 hover:bg-green-800/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                        className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase"
                       >
-                        {loading === row.id ? 'Saving…' : 'Mark Paid'}
+                        {loading === row.id ? '…' : 'Paid'}
                       </button>
-                    ) : confirmRevert === row.id ? (
-                      <div className="flex items-center justify-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                        <button
-                          onClick={() => revertPayout(row.id)}
-                          disabled={loading === row.id}
-                          className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase"
-                        >
-                          Yes
-                        </button>
-                        <button
-                          onClick={() => setConfirmRevert(null)}
-                          disabled={loading === row.id}
-                          className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
-                        >
-                          No
-                        </button>
-                      </div>
                     ) : (
-                      <button
-                        onClick={() => setConfirmRevert(row.id)}
-                        disabled={loading === row.id}
-                        className="px-2 py-1 text-xs rounded bg-slate-800/40 text-slate-400 hover:bg-slate-700/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                      >
-                        {loading === row.id ? 'Saving…' : 'Revert'}
-                      </button>
+                      confirmRevert === row.id ? (
+                        <div className="flex items-center gap-2 justify-center animate-in fade-in zoom-in-95 duration-200">
+                          <button
+                            onClick={() => revertPayout(row.id)}
+                            disabled={loading === row.id}
+                            className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmRevert(null)}
+                            className="text-[10px] font-bold text-slate-500 hover:text-slate-400 uppercase"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmRevert(row.id)}
+                          className="text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
+                        >
+                          Undo
+                        </button>
+                      )
                     )}
                   </td>
                 </tr>
@@ -258,98 +274,85 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
         </div>
       )}
 
-      {/* ── TDS Only Payouts (Cumulative Tracking) ── */}
+      {/* ── TDS filing rows ── */}
       {tdsOnlyRows.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">TDS Filing Obligations</p>
-          <div className="grid grid-cols-1 gap-3">
-            {tdsOnlyRows.map((row) => (
-              <div key={row.id} className="bg-violet-900/10 border border-violet-800/30 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-900/40 text-violet-400 border border-violet-800/50">
-                    TDS FILING
-                  </span>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-0.5">Due By</p>
-                    <p className="text-xs text-slate-200">{fmtDate(row.due_by)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-0.5">TDS Amount</p>
-                    <p className="text-xs text-violet-400 font-semibold">{fmtCurrency(row.tds_amount)}</p>
-                  </div>
-                </div>
-                <div>
-                  {row.tds_filed ? (
-                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-900/20 px-2 py-1 rounded border border-emerald-800/30">
-                      ✓ FILED
-                    </span>
-                  ) : (
-                    <MarkTdsFiledButton payoutId={row.id} onError={setError} />
-                  )}
-                </div>
-              </div>
-            ))}
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">TDS Filing Requirements (31 Mar)</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm text-slate-300">
+              <thead>
+                <tr className="border-b border-slate-700 text-xs text-slate-400">
+                  <th className="pb-2 text-left pr-3 whitespace-nowrap">FY End</th>
+                  <th className="pb-2 text-right pr-3 whitespace-nowrap">Accrued Interest</th>
+                  <th className="pb-2 text-right pr-3 whitespace-nowrap">TDS Amount</th>
+                  <th className="pb-2 text-center pr-3 whitespace-nowrap">Status</th>
+                  <th className="pb-2 text-center whitespace-nowrap">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/40">
+                {tdsOnlyRows.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="py-3 pr-3 text-xs">{fmtDate(row.due_by)}</td>
+                    <td className="py-3 pr-3 text-right font-mono text-xs">{fmtCurrency(row.gross_interest)}</td>
+                    <td className="py-3 pr-3 text-right font-mono text-xs text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
+                    <td className="py-3 pr-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${row.status === 'paid' ? 'bg-green-900/40 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
+                        {row.status === 'paid' ? 'Filed' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-center">
+                      {row.status !== 'paid' && <MarkTdsFiledButton payoutId={row.id} onError={setError} />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {/* ── Principal Repayment ── */}
-      {principalRows.map((row) => (
-        <div key={row.id} className="bg-emerald-900/10 border border-emerald-800/30 rounded-lg p-4">
-          <p className="text-sm font-semibold text-emerald-400 mb-3">Principal Repayment at Maturity</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-slate-500 mb-0.5">Due By</p>
-              <p className="text-slate-200">{fmtDate(row.due_by)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-0.5">Principal Amount</p>
-              <p className="text-emerald-400 font-semibold">{fmtCurrency(row.gross_interest)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-0.5">Status</p>
-              <PayoutStatusBadge status={row.status} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-0.5">Action</p>
-              {row.status !== 'paid' ? (
-                <button
-                  onClick={() => markAsPaid(row.id)}
-                  disabled={loading === row.id}
-                  className="px-2 py-1 text-xs rounded bg-green-800/40 text-green-400 hover:bg-green-800/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading === row.id ? 'Saving…' : 'Mark Paid'}
-                </button>
-              ) : confirmRevert === row.id ? (
-                <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+      {principalRows.length > 0 && (
+        <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-3">
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Maturity Repayment</h4>
+          {principalRows.map((row) => (
+            <div key={row.id} className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-400">Scheduled for {fmtDate(row.due_by)}</p>
+                <p className="text-lg font-bold text-slate-100">{fmtCurrency(row.gross_interest)}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <PayoutStatusBadge status={row.status} />
+                {row.status !== 'paid' ? (
+                  <button
+                    onClick={() => markAsPaid(row.id)}
+                    disabled={loading === row.id}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors uppercase disabled:opacity-50"
+                  >
+                    {loading === row.id ? '…' : 'Mark Repaid'}
+                  </button>
+                ) : (
                   <button
                     onClick={() => revertPayout(row.id)}
                     disabled={loading === row.id}
-                    className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors uppercase"
+                    className="text-xs font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
                   >
-                    Yes
+                    Undo
                   </button>
-                  <button
-                    onClick={() => setConfirmRevert(null)}
-                    disabled={loading === row.id}
-                    className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
-                  >
-                    No
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmRevert(row.id)}
-                  disabled={loading === row.id}
-                  className="px-2 py-1 text-xs rounded bg-slate-800/40 text-slate-400 hover:bg-slate-700/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading === row.id ? 'Saving…' : 'Revert'}
-                </button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
+
+      {undoToast && (
+        <UndoToast
+          message={undoToast.message}
+          onUndo={undoToast.onUndo}
+          onDismiss={() => setUndoToast(null)}
+        />
+      )}
     </div>
   )
 }
