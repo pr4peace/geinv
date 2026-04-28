@@ -4,28 +4,57 @@
 - main
 
 ## Phase
-- ready for next batch
+- building
 
 ## Active Batch
-- Batch C.6 — COMPLETE
+- Batch F — Notification Revamp
+
+---
+
+## For Gemini
+
+Read these two files before doing anything:
+
+1. **Spec:** `docs/superpowers/specs/2026-04-28-batch-f-notifications-design.md`
+2. **Plan:** `docs/superpowers/plans/2026-04-28-batch-f-notifications.md`
+
+The plan has 14 tasks. Work through them in order, task by task. Each task has exact file paths, complete code, and commit instructions. Follow them precisely.
+
+**Before writing any code:** Post a plain-English summary of all 14 tasks and wait for user confirmation.
+
+**Rules:**
+- Push to `main` directly (no branch needed for this batch)
+- `npm run build` must pass after every task before committing
+- `npm test` must pass at the end
+- Do not skip tasks or merge steps
+- The migration (Task 1) requires manual execution in Supabase SQL Editor — list the SQL and ask the user to run it before proceeding to Task 2
+
+---
+
+## Key context from today's session
+
+- All salesperson RBAC scoping is already done for agreements, investors, calendar, dashboard
+- `src/lib/reminders.ts` body builders currently private — Task 3 exports them
+- Latest migration is `016_tds_only_payout.sql` — new one is `017_notification_queue.sql`
+- The `paid` route already has a salesperson gate; `revert`, `mark-past-paid`, `rescan` do not yet
+- `RescanModal` exists at `src/components/agreements/RescanModal.tsx`
+- `PayoutScheduleSection` is at `src/components/agreements/PayoutScheduleSection.tsx`
+- Agreement detail page already reads `x-user-role` and `x-user-team-id` from headers
 
 ## Work Completed
-- Agreement detail page: salesperson gets notFound() if they access another salesperson's agreement via direct URL
-- Investor detail: already guarded via checkInvestorAccess (was already done)
-- Investors list: already scoped to salesperson (was already done in investors-page.ts)
-- Dashboard data: already scoped to salesperson (done in C.5)
-- Agreement table rows: already clickable links (already done)
-- Email frequency labels: payout_frequency not shown in email bodies, not an issue
+- Spec written: `docs/superpowers/specs/2026-04-28-batch-f-notifications-design.md`
+- Plan written: `docs/superpowers/plans/2026-04-28-batch-f-notifications.md`
 
 ## Files Changed
-- src/app/(app)/agreements/[id]/page.tsx — added headers import + salesperson notFound() guard
 - SESSION.md
 
 ## Decisions
-- Most C.6 items were already implemented in prior batches — only the agreement detail URL guard was missing
+- Everything goes through review queue — cron populates, humans send
+- Salesperson: view + create only, no processing actions
+- Push directly to main, no feature branch
 
 ## Codex Review Notes
 - Pending
 
 ## Next Agent Action
-- Claude: plan next batch. Priority: Batch F (Notification Revamp) or dashboard redesign.
+- Gemini: read spec + plan, summarise 14 tasks, wait for confirmation, implement task by task
