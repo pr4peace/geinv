@@ -29,7 +29,7 @@ const navItems = [
   { href: '/agreements', label: 'Agreements', icon: FileText },
   { href: '/investors', label: 'Investors', icon: Users },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/quarterly-review', label: 'Quarterly Review', icon: BarChart3 },
+  { href: '/quarterly-review', label: 'Quarterly Review', icon: BarChart3, disabled: true },
   { href: '/quarterly-reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -259,10 +259,19 @@ export default function AppLayout({
 
           {/* Nav */}
           <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto custom-scrollbar">
-            {navItems.map(({ href, label, icon: Icon }) => {
-              const isActive = pathname === href || pathname.startsWith(href + '/')
+            {navItems.map(({ href, label, icon: Icon, disabled }) => {
+              const isActive = !disabled && (pathname === href || pathname.startsWith(href + '/'))
               return (
                 <div key={href} className="relative group">
+                  {disabled ? (
+                    <div
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium opacity-35 cursor-not-allowed select-none ${isCollapsed ? 'justify-center px-0' : ''}`}
+                      title="Coming soon"
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      {!isCollapsed && <span>{label}</span>}
+                    </div>
+                  ) : (
                   <Link
                     href={href}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -274,6 +283,7 @@ export default function AppLayout({
                     <Icon className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                     {!isCollapsed && <span>{label}</span>}
                   </Link>
+                  )}
                   {/* Tooltip for collapsed state */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-3 px-3 py-2 bg-slate-800 text-white text-xs font-semibold rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-2xl border border-slate-700 ring-1 ring-white/5">
