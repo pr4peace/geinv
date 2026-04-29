@@ -1,113 +1,79 @@
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { generateTdsOnlyRows } from '@/lib/tds-calculator'
 
 export async function POST(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
+    if (userRole !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     const supabase = createAdminClient()
 
-    // 1. Fetch all cumulative/compound agreements
-    const { data: agreements, error: fetchError } = await supabase
+    // 1. Find all cumulative/compound agreements
+    const { data: agreements, error: agreementsError } = await supabase
       .from('agreements')
-      .select('id, investment_start_date, maturity_date, payout_frequency, interest_type, principal_amount, roi_percentage')
-      .is('deleted_at', null)
+      .select('*')
       .or('payout_frequency.eq.cumulative,interest_type.eq.compound')
+      .is('deleted_at', null)
 
-    if (fetchError) throw fetchError
+    if (agreementsError) {
+      return NextResponse.json({ error: agreementsError.message }, { status: 500 })
+    }
 
-    let updated = 0
-    let skipped = 0
+    let totalAdded = 0
+    const errors: string[] = []
 
     for (const agreement of agreements) {
-      // 2. Check if any is_tds_only rows exist
-      const { data: existingRows, error: checkError } = await supabase
+      // 2. Check if it already has is_tds_only rows
+      const { data: existingTdsRows, error: checkError } = await supabase
         .from('payout_schedule')
         .select('id')
         .eq('agreement_id', agreement.id)
         .eq('is_tds_only', true)
         .limit(1)
 
-      if (checkError) continue
-
-      if (existingRows && existingRows.length > 0) {
-        skipped++
+      if (checkError) {
+        errors.push(`Agreement ${agreement.id}: ${checkError.message}`)
         continue
       }
 
-      // 3. Generate missing rows
-      const startDateStr = agreement.investment_start_date
-      const maturityDateStr = agreement.maturity_date
-
-      if (!startDateStr || !maturityDateStr) {
-        skipped++
-        continue
+      if (existingTdsRows && existingTdsRows.length > 0) {
+        continue // Already has TDS rows
       }
 
-      const start = new Date(startDateStr)
-      const maturity = new Date(maturityDateStr)
-      const principal = Number(agreement.principal_amount) || 0
-      const roi = Number(agreement.roi_percentage) || 0
+      // 3. Generate TDS-only rows
+      const tdsOnlyRows = generateTdsOnlyRows({
+        agreementId: agreement.id,
+        startDate: agreement.investment_start_date,
+        maturityDate: agreement.maturity_date,
+        principal: agreement.principal_amount,
+        roi: agreement.roi_percentage,
+        interestType: agreement.interest_type || 'simple',
+      })
 
-      let currentYear = start.getUTCFullYear()
-      let lastDate = start
-      let totalAccruedSoFar = 0
-      const newRows = []
+      if (tdsOnlyRows.length > 0) {
+        const { error: insertError } = await supabase
+          .from('payout_schedule')
+          .insert(tdsOnlyRows.map(r => ({ ...r, agreement_id: agreement.id })))
 
-      while (true) {
-        const march31 = new Date(Date.UTC(currentYear, 2, 31))
-        if (march31 < start) { currentYear++; continue }
-        if (march31 > maturity) break
-
-        const periodFrom = lastDate === start
-          ? start
-          : new Date(lastDate.getTime() + 24 * 60 * 60 * 1000)
-
-        // Calculate accrued interest for this FY period using compound interest formula
-        const daysSinceStart = Math.floor((march31.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-        const totalAccruedUntilNow = principal * (Math.pow(1 + roi / 100, daysSinceStart / 365) - 1)
-        
-        const periodInterest = Number((totalAccruedUntilNow - totalAccruedSoFar).toFixed(2))
-        const tdsAmount = Number((periodInterest * 0.10).toFixed(2))
-        const netInterest = Number((periodInterest - tdsAmount).toFixed(2))
-
-        newRows.push({
-          agreement_id: agreement.id,
-          period_from: periodFrom.toISOString().split('T')[0],
-          period_to: march31.toISOString().split('T')[0],
-          due_by: march31.toISOString().split('T')[0],
-          gross_interest: periodInterest,
-          tds_amount: tdsAmount,
-          net_interest: netInterest,
-          is_tds_only: true,
-          is_principal_repayment: false,
-          no_of_days: Math.floor((march31.getTime() - periodFrom.getTime()) / (1000 * 60 * 60 * 24)) + 1,
-        })
-
-        totalAccruedSoFar += periodInterest
-        lastDate = march31
-        currentYear++
-      }
-
-      if (newRows.length > 0) {
-        const { error: insertError } = await supabase.from('payout_schedule').insert(newRows)
         if (insertError) {
-          console.error(`Failed to insert rows for agreement ${agreement.id}:`, insertError.message)
-          skipped++
+          errors.push(`Agreement ${agreement.id}: ${insertError.message}`)
         } else {
-          updated++
+          totalAdded += tdsOnlyRows.length
         }
-      } else {
-        skipped++
       }
     }
 
-    return NextResponse.json({ updated, skipped })
+    return NextResponse.json({
+      success: true,
+      total_agreements_processed: agreements.length,
+      total_tds_rows_added: totalAdded,
+      errors: errors.length > 0 ? errors : undefined
+    })
   } catch (err) {
-    console.error('Backfill error:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 }

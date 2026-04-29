@@ -21,22 +21,35 @@ describe('calculatePayoutSchedule', () => {
     expect(rows[0].period_to).toBe('2026-04-01')
   })
 
-  it('calculates cumulative schedule as two rows (interest + TDS tracking)', () => {
+  it('calculates cumulative schedule as multiple rows (March 31 + Maturity Payout + Maturity TDS)', () => {
     const rows = calculatePayoutSchedule({
       ...params,
       payoutFrequency: 'cumulative',
     })
-    expect(rows).toHaveLength(2)
-    // Row 1: Interest
-    expect(rows[0].gross_interest).toBe(120000) // 1M * 12% * 1yr
-    expect(rows[0].is_tds_only).toBe(false)
-    // Row 2: TDS Tracking
-    expect(rows[1].gross_interest).toBe(0)
-    expect(rows[1].tds_amount).toBe(12000)
-    expect(rows[1].is_tds_only).toBe(true)
+    // 2026-01-01 to 2027-01-01
+    // 1. 2027-01-01: Maturity Payout
+    // 2. 2026-03-31: FY26 TDS Row
+    // 3. 2027-01-01: FY27 TDS Row (remaining)
+    expect(rows).toHaveLength(3)
     
-    expect(rows[0].period_from).toBe('2026-01-01')
-    expect(rows[0].period_to).toBe('2027-01-01')
+    // Row 1: Interest Payout
+    const payout = rows.find(r => !r.is_tds_only)!
+    expect(payout.gross_interest).toBe(120000) // 1M * 12% * 1yr
+    expect(payout.due_by).toBe('2027-01-01')
+
+    // TDS Rows
+    const tdsRows = rows.filter(r => r.is_tds_only).sort((a, b) => a.due_by.localeCompare(b.due_by))
+    expect(tdsRows).toHaveLength(2)
+    
+    // FY26 (Jan 1 to Mar 31)
+    expect(tdsRows[0].due_by).toBe('2026-03-31')
+    // 1M * 12% * (89/365) = 29260.27
+    expect(tdsRows[0].gross_interest).toBe(29260.27)
+    
+    // FY27 (Apr 1 to Jan 1)
+    expect(tdsRows[1].due_by).toBe('2027-01-01')
+    expect(tdsRows[1].gross_interest).toBe(120000 - 29260.27)
+    expect(tdsRows[1].tds_amount).toBe(12000 - tdsRows[0].tds_amount)
   })
 
   it('calculates annual schedule correctly', () => {

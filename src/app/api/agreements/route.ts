@@ -10,6 +10,8 @@ import {
 import type { ExtractedPayoutRow } from '@/lib/claude'
 import { findOrCreateInvestor } from '@/lib/investors'
 
+import { generateTdsOnlyRows } from '@/lib/tds-calculator'
+
 export async function GET(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
@@ -259,50 +261,16 @@ export async function POST(request: NextRequest) {
     const hasTdsOnly = rows.some(r => r.is_tds_only)
 
     if (isCumulative && !hasTdsOnly && startDateStr && maturityDateStr) {
-      const start = new Date(startDateStr)
-      const maturity = new Date(maturityDateStr)
-      const principal = Number(agreementFields.principal_amount) || 0
-      const roi = Number(agreementFields.roi_percentage) || 0
+      const tdsOnlyRows = generateTdsOnlyRows({
+        agreementId: agreement.id,
+        startDate: startDateStr,
+        maturityDate: maturityDateStr,
+        principal: Number(agreementFields.principal_amount) || 0,
+        roi: Number(agreementFields.roi_percentage) || 0,
+        interestType: (agreementFields.interest_type as 'simple' | 'compound') || 'simple',
+      })
 
-      let currentYear = start.getUTCFullYear()
-      let lastDate = start
-      let totalAccruedSoFar = 0
-
-      while (true) {
-        const march31 = new Date(Date.UTC(currentYear, 2, 31))
-        if (march31 < start) { currentYear++; continue }
-        if (march31 > maturity) break
-
-        const periodFrom = lastDate === start
-          ? start
-          : new Date(lastDate.getTime() + 24 * 60 * 60 * 1000)
-
-        // Calculate accrued interest for this FY period using compound interest formula
-        // accrued = principal × ((1 + roi/100) ^ (days/365) - 1)
-        const daysSinceStart = Math.floor((march31.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-        const totalAccruedUntilNow = principal * (Math.pow(1 + roi / 100, daysSinceStart / 365) - 1)
-        
-        const periodInterest = Number((totalAccruedUntilNow - totalAccruedSoFar).toFixed(2))
-        const tdsAmount = Number((periodInterest * 0.10).toFixed(2))
-        const netInterest = Number((periodInterest - tdsAmount).toFixed(2))
-
-        rows.push({
-          agreement_id: agreement.id,
-          period_from: periodFrom.toISOString().split('T')[0],
-          period_to: march31.toISOString().split('T')[0],
-          due_by: march31.toISOString().split('T')[0],
-          gross_interest: periodInterest,
-          tds_amount: tdsAmount,
-          net_interest: netInterest,
-          is_tds_only: true,
-          is_principal_repayment: false,
-          no_of_days: Math.floor((march31.getTime() - periodFrom.getTime()) / (1000 * 60 * 60 * 24)) + 1,
-        } as ExtractedPayoutRow & { is_tds_only: boolean })
-
-        totalAccruedSoFar += periodInterest
-        lastDate = march31
-        currentYear++
-      }
+      rows.push(...tdsOnlyRows.map(r => ({ ...r, agreement_id: agreement.id })))
     }
 
     if (rows.length > 0) {

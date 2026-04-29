@@ -17,6 +17,8 @@ export interface PayoutRow {
   status: 'paid'
 }
 
+import { generateTdsOnlyRows } from './tds-calculator'
+
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date)
   d.setMonth(d.getMonth() + months)
@@ -84,20 +86,55 @@ export function calculatePayoutSchedule({
       status: 'paid',
     })
 
-    // TDS filing tracking row — internal use only, no investor reminder
-    rows.push({
-      period_from: toISO(start),
-      period_to: toISO(maturity),
-      due_by: toISO(maturity),
-      no_of_days: totalDays,
-      gross_interest: 0,
-      tds_amount: tds,
-      net_interest: 0,
-      is_principal_repayment: false,
-      is_tds_only: true,
-      tds_filed: false,
-      status: 'paid',
+    // Generate annual TDS-only rows for every 31 March
+    const tdsOnlyRows = generateTdsOnlyRows({
+      agreementId: '', // Not used in this function's output
+      startDate: startDate,
+      maturityDate: maturityDate,
+      principal: principal,
+      roi: roiPercentage,
+      interestType: interestType,
     })
+
+    for (const tdsRow of tdsOnlyRows) {
+      rows.push({
+        ...tdsRow,
+        tds_filed: false,
+        status: 'paid',
+      })
+    }
+
+    // Final TDS filing tracking row for maturity (covers from last 31 March to maturity)
+    // Find the last date used for TDS rows, or start if none
+    const lastTdsDate = tdsOnlyRows.length > 0 
+      ? new Date(tdsOnlyRows[tdsOnlyRows.length - 1].period_to) 
+      : start
+    
+    // Only add if maturity is not already covered by a 31 March row
+    if (toISO(lastTdsDate) !== toISO(maturity)) {
+      const periodFrom = lastTdsDate === start 
+        ? start 
+        : new Date(lastTdsDate.getTime() + 24 * 60 * 60 * 1000)
+      
+      const lastPeriodDays = daysBetween(periodFrom, maturity) + 1
+      const totalAccrued = rows.reduce((sum, r) => sum + (r.is_tds_only ? r.gross_interest : 0), 0)
+      const finalPeriodInterest = round2(gross - totalAccrued)
+      const finalTds = round2(tds - rows.reduce((sum, r) => sum + (r.is_tds_only ? r.tds_amount : 0), 0))
+
+      rows.push({
+        period_from: toISO(periodFrom),
+        period_to: toISO(maturity),
+        due_by: toISO(maturity),
+        no_of_days: lastPeriodDays,
+        gross_interest: finalPeriodInterest,
+        tds_amount: finalTds,
+        net_interest: 0,
+        is_principal_repayment: false,
+        is_tds_only: true,
+        tds_filed: false,
+        status: 'paid',
+      })
+    }
 
     return rows
   }

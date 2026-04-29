@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw, X, AlertTriangle, Check } from 'lucide-react'
 import type { ExtractedAgreement } from '@/lib/claude'
+import type { PayoutFrequency, InterestType } from '@/types/database'
 
 interface RescanModalProps {
   agreementId: string
@@ -142,23 +143,86 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                    <DataPoint label="Investor Name" value={extracted.investor_name} />
-                    <DataPoint label="Principal" value={extracted.principal_amount ? `₹${extracted.principal_amount.toLocaleString('en-IN')}` : '—'} />
-                    <DataPoint label="Agreement Date" value={extracted.agreement_date} />
-                    <DataPoint label="Start Date" value={extracted.investment_start_date} />
-                    <DataPoint label="Maturity Date" value={extracted.maturity_date} />
-                    <DataPoint label="ROI %" value={extracted.roi_percentage != null ? `${extracted.roi_percentage}%` : '—'} />
-                    <DataPoint label="Frequency" value={extracted.payout_frequency} />
-                    <DataPoint label="Interest Type" value={extracted.interest_type} />
-                    <DataPoint label="PAN" value={extracted.investor_pan} />
-                    <DataPoint label="Aadhaar" value={extracted.investor_aadhaar} />
+                    <EditableDataPoint 
+                      label="Investor Name" 
+                      value={extracted.investor_name} 
+                      onChange={(v) => setExtracted({ ...extracted, investor_name: v })}
+                    />
+                    <EditableDataPoint 
+                      label="Principal" 
+                      value={extracted.principal_amount} 
+                      type="number"
+                      onChange={(v) => setExtracted({ ...extracted, principal_amount: Number(v) })}
+                    />
+                    <EditableDataPoint 
+                      label="Agreement Date" 
+                      value={extracted.agreement_date} 
+                      type="date"
+                      onChange={(v) => setExtracted({ ...extracted, agreement_date: v })}
+                    />
+                    <EditableDataPoint 
+                      label="Start Date" 
+                      value={extracted.investment_start_date} 
+                      type="date"
+                      onChange={(v) => setExtracted({ ...extracted, investment_start_date: v })}
+                    />
+                    <EditableDataPoint 
+                      label="Maturity Date" 
+                      value={extracted.maturity_date} 
+                      type="date"
+                      onChange={(v) => setExtracted({ ...extracted, maturity_date: v })}
+                    />
+                    <EditableDataPoint 
+                      label="ROI %" 
+                      value={extracted.roi_percentage} 
+                      type="number"
+                      onChange={(v) => setExtracted({ ...extracted, roi_percentage: Number(v) })}
+                    />
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Frequency</p>
+                      <select
+                        value={extracted.payout_frequency || ''}
+                        onChange={(e) => setExtracted({ ...extracted, payout_frequency: e.target.value as PayoutFrequency })}
+                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="biannual">Biannual</option>
+                        <option value="annual">Annual</option>
+                        <option value="cumulative">Cumulative</option>
+                      </select>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Interest Type</p>
+                      <select
+                        value={extracted.interest_type || ''}
+                        onChange={(e) => setExtracted({ ...extracted, interest_type: e.target.value as InterestType })}
+                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="simple">Simple</option>
+                        <option value="compound">Compound</option>
+                      </select>
+                    </div>
+                    <EditableDataPoint 
+                      label="PAN" 
+                      value={extracted.investor_pan} 
+                      onChange={(v) => setExtracted({ ...extracted, investor_pan: v })}
+                    />
+                    <EditableDataPoint 
+                      label="Aadhaar" 
+                      value={extracted.investor_aadhaar} 
+                      onChange={(v) => setExtracted({ ...extracted, investor_aadhaar: v })}
+                    />
                   </div>
 
                   <div className="space-y-1">
                     <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Address</p>
-                    <p className="text-sm text-slate-300 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-                      {extracted.investor_address || '—'}
-                    </p>
+                    <textarea
+                      rows={2}
+                      value={extracted.investor_address || ''}
+                      onChange={(e) => setExtracted({ ...extracted, investor_address: e.target.value })}
+                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                    />
                   </div>
                 </div>
               )}
@@ -189,13 +253,26 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
   )
 }
 
-function DataPoint({ label, value }: { label: string; value: string | number | null | undefined }) {
+function EditableDataPoint({ 
+  label, 
+  value, 
+  type = 'text',
+  onChange 
+}: { 
+  label: string; 
+  value: string | number | null | undefined;
+  type?: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="space-y-0.5">
       <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{label}</p>
-      <p className="text-sm text-slate-200 font-medium truncate" title={String(value ?? '—')}>
-        {value ?? '—'}
-      </p>
+      <input
+        type={type}
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+      />
     </div>
   )
 }

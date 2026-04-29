@@ -43,11 +43,28 @@ In `src/components/notifications/NotificationsClient.tsx`: import QuickSendPanel
 
 ---
 
+## Files Changed
+- src/lib/tds-calculator.ts (New)
+- src/lib/version.ts (New)
+- src/components/WhatsNewModal.tsx (New)
+- src/lib/payout-calculator.ts
+- src/__tests__/payout-calculator.test.ts
+- src/app/api/agreements/route.ts
+- src/app/api/admin/backfill-tds-rows/route.ts (New)
+- src/app/api/agreements/[id]/rescan/route.ts (New)
+- src/components/agreements/RescanModal.tsx
+- src/components/agreements/PayoutScheduleSection.tsx
+- src/app/(app)/layout.tsx
+
 ## Work Completed
+- Batch C.2 — Post-Launch Hotfixes complete:
+  - Item 1: TDS-only rows auto-generated for cumulative/compound agreements on 31 March. Backfill route created.
+  - Item 2: Re-scan document without re-upload implemented with editable review modal.
+  - Item 3: Bulk mark-past-paid and per-row undo with UndoToast implemented.
+  - Item 4: "What's New" splash modal with version tracking implemented.
 - Batch F complete — notification queue, /notifications page, sidebar nav, salesperson gates
 - Gemini truncation fix — graceful JSON repair on MAX_TOKENS with user warning
 - Batch G complete — TDS calculation fixes, inline confirmations, undo toast
-- Batch C.2 handed to Gemini (running separately)
 
 ## Files to Change
 - src/app/api/reminders/process/route.ts (Item 1)

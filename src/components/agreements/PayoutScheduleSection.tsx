@@ -71,7 +71,6 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
-  const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null)
 
@@ -120,7 +119,10 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
         const err = await res.json().catch(() => ({}))
         setError(err.error ?? 'Failed to revert payout')
       } else {
-        setConfirmRevert(null)
+        setUndoToast({
+          message: 'Payout reverted to pending',
+          onUndo: () => markAsPaid(payoutId)
+        })
         router.refresh()
       }
     } finally {
@@ -241,30 +243,13 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                         {loading === row.id ? '…' : 'Paid'}
                       </button>
                     ) : (
-                      confirmRevert === row.id ? (
-                        <div className="flex items-center gap-2 justify-center animate-in fade-in zoom-in-95 duration-200">
-                          <button
-                            onClick={() => revertPayout(row.id)}
-                            disabled={loading === row.id}
-                            className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => setConfirmRevert(null)}
-                            className="text-[10px] font-bold text-slate-500 hover:text-slate-400 uppercase"
-                          >
-                            X
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmRevert(row.id)}
-                          className="text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
-                        >
-                          Undo
-                        </button>
-                      )
+                      <button
+                        onClick={() => revertPayout(row.id)}
+                        disabled={loading === row.id}
+                        className="text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
+                      >
+                        {loading === row.id ? '…' : 'Undo'}
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -296,12 +281,12 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                     <td className="py-3 pr-3 text-right font-mono text-xs">{fmtCurrency(row.gross_interest)}</td>
                     <td className="py-3 pr-3 text-right font-mono text-xs text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
                     <td className="py-3 pr-3 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${row.status === 'paid' ? 'bg-green-900/40 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
-                        {row.status === 'paid' ? 'Filed' : 'Pending'}
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${row.tds_filed ? 'bg-green-900/40 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
+                        {row.tds_filed ? 'Filed' : 'Pending'}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      {row.status !== 'paid' && <MarkTdsFiledButton payoutId={row.id} onError={setError} />}
+                      {!row.tds_filed && <MarkTdsFiledButton payoutId={row.id} onError={setError} />}
                     </td>
                   </tr>
                 ))}
