@@ -4,59 +4,57 @@
 - main
 
 ## Phase
-- reviewing
+- implementing
 
 ## Active Batch
-- Quick Send Panel + Notifications Context complete
+- Sequential queue — Gemini works through all batches in order
 
 ---
 
-## Items for Gemini
+## Queue for Gemini (in order)
 
-### Batch 1 — Quick Send Panel
-Full plan: `docs/superpowers/plans/2026-04-29-quick-send-panel.md`
+### Batch 1 — Quick Send Panel + Notifications Context
+**Status:** In progress / just completed
+Plans:
+- `docs/superpowers/plans/2026-04-29-quick-send-panel.md`
+- `docs/superpowers/plans/2026-04-29-notifications-context.md`
 
-- [x] Item 1 — Fix notification_queue silent insert failure
-- [x] Item 2 — Add salesperson name to page fetch
-- [x] Item 3 — Build QuickSendPanel component
-- [x] Item 4 — Wire QuickSendPanel into NotificationsClient
-
-### Batch 2 — Notifications Context (stats header + trigger labels)
-Full plan: `docs/superpowers/plans/2026-04-29-notifications-context.md`
-
-- [x] Item 1 — Add fetchStats to notifications page
-- [x] Item 2 — Add StatsHeader and trigger labels to NotificationsClient
+- [x] Quick Send Panel (4 items)
+- [x] Notifications Context (2 items)
 
 ---
 
-## Files Changed
-- src/app/api/reminders/process/route.ts
-- src/app/(app)/notifications/page.tsx
-- src/components/notifications/QuickSendPanel.tsx (New)
-- src/components/notifications/NotificationsClient.tsx
+### Batch 2 — Extraction Pipeline Redesign
+**Status:** Queued
+Plan: `docs/superpowers/plans/2026-04-29-extraction-pipeline.md`
+
+- [ ] Task 1 — ExtractionFlag type + validateExtraction() + tests
+- [ ] Task 2 — Harden Gemini prompt (row count, math check, coverage, compound TDS, is_tds_only)
+- [ ] Task 3 — PDF pre-processing (pdfjs-dist + canvas + sharp)
+- [ ] Task 4 — ExtractionReview flags panel + save gate
+- [ ] Task 5 — Rescan route: return current values + flags
+- [ ] Task 6 — New rescan/apply route (atomic update)
+- [ ] Task 7 — RescanModal diff view + flags + payout schedule update
+- [ ] Task 8 — SESSION.md update + push
+
+---
 
 ## Work Completed
-- Batch 1 — Quick Send Panel complete:
-  - Fixed `notification_queue` silent insert failure in `reminders/process` route.
-  - Added salesperson name to agreement join in notifications page fetch.
-  - Built `QuickSendPanel` component with client-side filtering and bulk send.
-  - Integrated `QuickSendPanel` into `NotificationsClient`.
-- Batch 2 — Notifications Context complete:
-  - Added `fetchStats` to notifications page to query source tables (payouts, maturities, TDS, docs).
-  - Added `StatsHeader` component to `NotificationsClient`.
-  - Added descriptive "trigger labels" to `QueueTable` rows for better context.
-- Batch C.2 — Post-Launch Hotfixes complete (TDS rows, rescan, bulk mark-paid, What's New modal)
-- Batch F complete — notification queue, /notifications page, sidebar nav, salesperson gates
-- Batch G complete — TDS calculation fixes, inline confirmations, undo toast
+- Batch C.2 — TDS rows, rescan, bulk mark-paid, What's New modal
+- Batch F — notifications page, sidebar nav, salesperson gates
+- Batch G — TDS calculation fixes, inline confirmations, undo toast
 
 ## Decisions
 - No native browser dialogs anywhere — standing rule
-- QuickSendPanel filters client-side from already-fetched pending items (no new API)
+- QuickSendPanel filters client-side (no new API)
 - Stats header queries source tables directly (not notification_queue)
-- Panel and stats only visible to coordinators
+- Rescan now includes payout schedule update + diff view + flag resolution
+- Extraction flags: fix / re-upload / accept-as-is — all three options
+- Save blocked until all flags resolved
+- PDF pre-processing: high-contrast B&W images via pdfjs-dist + canvas + sharp, falls back to raw PDF if conversion fails
 
 ## Codex Review Notes
 - (none yet)
 
 ## Next Agent Action
-- Codex: review QuickSendPanel logic, stats queries, and trigger label consistency.
+- Gemini: complete Batch 1 if not done. Then immediately proceed to Batch 2. Read each plan file fully before starting. Work through all tasks in order. Run `npm run build` and `npm test` after each task. Push when all batches complete.
