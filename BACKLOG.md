@@ -101,6 +101,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Item | Notes |
 |---|---|
+| **Quick Send — extended timeframes** | Add `Quarter (90 days)`, `6 months (180 days)`, `1 year (365 days)` to the timeframe dropdown in `QuickSendPanel`. Simple change to `TIMEFRAME_OPTIONS` array in `src/components/notifications/QuickSendPanel.tsx`. |
 | **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch D is stable. |
 | **Slack integration** | Automated notifications. External dependency. |
 | **Custom domain** | Move off Vercel subdomain to a proper domain. |
