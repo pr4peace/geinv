@@ -13,6 +13,15 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
+### 🩹 Batch C.3 — Rescan Improvements (next hotfix batch)
+
+| Item | Notes |
+|---|---|
+| **Rescan: include payout schedule update** | `RescanModal` + `handleConfirm` currently skips payout rows entirely. On confirm: delete existing `payout_schedule` rows for the agreement and re-insert using the freshly extracted `payout_schedule` from Gemini. Wire up via `PATCH /api/agreements/[id]` or a new `POST /api/agreements/[id]/rescan/apply`. |
+| **Rescan: show diff of what changed** | Before showing editable fields, fetch current stored agreement + payout rows and compare against extracted. Highlight changed fields in amber, unchanged in grey. Show old payout rows vs new payout rows side by side so coordinator can see exactly what Gemini corrected before confirming. |
+
+---
+
 ### 🩹 Batch C.2 — Post-Launch Hotfixes (branch: `feature/batch-c2-hotfixes`)
 *Fixes from first real upload session. Applied urgently — some already on main.*
 
@@ -29,10 +38,10 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 | **Overdue filter fix** | ✅ main | due_by < today instead of period_to < monthStart |
 | **Maturity reminder catch-up** | ✅ main | Immediate reminder if all lead-day dates are past |
 | **Mark past payouts as paid on import** | ✅ main | Checkbox in ExtractionReview + API |
-| **TDS rows on 31st March (cumulative/compound)** | 🔲 todo | One row per 31 Mar in term, is_tds_only |
-| **Re-scan without re-upload** | 🔲 todo | Button on detail page, re-runs Gemini from stored doc |
-| **Per-agreement mark-past-paid + row revert** | 🔲 todo | Bulk button with confirm + per-row undo |
-| **Splash screen "What's New"** | 🔲 todo | Max 3 views per user, localStorage count |
+| **TDS rows on 31st March (cumulative/compound)** | ✅ main | Done in C.2 |
+| **Re-scan without re-upload** | ✅ main | Done in C.2 — but payout schedule excluded, see C.3 |
+| **Per-agreement mark-past-paid + row revert** | ✅ main | Done in C.2 |
+| **Splash screen "What's New"** | ✅ main | Done in C.2 — versioning rework tracked in Future |
 
 ---
 
