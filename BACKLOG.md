@@ -101,6 +101,8 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 | Item | Notes |
 |---|---|
+| **PDF pre-processing for extraction accuracy** | Before sending to Gemini, convert each PDF page to a high-contrast B&W image (grayscale + contrast boost + sharpen) using `sharp` + `pdf2pic` or `pdfjs-dist`. Eliminates grey backgrounds, light ink, and scan artifacts that cause Gemini to misread numbers. Particularly important for payout schedule tables. Implement in `src/lib/claude.ts` as a pre-processing step before the Gemini API call. |
+| **Versioning system rework** | Full rework of `src/lib/version.ts` + `src/components/WhatsNewModal.tsx` — current implementation needs review. Ensure version bump, localStorage tracking (max 3 views), and modal display all work correctly end-to-end. |
 | **Quick Send — extended timeframes** | Add `Quarter (90 days)`, `6 months (180 days)`, `1 year (365 days)` to the timeframe dropdown in `QuickSendPanel`. Simple change to `TIMEFRAME_OPTIONS` array in `src/components/notifications/QuickSendPanel.tsx`. |
 | **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch D is stable. |
 | **Slack integration** | Automated notifications. External dependency. |
