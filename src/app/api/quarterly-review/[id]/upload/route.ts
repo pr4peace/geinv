@@ -35,6 +35,21 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
+    // Validation: Max 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File size too large (max 10MB)' }, { status: 400 })
+    }
+
+    // Validation: Allowed types (Excel and PDF)
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'application/pdf',
+    ]
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Only Excel or PDF files are allowed' }, { status: 400 })
+    }
+
     if (!type || !['incoming_funds', 'tds'].includes(type)) {
       return NextResponse.json(
         { error: "type must be 'incoming_funds' or 'tds'" },

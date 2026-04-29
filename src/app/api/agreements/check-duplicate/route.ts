@@ -6,9 +6,10 @@ export async function GET(request: NextRequest) {
   const userTeamId = request.headers.get('x-user-team-id') ?? ''
 
   const { searchParams } = request.nextUrl
-  const investorName = searchParams.get('investor_name')?.trim()
+  const sanitize = (s: string) => s.replace(/[,()]/g, '')
+  const investorName = sanitize(searchParams.get('investor_name')?.trim() ?? '')
   const agreementDate = searchParams.get('agreement_date')?.trim()
-  const investorPan = searchParams.get('investor_pan')?.trim() || null
+  const investorPan = sanitize(searchParams.get('investor_pan')?.trim() ?? '') || null
 
   if (!investorName || !agreementDate) {
     return NextResponse.json({ duplicates: [] })

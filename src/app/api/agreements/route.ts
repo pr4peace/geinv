@@ -131,9 +131,10 @@ export async function POST(request: NextRequest) {
 
     // Duplicate check — skip only if caller explicitly sets force: true
     if (!force) {
-      const investorName = (agreementFields.investor_name as string) ?? ''
+      const sanitize = (s: string) => s.replace(/[,()]/g, '')
+      const investorName = sanitize((agreementFields.investor_name as string) ?? '')
       const agreementDate = (agreementFields.agreement_date as string) ?? ''
-      const investorPan = (agreementFields.investor_pan as string | null) ?? null
+      const investorPan = sanitize((agreementFields.investor_pan as string | null) ?? '') || null
 
       let orFilter = `and(investor_name.ilike.${investorName},agreement_date.eq.${agreementDate})`
       if (investorPan) {
@@ -276,7 +277,8 @@ export async function POST(request: NextRequest) {
     if (rows.length > 0) {
       const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
       if (payoutError) {
-        console.error('Failed to insert payout schedule:', payoutError.message)
+        await supabase.from('agreements').delete().eq('id', agreement.id)
+        return NextResponse.json({ error: `Failed to insert payout schedule: ${payoutError.message}` }, { status: 500 })
       }
     }
 
@@ -299,7 +301,8 @@ export async function POST(request: NextRequest) {
       .order('due_by', { ascending: true })
 
     if (fetchPayoutError) {
-      return NextResponse.json({ error: fetchPayoutError.message }, { status: 500 })
+      await supabase.from('agreements').delete().eq('id', agreement.id)
+      return NextResponse.json({ error: `Failed to fetch payout schedule for reminders: ${fetchPayoutError.message}` }, { status: 500 })
     }
 
     // Fetch internal email (coordinator) for reminders
@@ -361,7 +364,10 @@ export async function POST(request: NextRequest) {
 
       const { error: reminderError } = await supabase.from('reminders').insert(reminderRows)
       if (reminderError) {
-        console.error('Failed to insert reminders:', reminderError.message)
+        // Cleanup: Delete agreement and payouts if reminders fail
+        await supabase.from('payout_schedule').delete().eq('agreement_id', agreement.id)
+        await supabase.from('agreements').delete().eq('id', agreement.id)
+        return NextResponse.json({ error: `Failed to insert reminders: ${reminderError.message}` }, { status: 500 })
       }
     }
 

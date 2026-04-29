@@ -70,6 +70,10 @@ Plan: `docs/superpowers/plans/2026-04-29-extraction-pipeline.md`
   - Implemented salesperson scoping for KPIs and Cash Flow Forecast.
   - Created `apply_rescan_update` RPC and updated route for atomic mutations.
   - Added RBAC and salesperson scoping to `check-duplicate` endpoint.
+- **Codex Review Fixes (Round 2) applied:**
+  - Implemented atomicity/error-checking in agreement creation and CSV import (abort if payouts fail).
+  - Added file size (10MB) and MIME type validation to signed agreement and reconciliation uploads.
+  - Sanitized PostgREST control characters in duplicate check `.or()` filters.
 - Batch C.2 — TDS rows, rescan, bulk mark-paid, What's New modal
 - Batch F — notifications page, sidebar nav, salesperson gates
 - Batch G — TDS calculation fixes, inline confirmations, undo toast
@@ -85,30 +89,30 @@ Plan: `docs/superpowers/plans/2026-04-29-extraction-pipeline.md`
 - Rescan required flag handled via UI badges/banners and reset on apply
 
 ## Codex Review Notes
-- **File:** `src/app/api/reminders/process/route.ts:90`
-  **Severity:** critical
-  **Issue:** `GET /api/reminders/process` trusts only `x-vercel-cron: 1`, which any external caller can spoof to enqueue notifications and flip payout rows to `overdue` without authentication.
-  **Fix:** Delete the public `GET` handler entirely or make it use the same `Authorization: Bearer ${CRON_SECRET}` check as `POST`, so `processReminders()` is never reachable from a spoofable header path.
-
-- **File:** `src/app/api/quarterly-review/[id]/upload/route.ts:45`
+- **File:** `src/app/api/agreements/route.ts:276`
   **Severity:** high
-  **Issue:** uploaded reconciliation spreadsheets are written to a private bucket but persisted as `getPublicUrl()` links, which either exposes sensitive finance files if the bucket is ever public or breaks `reconcile`/`reconcile-ui` because those routes later `fetch()` an unauthenticated URL.
-  **Fix:** replace the `getPublicUrl()` block at lines 63-64 with storage-path persistence, e.g. store `filePath` in `quarterly_reviews`, then in both reconcile routes download with `supabase.storage.from('reconciliations').download(storedPath)` using the admin client instead of `fetch(url)`.
+  **Issue:** agreement creation still returns `201` after payout schedule insert or reminder insert failures, so production can persist a live agreement without its required payout rows and silently tell the user the save succeeded.
+  **Fix:** make the agreement insert, payout_schedule insert, and any required follow-up writes one transactional unit (RPC/SQL transaction), and if `payoutError` is non-null return an error instead of logging and continuing.
 
-- **File:** `src/app/api/kpi/route.ts:4`
+- **File:** `src/app/api/agreements/import/route.ts:139`
   **Severity:** high
-  **Issue:** the KPI endpoint returns company-wide principal, overdue totals, quarterly forecast, and maturity data for every authenticated user; a salesperson can call it directly and see the full book instead of only their assigned agreements.
-  **Fix:** read `x-user-role` and `x-user-team-id` in this route, reject salespeople or pass `salespersonId` through to `getDashboardKPIs()`, `getQuarterlyForecast()`, and `getFrequencyBreakdown()`, then add `.eq('salesperson_id', salespersonId)` / joined-agreement filters inside `src/lib/kpi.ts` for every underlying query.
+  **Issue:** CSV import ignores the result of `payout_schedule.insert(...)`, then writes the audit row and increments `imported`, so a failed payout insert produces an apparently successful import with a corrupted agreement missing all payout history.
+  **Fix:** capture the insert result, abort that row on any `payout_schedule` error, and only write the audit row plus `imported++` after the payout rows have been inserted successfully.
 
-- **File:** `src/app/api/agreements/[id]/rescan/apply/route.ts:28`
-  **Severity:** high
-  **Issue:** rescan apply updates the agreement, deletes all existing payout rows, and then reinserts new rows in separate statements with no transaction, so any insert failure leaves the agreement half-applied and permanently wipes its original payout schedule.
-  **Fix:** move the whole mutation into a single Postgres transaction via an RPC (update agreement fields, delete old `payout_schedule`, insert replacement rows, and only then commit), or at minimum call one SQL function from this route instead of the current line-28-to-95 multi-step sequence.
-
-- **File:** `src/app/api/agreements/check-duplicate/route.ts:4`
+- **File:** `src/app/api/agreements/[id]/upload-signed/route.ts:28`
   **Severity:** medium
-  **Issue:** the duplicate-check endpoint has no API-level role check or salesperson scoping, so any authenticated salesperson can query arbitrary investor names/PANs and enumerate agreement metadata outside their portfolio.
-  **Fix:** add the same guard used by creation routes at the top of this handler (`if (userRole !== 'coordinator' && userRole !== 'admin') return 403`), and if this route ever needs salesperson access later, scope the query by `salesperson_id = x-user-team-id` before returning duplicates.
+  **Issue:** the signed-agreement upload route accepts any file type and any file size, so a coordinator can accidentally store arbitrary large or non-document files in the `agreements` bucket and publish long-lived signed URLs for them.
+  **Fix:** add the same kind of server-side validation used in `src/app/api/extract/route.ts` before reading the buffer: enforce an explicit size cap and allow only PDF/DOCX MIME types/extensions.
+
+- **File:** `src/app/api/quarterly-review/[id]/upload/route.ts:30`
+  **Severity:** medium
+  **Issue:** quarterly reconciliation upload has no MIME or size validation, so malformed or oversized files are accepted into storage and only fail later when the reconciliation parser tries to read them.
+  **Fix:** reject files above a fixed size limit and allow only the spreadsheet formats the parser actually supports before calling `file.arrayBuffer()` and storage upload.
+
+- **File:** `src/app/api/agreements/route.ts:138`
+  **Severity:** medium
+  **Issue:** duplicate detection builds a PostgREST `.or(...)` filter by directly interpolating `investor_name` and `investor_pan`, so reserved characters like commas and parentheses can alter the query logic instead of being treated as literal input.
+  **Fix:** sanitize or escape PostgREST control characters before constructing `orFilter` here, and mirror the same sanitizer in `src/app/api/agreements/import/route.ts` and `src/app/api/agreements/check-duplicate/route.ts`.
 
 ## Next Agent Action
-- Codex: review extraction validator logic, rescan apply route atomicity, and RescanModal diff rendering.
+- Codex: final check of atomicity fixes, file validations, and filter sanitization.

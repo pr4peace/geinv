@@ -32,6 +32,20 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
+    // Validation: Max 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File size too large (max 10MB)' }, { status: 400 })
+    }
+
+    // Validation: Allowed types
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ]
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Only PDF or DOCX files are allowed' }, { status: 400 })
+    }
+
     const fileBuffer = Buffer.from(await file.arrayBuffer())
     const ext = file.name.split('.').pop() ?? 'pdf'
     const filePath = `${existing.reference_id}/signed-${Date.now()}.${ext}`

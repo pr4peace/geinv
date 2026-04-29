@@ -60,9 +60,13 @@ export async function POST(request: NextRequest) {
     for (const row of rows) {
       try {
         // Duplicate check
-        let orFilter = `and(investor_name.ilike.${row.investor_name},agreement_date.eq.${row.agreement_date})`
-        if (row.investor_pan) {
-          orFilter += `,and(investor_pan.eq.${row.investor_pan},agreement_date.eq.${row.agreement_date})`
+        const sanitize = (s: string) => s.replace(/[,()]/g, '')
+        const investorName = sanitize(row.investor_name ?? '')
+        const investorPan = sanitize(row.investor_pan ?? '') || null
+
+        let orFilter = `and(investor_name.ilike.${investorName},agreement_date.eq.${row.agreement_date})`
+        if (investorPan) {
+          orFilter += `,and(investor_pan.eq.${investorPan},agreement_date.eq.${row.agreement_date})`
         }
 
         const { data: dups } = await supabase
@@ -137,9 +141,15 @@ export async function POST(request: NextRequest) {
         })
 
         if (payoutRows.length > 0) {
-          await supabase.from('payout_schedule').insert(
+          const { error: payoutError } = await supabase.from('payout_schedule').insert(
             payoutRows.map((p) => ({ ...p, agreement_id: agreement.id }))
           )
+          if (payoutError) {
+            // Cleanup: Delete the agreement if payouts failed
+            await supabase.from('agreements').delete().eq('id', agreement.id)
+            errors.push(`${row.investor_name}: Failed to insert payout schedule: ${payoutError.message}`)
+            continue
+          }
         }
 
         // Audit log — tag as csv_import so they can be bulk-undone
