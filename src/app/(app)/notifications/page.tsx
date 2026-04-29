@@ -4,11 +4,13 @@ import NotificationsClient from '@/components/notifications/NotificationsClient'
 import type { NotificationQueue } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
-
-export const metadata = { title: 'Notifications — Good Earth Investment Tracker' }
-
 type EnrichedItem = NotificationQueue & {
-  agreement?: { id: string; investor_name: string; reference_id: string } | null
+  agreement?: {
+    id: string
+    investor_name: string
+    reference_id: string
+    salesperson?: { name: string } | null
+  } | null
   sent_by_member?: { name: string } | null
 }
 
@@ -19,7 +21,7 @@ async function fetchItems(status: string, salespersonId?: string): Promise<Enric
     .from('notification_queue')
     .select(`
       *,
-      agreement:agreements(id, investor_name, reference_id),
+      agreement:agreements(id, investor_name, reference_id, salesperson:team_members!salesperson_id(name)),
       sent_by_member:team_members!sent_by(name)
     `)
     .eq('status', status)
@@ -41,15 +43,71 @@ async function fetchItems(status: string, salespersonId?: string): Promise<Enric
   return (data ?? []) as EnrichedItem[]
 }
 
+type NotificationStats = {
+  payouts: number
+  maturities: number
+  tdsFilings: number
+  docsOverdue: number
+}
+
+async function fetchStats(): Promise<NotificationStats> {
+  const supabase = createAdminClient()
+  const todayStr = new Date().toISOString().split('T')[0]
+  const plus30 = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+  const plus90 = new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0]
+  const plus60 = new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]
+  const minus30 = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+
+  const [payoutsRes, maturitiesRes, tdsRes, docsRes] = await Promise.all([
+    supabase
+      .from('payout_schedule')
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'paid')
+      .eq('is_tds_only', false)
+      .eq('is_principal_repayment', false)
+      .gte('due_by', todayStr)
+      .lte('due_by', plus30),
+    supabase
+      .from('agreements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .gte('maturity_date', todayStr)
+      .lte('maturity_date', plus90),
+    supabase
+      .from('payout_schedule')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_tds_only', true)
+      .neq('status', 'paid')
+      .gte('due_by', todayStr)
+      .lte('due_by', plus60),
+    supabase
+      .from('agreements')
+      .select('id', { count: 'exact', head: true })
+      .eq('doc_status', 'sent_to_client')
+      .is('doc_returned_date', null)
+      .is('deleted_at', null)
+      .lte('doc_sent_to_client_date', minus30),
+  ])
+
+  return {
+    payouts: payoutsRes.count ?? 0,
+    maturities: maturitiesRes.count ?? 0,
+    tdsFilings: tdsRes.count ?? 0,
+    docsOverdue: docsRes.count ?? 0,
+  }
+}
+
 export default async function NotificationsPage() {
   const headersList = await headers()
   const userRole = headersList.get('x-user-role') ?? ''
   const userTeamId = headersList.get('x-user-team-id') ?? ''
   const salespersonId = userRole === 'salesperson' ? userTeamId : undefined
 
-  const [pending, sent] = await Promise.all([
+  const [pending, sent, stats] = await Promise.all([
     fetchItems('pending', salespersonId).catch(() => [] as EnrichedItem[]),
     fetchItems('sent', salespersonId).catch(() => [] as EnrichedItem[]),
+    fetchStats().catch(() => ({ payouts: 0, maturities: 0, tdsFilings: 0, docsOverdue: 0 })),
   ])
 
   const todayStr = new Date().toISOString().split('T')[0]
@@ -71,6 +129,7 @@ export default async function NotificationsPage() {
       redFlags={redFlags}
       history={sent}
       userRole={userRole}
+      stats={stats}
     />
   )
 }

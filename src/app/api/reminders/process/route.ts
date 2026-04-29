@@ -62,20 +62,15 @@ async function processReminders(): Promise<{
     })
   }
 
-  // 3. Upsert — ignore conflicts (idempotent via unique indexes)
-  if (allItems.length > 0) {
-    const { data, error } = await supabase
-      .from('notification_queue')
-      .insert(allItems)
-      .select('id')
-    
-    // In Supabase/Postgrest, if there is a conflict and no ON CONFLICT is specified, 
-    // it will return an error 409. But we want to just skip duplicates.
-    // Actually our unique index handles this but the insert will fail if we don't use onConflict.
-    // However, the plan didn't specify onConflict. 
-    // Let's use it for robustness.
-    
-    if (!error) queueAdded = data?.length ?? 0
+  // 3. Insert per-item — swallow unique constraint violations (idempotent re-runs)
+  for (const item of allItems) {
+    const { error } = await supabase.from('notification_queue').insert(item)
+    if (!error) {
+      queueAdded++
+    } else if (error.code !== '23505') {
+      console.error('notification_queue insert error:', error.message)
+    }
+    // 23505 = unique_violation — item already pending, skip silently
   }
 
   // 4. Still mark payout_schedule rows as overdue (no change from before)

@@ -4,10 +4,87 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { NotificationQueue, NotificationType } from '@/types/database'
 import { UndoToast } from '@/components/UndoToast'
+import QuickSendPanel from '@/components/notifications/QuickSendPanel'
 
 type EnrichedItem = NotificationQueue & {
-  agreement?: { id: string; investor_name: string; reference_id: string } | null
+  agreement?: {
+    id: string
+    investor_name: string
+    reference_id: string
+    salesperson?: { name: string } | null
+  } | null
   sent_by_member?: { name: string } | null
+}
+
+type NotificationStats = {
+  payouts: number
+  maturities: number
+  tdsFilings: number
+  docsOverdue: number
+}
+
+function StatsHeader({ stats }: { stats: NotificationStats }) {
+  const pills = [
+    { label: 'Payouts', count: stats.payouts, window: '30 days', icon: '📅' },
+    { label: 'Maturities', count: stats.maturities, window: '90 days', icon: '🏁' },
+    { label: 'TDS filing', count: stats.tdsFilings, window: '60 days', icon: '📋' },
+    { label: 'Docs overdue', count: stats.docsOverdue, window: null, icon: '📄' },
+  ]
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {pills.map(pill => (
+        <div
+          key={pill.label}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm ${
+            pill.count > 0
+              ? 'bg-slate-800 border-slate-700 text-slate-200'
+              : 'bg-slate-900 border-slate-800 text-slate-500'
+          }`}
+        >
+          <span>{pill.icon}</span>
+          <span className={pill.count > 0 ? 'font-semibold' : ''}>{pill.count}</span>
+          <span className="text-slate-400">{pill.label}</span>
+          {pill.window && pill.count > 0 && (
+            <span className="text-[11px] text-slate-500">in {pill.window}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function getTriggerLabel(item: EnrichedItem): string {
+  const todayStr = new Date().toISOString().split('T')[0]
+  const due = item.due_date
+  if (!due) {
+    if (item.notification_type === 'monthly_summary') return 'Monthly summary'
+    if (item.notification_type === 'quarterly_forecast') return 'Quarterly forecast'
+    return ''
+  }
+
+  const diffDays = Math.round(
+    (new Date(due).getTime() - new Date(todayStr).getTime()) / 86400000
+  )
+
+  switch (item.notification_type) {
+    case 'payout':
+      return diffDays < 0
+        ? `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}`
+        : `Due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`
+    case 'maturity':
+      return `Matures in ${diffDays} day${diffDays !== 1 ? 's' : ''}`
+    case 'tds_filing':
+      return `Filing due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`
+    case 'doc_return':
+      return `Sent ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} ago, not returned`
+    case 'monthly_summary':
+      return 'Monthly summary'
+    case 'quarterly_forecast':
+      return 'Quarterly forecast'
+    default:
+      return ''
+  }
 }
 
 const TYPE_LABELS: Record<NotificationType, string> = {
@@ -131,6 +208,9 @@ function QueueTable({
                       <div>
                         <p className="text-slate-100 font-medium">{item.agreement.investor_name}</p>
                         <p className="text-[10px] text-slate-500 font-mono">{item.agreement.reference_id}</p>
+                        {getTriggerLabel(item) && (
+                          <p className="text-[10px] text-slate-500 mt-0.5">{getTriggerLabel(item)}</p>
+                        )}
                       </div>
                     ) : (
                       <p className="text-slate-400 italic text-xs">{TYPE_LABELS[item.notification_type]}</p>
@@ -217,12 +297,13 @@ function HistoryTable({ items, onResend, sending }: {
 }
 
 export default function NotificationsClient({
-  pending, redFlags, history, userRole,
+  pending, redFlags, history, userRole, stats,
 }: {
   pending: EnrichedItem[]
   redFlags: EnrichedItem[]
   history: EnrichedItem[]
   userRole: string
+  stats: NotificationStats
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<'queue' | 'flags' | 'history'>('queue')
@@ -275,11 +356,21 @@ export default function NotificationsClient({
         <p className="text-xs text-slate-500 mt-0.5">Review and send upcoming reminders — nothing sends without your approval</p>
       </div>
 
+      <StatsHeader stats={stats} />
+
       {error && (
         <div className="bg-red-900/30 border border-red-800 rounded-xl px-4 py-3 text-sm text-red-400 flex items-center justify-between">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-4">✕</button>
         </div>
+      )}
+
+      {isCoordinator && (
+        <QuickSendPanel
+          pending={pending}
+          onSend={handleSend}
+          sending={sending}
+        />
       )}
 
       <div className="flex gap-1 border-b border-slate-800">
