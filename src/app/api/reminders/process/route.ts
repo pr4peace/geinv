@@ -89,7 +89,11 @@ async function processReminders(): Promise<{
 
 export async function GET(request: NextRequest) {
   const cronHeader = request.headers.get('x-vercel-cron')
-  if (cronHeader !== '1') {
+  const authHeader = request.headers.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
+
+  // Must be from Vercel Cron AND have valid secret
+  if (cronHeader !== '1' || !cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {

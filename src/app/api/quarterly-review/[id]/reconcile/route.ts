@@ -9,12 +9,14 @@ import {
 import type { ReconciliationResult } from '@/types/database'
 import { parseISO } from 'date-fns'
 
-async function downloadFileFromUrl(url: string): Promise<Buffer> {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to download file from ${url}: ${response.statusText}`)
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+async function downloadFileFromStorage(supabase: SupabaseClient, path: string): Promise<Buffer> {
+  const { data, error } = await supabase.storage.from('reconciliations').download(path)
+  if (error || !data) {
+    throw new Error(`Failed to download file from storage: ${error?.message ?? 'No data'}`)
   }
-  const arrayBuffer = await response.arrayBuffer()
+  const arrayBuffer = await data.arrayBuffer()
   return Buffer.from(arrayBuffer)
 }
 
@@ -69,7 +71,7 @@ export async function POST(
         )
       }
 
-      const fileBuffer = await downloadFileFromUrl(review.incoming_funds_doc_url)
+      const fileBuffer = await downloadFileFromStorage(supabase, review.incoming_funds_doc_url)
       const payments = parseIncomingFundsExcel(fileBuffer)
 
       // Fetch all active agreements
@@ -99,7 +101,7 @@ export async function POST(
         )
       }
 
-      const fileBuffer = await downloadFileFromUrl(review.tds_doc_url)
+      const fileBuffer = await downloadFileFromStorage(supabase, review.tds_doc_url)
       const tdsEntries = parseTDSExcel(fileBuffer)
 
       // Fetch paid payouts and their agreements

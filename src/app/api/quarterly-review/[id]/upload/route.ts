@@ -60,23 +60,22 @@ export async function POST(
       return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
     }
 
-    const { data: urlData } = supabase.storage.from('reconciliations').getPublicUrl(filePath)
-    const fileUrl = urlData.publicUrl
-
-    // Update quarterly_review with the doc URL
+    // Store the path instead of public URL for private access
     const updateField =
       type === 'incoming_funds' ? 'incoming_funds_doc_url' : 'tds_doc_url'
 
     const { error: updateError } = await supabase
       .from('quarterly_reviews')
-      .update({ [updateField]: fileUrl })
+      .update({ [updateField]: filePath })
       .eq('id', id)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, file_url: fileUrl })
+    const { data: urlData } = supabase.storage.from('reconciliations').getPublicUrl(filePath)
+
+    return NextResponse.json({ success: true, file_url: urlData.publicUrl, file_path: filePath })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },

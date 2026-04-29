@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
+  const userRole = request.headers.get('x-user-role') ?? ''
+  const userTeamId = request.headers.get('x-user-team-id') ?? ''
+
   const { searchParams } = request.nextUrl
   const investorName = searchParams.get('investor_name')?.trim()
   const agreementDate = searchParams.get('agreement_date')?.trim()
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('agreements')
-    .select('id, reference_id, investor_name, agreement_date, principal_amount, status')
+    .select('id, reference_id, investor_name, agreement_date, principal_amount, status, salesperson_id')
     .neq('status', 'cancelled')
     .is('deleted_at', null)
     .or(orFilter)
@@ -31,5 +34,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ duplicates: [] })
   }
 
-  return NextResponse.json({ duplicates: data ?? [] })
+  // If salesperson, only show duplicates from their own portfolio
+  let duplicates = data ?? []
+  if (userRole === 'salesperson') {
+    duplicates = duplicates.filter(d => d.salesperson_id === userTeamId)
+  }
+
+  return NextResponse.json({ duplicates })
 }

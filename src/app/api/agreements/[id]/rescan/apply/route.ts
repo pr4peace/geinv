@@ -25,10 +25,10 @@ export async function POST(
 
     const supabase = createAdminClient()
 
-    // 1. Update agreement fields
-    const { error: updateError } = await supabase
-      .from('agreements')
-      .update({
+    // Use RPC for atomic mutation (transaction)
+    const { error: rpcError } = await supabase.rpc('apply_rescan_update', {
+      p_agreement_id: id,
+      p_agreement_data: {
         agreement_date: extracted.agreement_date,
         investment_start_date: extracted.investment_start_date,
         agreement_type: extracted.agreement_type,
@@ -50,52 +50,27 @@ export async function POST(
         lock_in_years: extracted.lock_in_years,
         maturity_date: extracted.maturity_date,
         payments: extracted.payments ?? [],
-        rescan_required: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
+      },
+      p_payout_rows: (extracted.payout_schedule ?? []).map((row: ExtractedPayoutRow) => ({
+        period_from: row.period_from,
+        period_to: row.period_to,
+        no_of_days: row.no_of_days ?? null,
+        due_by: row.due_by,
+        gross_interest: row.gross_interest ?? 0,
+        tds_amount: row.tds_amount ?? 0,
+        net_interest: row.net_interest ?? 0,
+        is_principal_repayment: row.is_principal_repayment ?? false,
+        is_tds_only: row.is_tds_only ?? false,
+        tds_filed: false,
+        status: 'pending',
+      })),
+    })
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    if (rpcError) {
+      return NextResponse.json({ error: rpcError.message }, { status: 500 })
     }
 
-    // 2. Delete existing payout rows
-    const { error: deleteError } = await supabase
-      .from('payout_schedule')
-      .delete()
-      .eq('agreement_id', id)
-
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 })
-    }
-
-    // 3. Insert new payout rows
-    const newRows = (extracted.payout_schedule ?? []).map((row: ExtractedPayoutRow) => ({
-      agreement_id: id,
-      period_from: row.period_from,
-      period_to: row.period_to,
-      no_of_days: row.no_of_days ?? null,
-      due_by: row.due_by,
-      gross_interest: row.gross_interest ?? 0,
-      tds_amount: row.tds_amount ?? 0,
-      net_interest: row.net_interest ?? 0,
-      is_principal_repayment: row.is_principal_repayment ?? false,
-      is_tds_only: row.is_tds_only ?? false,
-      tds_filed: false,
-      status: 'pending',
-    }))
-
-    if (newRows.length > 0) {
-      const { error: insertError } = await supabase
-        .from('payout_schedule')
-        .insert(newRows)
-
-      if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 })
-      }
-    }
-
-    return NextResponse.json({ success: true, rowsInserted: newRows.length })
+    return NextResponse.json({ success: true, rowsInserted: extracted.payout_schedule?.length ?? 0 })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },

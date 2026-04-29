@@ -3,13 +3,17 @@ import { getDashboardKPIs, getQuarterlyForecast, getFrequencyBreakdown } from '@
 
 export async function GET(request: NextRequest) {
   try {
+    const userRole = request.headers.get('x-user-role') ?? ''
+    const userTeamId = request.headers.get('x-user-team-id') ?? ''
+    const salespersonId = userRole === 'salesperson' ? userTeamId : undefined
+
     const { searchParams } = new URL(request.url)
     const quarter = searchParams.get('quarter') ?? undefined
 
     const [kpis, forecast, frequency] = await Promise.all([
-      getDashboardKPIs(),
-      getQuarterlyForecast(quarter),
-      getFrequencyBreakdown(),
+      getDashboardKPIs(salespersonId),
+      getQuarterlyForecast(quarter, salespersonId),
+      getFrequencyBreakdown(salespersonId),
     ])
 
     return NextResponse.json({ kpis, forecast, frequency })

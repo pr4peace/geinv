@@ -79,18 +79,24 @@ export function getIndianFinancialQuarterBounds(date: Date = new Date()): { star
   return { start: new Date(year - 1, 3, 1), end: new Date(year, 2, 31) }
 }
 
-export async function getDashboardKPIs(): Promise<DashboardKPIs> {
+export async function getDashboardKPIs(salespersonId?: string): Promise<DashboardKPIs> {
   const supabase = createAdminClient()
   const now = new Date()
   const { start: qStart, end: qEnd } = getIndianFinancialQuarterBounds(now)
   const in90Days = addDays(now, 90)
 
   // Active + matured agreements
-  const { data: agreements, error: agreementsError } = await supabase
+  let agreementsQuery = supabase
     .from('agreements')
     .select('id, investor_name, principal_amount, maturity_date, reference_id, status')
     .in('status', ['active', 'matured'])
     .is('deleted_at', null)
+
+  if (salespersonId) {
+    agreementsQuery = agreementsQuery.eq('salesperson_id', salespersonId)
+  }
+
+  const { data: agreements, error: agreementsError } = await agreementsQuery
   if (agreementsError) throw new Error(`Failed to fetch agreements: ${agreementsError.message}`)
 
   const allAgreements = agreements ?? []
@@ -100,15 +106,21 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   const maturedPrincipal = maturedAgreements.reduce((s, a) => s + a.principal_amount, 0)
 
   // Quarter payouts
-  const { data: quarterPayouts, error: quarterPayoutsError } = await supabase
+  let payoutsQuery = supabase
     .from('payout_schedule')
-    .select('gross_interest, tds_amount, net_interest, status, due_by, agreements!inner(status, deleted_at)')
+    .select('gross_interest, tds_amount, net_interest, status, due_by, agreements!inner(status, deleted_at, salesperson_id)')
     .gte('due_by', format(qStart, 'yyyy-MM-dd'))
     .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
     .eq('is_principal_repayment', false)
     .eq('is_tds_only', false)
+
+  if (salespersonId) {
+    payoutsQuery = payoutsQuery.eq('agreements.salesperson_id', salespersonId)
+  }
+
+  const { data: quarterPayouts, error: quarterPayoutsError } = await payoutsQuery
   if (quarterPayoutsError) throw new Error(`Failed to fetch quarter payouts: ${quarterPayoutsError.message}`)
 
   const qPayouts = quarterPayouts ?? []
@@ -117,12 +129,18 @@ export async function getDashboardKPIs(): Promise<DashboardKPIs> {
   const quarterNet = qPayouts.reduce((s, p) => s + p.net_interest, 0)
 
   // Overdue — join agreements to exclude deleted/inactive ones
-  const { data: overduePayouts, error: overduePayoutsError } = await supabase
+  let overdueQuery = supabase
     .from('payout_schedule')
-    .select('net_interest, agreements!inner(status, deleted_at)')
+    .select('net_interest, agreements!inner(status, deleted_at, salesperson_id)')
     .eq('status', 'overdue')
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
+
+  if (salespersonId) {
+    overdueQuery = overdueQuery.eq('agreements.salesperson_id', salespersonId)
+  }
+
+  const { data: overduePayouts, error: overduePayoutsError } = await overdueQuery
   if (overduePayoutsError) throw new Error(`Failed to fetch overdue payouts: ${overduePayoutsError.message}`)
 
   const overdue = overduePayouts ?? []
@@ -165,7 +183,7 @@ export function quarterLabelToDate(label: string): Date {
   return new Date(firstYear + 1, 1, 15)                  // Feb 15 of second year
 }
 
-export async function getQuarterlyForecast(quarterLabel?: string): Promise<QuarterlyForecast> {
+export async function getQuarterlyForecast(quarterLabel?: string, salespersonId?: string): Promise<QuarterlyForecast> {
   const supabase = createAdminClient()
   const now = new Date()
   const label = quarterLabel ?? getQuarterLabel(now)
@@ -186,30 +204,42 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
       reference_id: string
       payout_frequency: string
       status: string
+      salesperson_id: string | null
     }
   }
 
-  const { data: payouts, error: payoutsError } = await supabase
+  let payoutsQuery = supabase
     .from('payout_schedule')
     .select(`
       id, agreement_id, due_by, gross_interest, tds_amount, net_interest,
       is_principal_repayment, status,
-      agreements!inner(investor_name, reference_id, payout_frequency, status)
+      agreements!inner(investor_name, reference_id, payout_frequency, status, salesperson_id)
     `)
     .gte('due_by', format(qStart, 'yyyy-MM-dd'))
     .lte('due_by', format(qEnd, 'yyyy-MM-dd'))
     .in('agreements.status', ['active', 'draft'])
     .eq('is_principal_repayment', false)
     .eq('is_tds_only', false)
-    .order('due_by')
+
+  if (salespersonId) {
+    payoutsQuery = payoutsQuery.eq('agreements.salesperson_id', salespersonId)
+  }
+
+  const { data: payouts, error: payoutsError } = await payoutsQuery
   if (payoutsError) throw new Error(`Failed to fetch quarterly payouts: ${payoutsError.message}`)
 
-  const { data: maturities, error: maturitiesError } = await supabase
+  let maturitiesQuery = supabase
     .from('agreements')
     .select('id, investor_name, reference_id, principal_amount, maturity_date')
     .eq('status', 'active')
     .gte('maturity_date', format(qStart, 'yyyy-MM-dd'))
     .lte('maturity_date', format(qEnd, 'yyyy-MM-dd'))
+
+  if (salespersonId) {
+    maturitiesQuery = maturitiesQuery.eq('salesperson_id', salespersonId)
+  }
+
+  const { data: maturities, error: maturitiesError } = await maturitiesQuery
   if (maturitiesError) throw new Error(`Failed to fetch maturities: ${maturitiesError.message}`)
 
   const payoutList = (payouts as unknown as PayoutWithAgreement[] ?? []).map((p) => ({
@@ -250,14 +280,20 @@ export async function getQuarterlyForecast(quarterLabel?: string): Promise<Quart
   }
 }
 
-export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
+export async function getFrequencyBreakdown(salespersonId?: string): Promise<FrequencyBreakdown> {
   const supabase = createAdminClient()
 
-  const { data: agreements, error: agreementsError } = await supabase
+  let query = supabase
     .from('agreements')
     .select('payout_frequency, principal_amount')
     .eq('status', 'active')
     .is('deleted_at', null)
+
+  if (salespersonId) {
+    query = query.eq('salesperson_id', salespersonId)
+  }
+
+  const { data: agreements, error: agreementsError } = await query
   if (agreementsError) throw new Error(`Failed to fetch agreements: ${agreementsError.message}`)
 
   const result: FrequencyBreakdown = {
@@ -276,13 +312,19 @@ export async function getFrequencyBreakdown(): Promise<FrequencyBreakdown> {
 
   // Get expected interest from payout_schedule for each frequency group
   for (const freq of ['quarterly', 'annual', 'cumulative'] as const) {
-    const { data: freqPayouts, error: freqPayoutsError } = await supabase
+    let psQuery = supabase
       .from('payout_schedule')
-      .select('net_interest, agreements!inner(payout_frequency, status)')
+      .select('net_interest, agreements!inner(payout_frequency, status, salesperson_id)')
       .eq('agreements.payout_frequency', freq)
       .eq('agreements.status', 'active')
       .eq('is_principal_repayment', false)
-    .eq('is_tds_only', false)
+      .eq('is_tds_only', false)
+
+    if (salespersonId) {
+      psQuery = psQuery.eq('agreements.salesperson_id', salespersonId)
+    }
+
+    const { data: freqPayouts, error: freqPayoutsError } = await psQuery
     if (freqPayoutsError) throw new Error(`Failed to fetch ${freq} payouts: ${freqPayoutsError.message}`)
 
     result[freq].total_expected_interest = (freqPayouts ?? []).reduce(
