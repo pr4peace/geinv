@@ -73,6 +73,7 @@ export interface Agreement {
   investor2_aadhaar: string | null
   investor2_address: string | null
   investor2_birth_year: number | null
+  rescan_required: boolean
   deleted_at: string | null
   created_at: string
   updated_at: string

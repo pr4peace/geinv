@@ -1,27 +1,212 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, X, AlertTriangle, Check } from 'lucide-react'
-import type { ExtractedAgreement } from '@/lib/claude'
+import { RefreshCw, X, AlertTriangle, Check, ArrowRight } from 'lucide-react'
+import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
 import type { PayoutFrequency, InterestType } from '@/types/database'
+import type { ExtractionFlag } from '@/lib/extraction-validator'
 
 interface RescanModalProps {
   agreementId: string
+}
+
+interface AgreementFields {
+  agreement_date: string
+  investment_start_date: string
+  agreement_type: string
+  investor_name: string
+  investor_pan: string | null
+  investor_aadhaar: string | null
+  investor_address: string | null
+  tds_filing_name: string | null
+  principal_amount: number
+  roi_percentage: number
+  payout_frequency: string
+  interest_type: string
+  lock_in_years: number
+  maturity_date: string
+}
+
+function FlagsPanel({
+  flags,
+  onFix,
+  onAccept,
+  onReUpload,
+}: {
+  flags: ExtractionFlag[]
+  onFix: (flagId: string) => void
+  onAccept: (flagId: string, note: string) => void
+  onReUpload: () => void
+}) {
+  const [acceptNotes, setAcceptNotes] = useState<Record<string, string>>({})
+  const [accepting, setAccepting] = useState<string | null>(null)
+
+  const pending = flags.filter(f => f.resolution === 'pending')
+  const resolved = flags.filter(f => f.resolution !== 'pending')
+
+  if (flags.length === 0) return null
+
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-red-400 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          {pending.length} issue{pending.length !== 1 ? 's' : ''} found — resolve all before saving
+        </h3>
+        <span className="text-xs text-slate-500">{resolved.length} of {flags.length} resolved</span>
+      </div>
+
+      {flags.map(flag => (
+        <div
+          key={flag.id}
+          className={`border-l-4 rounded-xl p-4 space-y-3 ${
+            flag.resolution === 'pending'
+              ? 'border-red-500 bg-red-900/10'
+              : flag.resolution === 'accepted'
+              ? 'border-amber-500 bg-amber-900/10'
+              : 'border-emerald-500 bg-emerald-900/10'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-slate-200">{flag.message}</p>
+              <p className="text-xs text-slate-400">
+                Expected: <span className="text-emerald-400">{flag.expected}</span>
+                {' · '}
+                Found: <span className="text-red-400">{flag.found}</span>
+              </p>
+            </div>
+            {flag.resolution !== 'pending' && (
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                flag.resolution === 'accepted' ? 'bg-amber-900/40 text-amber-400' : 'bg-emerald-900/40 text-emerald-400'
+              }`}>
+                {flag.resolution}
+              </span>
+            )}
+          </div>
+
+          {flag.resolution === 'pending' && (
+            <div className="flex flex-wrap gap-2">
+              {flag.rowIndex !== null && (
+                <button
+                  type="button"
+                  onClick={() => onFix(flag.id)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-900/40 text-indigo-400 hover:bg-indigo-800/40 rounded-lg transition-colors"
+                >
+                  Fix value
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onReUpload}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg transition-colors"
+              >
+                Retry Scan
+              </button>
+              {accepting === flag.id ? (
+                <div className="flex items-center gap-2 w-full">
+                  <input
+                    type="text"
+                    placeholder="Why is this correct? (required)"
+                    value={acceptNotes[flag.id] ?? ''}
+                    onChange={e => setAcceptNotes(n => ({ ...n, [flag.id]: e.target.value }))}
+                    className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    disabled={(acceptNotes[flag.id] ?? '').trim().length < 5}
+                    onClick={() => { onAccept(flag.id, acceptNotes[flag.id]); setAccepting(null) }}
+                    className="px-3 py-1.5 text-xs font-semibold bg-amber-700 text-white hover:bg-amber-600 disabled:opacity-40 rounded-lg transition-colors"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccepting(null)}
+                    className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAccepting(flag.id)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 rounded-lg transition-colors"
+                >
+                  Accept as-is
+                </button>
+              )}
+            </div>
+          )}
+
+          {flag.resolution === 'accepted' && flag.acceptanceNote && (
+            <p className="text-xs text-amber-400/70 italic">Note: {flag.acceptanceNote}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function RescanDiff({
+  label,
+  oldVal,
+  newVal,
+  onChange,
+  type = 'text',
+}: {
+  label: string
+  oldVal: string | number | null
+  newVal: string | number | null
+  onChange: (v: string | number) => void
+  type?: string
+}) {
+  const isChanged = String(oldVal ?? '') !== String(newVal ?? '')
+
+  return (
+    <div className={`p-3 rounded-xl border transition-colors ${isChanged ? 'bg-amber-900/10 border-amber-700/50' : 'bg-slate-800/40 border-slate-700'}`}>
+      <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">{label}</label>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] text-slate-500">Current</p>
+          <p className="text-sm text-slate-400 truncate">{oldVal ?? '—'}</p>
+        </div>
+        <ArrowRight className={`w-4 h-4 flex-shrink-0 ${isChanged ? 'text-amber-500' : 'text-slate-700'}`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] text-indigo-400">Extracted</p>
+          <input
+            type={type}
+            value={newVal ?? ''}
+            onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
+            className={`w-full bg-slate-900 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${isChanged ? 'border-amber-600 text-amber-200' : 'border-slate-700 text-slate-200'}`}
+          />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function RescanModal({ agreementId }: RescanModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [extracted, setExtracted] = useState<ExtractedAgreement | null>(null)
+  const [current, setCurrent] = useState<{ agreement: AgreementFields; payoutRows: ExtractedPayoutRow[] } | null>(null)
+  const [flags, setFlags] = useState<ExtractionFlag[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
+
+  const unresolvedCount = useMemo(() => flags.filter(f => f.resolution === 'pending').length, [flags])
 
   async function handleRescan() {
     setLoading(true)
     setError(null)
     setExtracted(null)
+    setCurrent(null)
+    setFlags([])
     setIsOpen(true)
 
     try {
@@ -35,7 +220,9 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
       }
 
       const data = await res.json()
-      setExtracted(data)
+      setExtracted(data.extracted)
+      setFlags(data.flags ?? [])
+      setCurrent(data.current)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error during rescan')
     } finally {
@@ -43,46 +230,40 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
     }
   }
 
+  function handleFlagFix(flagId: string) {
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, resolution: 'fixed' } : f))
+  }
+
+  function handleFlagAccept(flagId: string, note: string) {
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, resolution: 'accepted', acceptanceNote: note } : f))
+  }
+
   async function handleConfirm() {
     if (!extracted) return
+    if (unresolvedCount > 0) return
+    
     setSaving(true)
     setError(null)
 
     try {
-      const body = {
-        agreement_date: extracted.agreement_date,
-        investment_start_date: extracted.investment_start_date,
-        agreement_type: extracted.agreement_type,
-        investor_name: extracted.investor_name,
-        investor_pan: extracted.investor_pan,
-        investor_aadhaar: extracted.investor_aadhaar,
-        investor_address: extracted.investor_address,
-        tds_filing_name: extracted.tds_filing_name,
-        nominees: extracted.nominees,
-        principal_amount: extracted.principal_amount,
-        roi_percentage: extracted.roi_percentage,
-        payout_frequency: extracted.payout_frequency,
-        interest_type: extracted.interest_type,
-        lock_in_years: extracted.lock_in_years,
-        maturity_date: extracted.maturity_date,
-        payments: extracted.payments,
-      }
-
-      const res = await fetch(`/api/agreements/${agreementId}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/agreements/${agreementId}/rescan/apply`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          extracted,
+          acceptedFlags: flags.filter(f => f.resolution === 'accepted').map(f => f.id),
+        }),
       })
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? 'Failed to update agreement')
+        throw new Error(data.error ?? 'Failed to apply update')
       }
 
       setIsOpen(false)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error during update')
+      setError(err instanceof Error ? err.message : 'Unknown error during apply')
     } finally {
       setSaving(false)
     }
@@ -132,58 +313,71 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                 </div>
               )}
 
-              {extracted && !loading && (
+              {extracted && current && !loading && (
                 <div className="space-y-6">
                   <div className="bg-emerald-900/20 border border-emerald-800/50 rounded-xl p-4 flex gap-3">
                     <Check className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-emerald-300">Extraction Complete</p>
-                      <p className="text-xs text-emerald-400/70">Review the values below extracted from the document. Payout schedule will NOT be updated.</p>
+                      <p className="text-xs text-emerald-400/70">Verify the changes below. Confirming will overwrite the current agreement and payout schedule.</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                    <EditableDataPoint 
+                  <FlagsPanel
+                    flags={flags}
+                    onFix={handleFlagFix}
+                    onAccept={handleFlagAccept}
+                    onReUpload={handleRescan}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <RescanDiff 
                       label="Investor Name" 
-                      value={extracted.investor_name} 
-                      onChange={(v) => setExtracted({ ...extracted, investor_name: v })}
+                      oldVal={current.agreement.investor_name}
+                      newVal={extracted.investor_name} 
+                      onChange={(v) => setExtracted({ ...extracted, investor_name: String(v) })}
                     />
-                    <EditableDataPoint 
+                    <RescanDiff 
                       label="Principal" 
-                      value={extracted.principal_amount} 
+                      oldVal={current.agreement.principal_amount}
+                      newVal={extracted.principal_amount} 
                       type="number"
                       onChange={(v) => setExtracted({ ...extracted, principal_amount: Number(v) })}
                     />
-                    <EditableDataPoint 
+                    <RescanDiff 
                       label="Agreement Date" 
-                      value={extracted.agreement_date} 
+                      oldVal={current.agreement.agreement_date}
+                      newVal={extracted.agreement_date} 
                       type="date"
-                      onChange={(v) => setExtracted({ ...extracted, agreement_date: v })}
+                      onChange={(v) => setExtracted({ ...extracted, agreement_date: String(v) })}
                     />
-                    <EditableDataPoint 
+                    <RescanDiff 
                       label="Start Date" 
-                      value={extracted.investment_start_date} 
+                      oldVal={current.agreement.investment_start_date}
+                      newVal={extracted.investment_start_date} 
                       type="date"
-                      onChange={(v) => setExtracted({ ...extracted, investment_start_date: v })}
+                      onChange={(v) => setExtracted({ ...extracted, investment_start_date: String(v) })}
                     />
-                    <EditableDataPoint 
+                    <RescanDiff 
                       label="Maturity Date" 
-                      value={extracted.maturity_date} 
+                      oldVal={current.agreement.maturity_date}
+                      newVal={extracted.maturity_date} 
                       type="date"
-                      onChange={(v) => setExtracted({ ...extracted, maturity_date: v })}
+                      onChange={(v) => setExtracted({ ...extracted, maturity_date: String(v) })}
                     />
-                    <EditableDataPoint 
+                    <RescanDiff 
                       label="ROI %" 
-                      value={extracted.roi_percentage} 
+                      oldVal={current.agreement.roi_percentage}
+                      newVal={extracted.roi_percentage} 
                       type="number"
                       onChange={(v) => setExtracted({ ...extracted, roi_percentage: Number(v) })}
                     />
-                    <div className="space-y-0.5">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Frequency</p>
+                    <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Frequency</p>
                       <select
                         value={extracted.payout_frequency || ''}
                         onChange={(e) => setExtracted({ ...extracted, payout_frequency: e.target.value as PayoutFrequency })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
@@ -192,36 +386,26 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                         <option value="cumulative">Cumulative</option>
                       </select>
                     </div>
-                    <div className="space-y-0.5">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Interest Type</p>
+                    <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Interest Type</p>
                       <select
                         value={extracted.interest_type || ''}
                         onChange={(e) => setExtracted({ ...extracted, interest_type: e.target.value as InterestType })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="simple">Simple</option>
                         <option value="compound">Compound</option>
                       </select>
                     </div>
-                    <EditableDataPoint 
-                      label="PAN" 
-                      value={extracted.investor_pan} 
-                      onChange={(v) => setExtracted({ ...extracted, investor_pan: v })}
-                    />
-                    <EditableDataPoint 
-                      label="Aadhaar" 
-                      value={extracted.investor_aadhaar} 
-                      onChange={(v) => setExtracted({ ...extracted, investor_aadhaar: v })}
-                    />
                   </div>
 
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Address</p>
+                  <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Address</p>
                     <textarea
                       rows={2}
                       value={extracted.investor_address || ''}
                       onChange={(e) => setExtracted({ ...extracted, investor_address: e.target.value })}
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                     />
                   </div>
                 </div>
@@ -236,13 +420,17 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
               >
                 Cancel
               </button>
-              {extracted && !loading && (
+              {extracted && current && !loading && (
                 <button
                   onClick={handleConfirm}
-                  disabled={saving}
+                  disabled={saving || unresolvedCount > 0}
                   className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
                 >
-                  {saving ? 'Updating...' : 'Confirm Update'}
+                  {saving 
+                    ? 'Applying...' 
+                    : unresolvedCount > 0 
+                    ? `${unresolvedCount} Issues to Resolve` 
+                    : 'Apply Changes'}
                 </button>
               )}
             </div>
@@ -250,29 +438,5 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
         </div>
       )}
     </>
-  )
-}
-
-function EditableDataPoint({ 
-  label, 
-  value, 
-  type = 'text',
-  onChange 
-}: { 
-  label: string; 
-  value: string | number | null | undefined;
-  type?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-0.5">
-      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{label}</p>
-      <input
-        type={type}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-      />
-    </div>
   )
 }

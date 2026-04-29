@@ -2,6 +2,46 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
+async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
+  const sharp = (await import('sharp')).default
+  // pdfjs legacy build required for Node.js environments
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const { createCanvas } = await import('canvas')
+
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
+  const pdf = await loadingTask.promise
+
+  const images: Buffer[] = []
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    const viewport = page.getViewport({ scale: 2.5 }) // 2.5x for high resolution
+
+    const canvas = createCanvas(viewport.width, viewport.height)
+    const context = canvas.getContext('2d')
+
+    await page.render({
+      // @ts-expect-error — canvasContext expects a specific type that the canvas library provides but doesn't perfectly match the internal DOM types
+      canvasContext: context,
+      viewport,
+    }).promise
+
+    const pngBuffer = canvas.toBuffer('image/png')
+
+    // High-contrast B&W: greyscale → normalise → sharpen
+    const processed = await sharp(pngBuffer)
+      .greyscale()
+      .normalise()
+      .sharpen({ sigma: 1.5 })
+      .png()
+      .toBuffer()
+
+    images.push(processed)
+  }
+
+  return images
+}
+
 export interface ExtractedPayoutRow {
   period_from: string        // ISO date
   period_to: string          // ISO date
@@ -11,6 +51,7 @@ export interface ExtractedPayoutRow {
   tds_amount: number
   net_interest: number
   is_principal_repayment: boolean
+  is_tds_only: boolean
 }
 
 export interface ExtractedAgreement {
@@ -94,6 +135,21 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
     - amount: payment amount as a plain number, or null if not stated
     If only one payment, return a single-element array. If no payment info found, return [].
 
+11. ROW COUNT VERIFICATION: Before returning JSON, count the rows in the payout schedule table in the document. Your payout_schedule array must contain exactly that many entries — not more, not fewer. If your count does not match, re-read the table and correct it.
+
+12. MATH SELF-CHECK: For every payout row (non-principal rows only), verify:
+    - tds_amount = round(gross_interest × 0.10, 2)
+    - net_interest = round(gross_interest - tds_amount, 2)
+    If any row fails either check, correct the values before returning. Do not return rows with mismatched numbers.
+
+13. PERIOD COVERAGE: Your payout rows must cover the complete period from investment_start_date to maturity_date with no gaps. Verify:
+    - Does period_from of row 1 equal investment_start_date?
+    - Does period_to of the last non-principal row equal maturity_date?
+    - Does period_from of each row equal the day after period_to of the previous row?
+    If any check fails, re-read the document and add the missing row(s).
+
+14. COMPOUND INTEREST TDS ROWS: For compound interest agreements (interest_type = "compound"), TDS must be filed each Indian financial year (1 April – 31 March). You must extract one TDS row per financial year that overlaps with the investment term, including partial first and last years. These rows have is_tds_only: true. If the document shows annual TDS deduction rows, extract all of them — do not stop at 3 rows if the term spans 4 financial years. Set is_tds_only: false for all regular interest payout rows.
+
 Return ONLY valid JSON matching this exact schema — no explanation, no markdown fences:
 {
   "agreement_date": "YYYY-MM-DD",
@@ -112,7 +168,7 @@ Return ONLY valid JSON matching this exact schema — no explanation, no markdow
   "lock_in_years": 0,
   "maturity_date": "YYYY-MM-DD",
   "payments": [{"date": "YYYY-MM-DD or null", "mode": "string or null", "bank": "string or null", "amount": 0}],
-  "payout_schedule": [],
+  "payout_schedule": [{"period_from": "YYYY-MM-DD", "period_to": "YYYY-MM-DD", "due_by": "YYYY-MM-DD", "gross_interest": 0, "tds_amount": 0, "net_interest": 0, "is_principal_repayment": false, "is_tds_only": false}],
   "confidence_warnings": []
 }`
 
@@ -138,15 +194,35 @@ export async function extractAgreementData(
 
   try {
     if (mimeType === 'application/pdf') {
-      result = await model.generateContent([
-        {
-          inlineData: {
-            mimeType: 'application/pdf',
-            data: fileBuffer.toString('base64'),
+      let parts: Parameters<typeof model.generateContent>[0]
+
+      try {
+        // Convert PDF pages to high-contrast B&W images for accurate number reading
+        const pageImages = await pdfToHighContrastImages(fileBuffer)
+        parts = [
+          ...pageImages.map(img => ({
+            inlineData: {
+              mimeType: 'image/png' as const,
+              data: img.toString('base64'),
+            },
+          })),
+          EXTRACTION_PROMPT,
+        ]
+      } catch (err) {
+        console.error('PDF pre-processing failed, falling back to raw PDF:', err)
+        // Fall back to raw PDF if image conversion fails (e.g. missing native deps)
+        parts = [
+          {
+            inlineData: {
+              mimeType: 'application/pdf' as const,
+              data: fileBuffer.toString('base64'),
+            },
           },
-        },
-        EXTRACTION_PROMPT,
-      ])
+          EXTRACTION_PROMPT,
+        ]
+      }
+
+      result = await model.generateContent(parts)
     } else {
       // DOCX — extract text via mammoth then send as text
       const mammoth = await import('mammoth')

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { ArrowLeft, Bell, FileText, User } from 'lucide-react'
+import { ArrowLeft, Bell, FileText, User, AlertTriangle } from 'lucide-react'
 import type {
   Agreement,
   PayoutSchedule,
@@ -234,6 +234,23 @@ export default async function AgreementDetailPage({
             </Link>
           )}
         </div>
+
+        {/* ── Rescan Required Banner ── */}
+        {agreement.rescan_required && (
+          <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-4 flex gap-4 items-center">
+            <div className="p-2 bg-amber-500/20 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-amber-200">Rescan Recommended</h3>
+              <p className="text-xs text-amber-400/80 mt-0.5">
+                This agreement was uploaded with an older extraction model. 
+                A rescan is recommended to ensure all payout and TDS data is accurate.
+              </p>
+            </div>
+            <RescanModal agreementId={agreement.id} />
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">

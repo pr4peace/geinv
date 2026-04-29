@@ -309,6 +309,9 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
                     {a.is_draft && (
                       <span className="text-xs text-amber-400 bg-amber-900/30 px-1.5 py-0.5 rounded font-medium">Draft</span>
                     )}
+                    {a.rescan_required && (
+                      <span className="text-[10px] text-amber-300 bg-amber-900/40 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-amber-800/50">Rescan required</span>
+                    )}
                   </div>
                   <div className="text-slate-500 text-xs">{a.reference_id}</div>
                 </td>

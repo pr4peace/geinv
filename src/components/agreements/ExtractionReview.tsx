@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Download, ChevronLeft, Plus, X, ExternalLink } from 'lucide-react'
 import type { ExtractedAgreement } from '@/lib/claude'
 import PayoutScheduleTable from './PayoutScheduleTable'
+import { validateExtraction } from '@/lib/extraction-validator'
+import type { ExtractionFlag } from '@/lib/extraction-validator'
 
 interface TeamMember {
   id: string
@@ -125,6 +127,129 @@ function fieldMentionedInWarning(field: keyof FormState, warnings: string[]): bo
   )
 }
 
+function FlagsPanel({
+  flags,
+  onFix,
+  onAccept,
+  onReUpload,
+}: {
+  flags: ExtractionFlag[]
+  onFix: (flagId: string, rowIndex: number) => void
+  onAccept: (flagId: string, note: string) => void
+  onReUpload: () => void
+}) {
+  const [acceptNotes, setAcceptNotes] = useState<Record<string, string>>({})
+  const [accepting, setAccepting] = useState<string | null>(null)
+
+  const pending = flags.filter(f => f.resolution === 'pending')
+  const resolved = flags.filter(f => f.resolution !== 'pending')
+
+  if (flags.length === 0) return null
+
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-red-400 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          {pending.length} issue{pending.length !== 1 ? 's' : ''} found — resolve all before saving
+        </h3>
+        <span className="text-xs text-slate-500">{resolved.length} of {flags.length} resolved</span>
+      </div>
+
+      {flags.map(flag => (
+        <div
+          key={flag.id}
+          className={`border-l-4 rounded-xl p-4 space-y-3 ${
+            flag.resolution === 'pending'
+              ? 'border-red-500 bg-red-900/10'
+              : flag.resolution === 'accepted'
+              ? 'border-amber-500 bg-amber-900/10'
+              : 'border-emerald-500 bg-emerald-900/10'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-slate-200">{flag.message}</p>
+              <p className="text-xs text-slate-400">
+                Expected: <span className="text-emerald-400">{flag.expected}</span>
+                {' · '}
+                Found: <span className="text-red-400">{flag.found}</span>
+              </p>
+            </div>
+            {flag.resolution !== 'pending' && (
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                flag.resolution === 'accepted' ? 'bg-amber-900/40 text-amber-400' : 'bg-emerald-900/40 text-emerald-400'
+              }`}>
+                {flag.resolution}
+              </span>
+            )}
+          </div>
+
+          {flag.resolution === 'pending' && (
+            <div className="flex flex-wrap gap-2">
+              {flag.rowIndex !== null && (
+                <button
+                  type="button"
+                  onClick={() => onFix(flag.id, flag.rowIndex!)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-900/40 text-indigo-400 hover:bg-indigo-800/40 rounded-lg transition-colors"
+                >
+                  Fix value
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onReUpload}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg transition-colors"
+              >
+                Re-upload document
+              </button>
+              {accepting === flag.id ? (
+                <div className="flex items-center gap-2 w-full">
+                  <input
+                    type="text"
+                    placeholder="Why is this value correct? (required)"
+                    value={acceptNotes[flag.id] ?? ''}
+                    onChange={e => setAcceptNotes(n => ({ ...n, [flag.id]: e.target.value }))}
+                    className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    disabled={(acceptNotes[flag.id] ?? '').trim().length < 5}
+                    onClick={() => { onAccept(flag.id, acceptNotes[flag.id]); setAccepting(null) }}
+                    className="px-3 py-1.5 text-xs font-semibold bg-amber-700 text-white hover:bg-amber-600 disabled:opacity-40 rounded-lg transition-colors"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccepting(null)}
+                    className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAccepting(flag.id)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 rounded-lg transition-colors"
+                >
+                  Accept as-is
+                </button>
+              )}
+            </div>
+          )}
+
+          {flag.resolution === 'accepted' && flag.acceptanceNote && (
+            <p className="text-xs text-amber-400/70 italic">Note: {flag.acceptanceNote}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function ExtractionReview({
   extracted,
   fileUrl,
@@ -173,6 +298,23 @@ export default function ExtractionReview({
     salesperson_id: salespersonId ?? '',
     salesperson_custom: salespersonCustom ?? '',
   })
+
+  const [flags, setFlags] = useState<ExtractionFlag[]>(() => validateExtraction(extracted))
+  const unresolvedCount = flags.filter(f => f.resolution === 'pending').length
+
+  function handleFlagFix(flagId: string, rowIndex: number) {
+    // Scroll to the payout row — the row is already editable in the payout schedule table
+    const rowEl = document.getElementById(`payout-row-${rowIndex}`)
+    rowEl?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    rowEl?.classList.add('ring-2', 'ring-red-500')
+    setTimeout(() => rowEl?.classList.remove('ring-2', 'ring-red-500'), 3000)
+    // Mark as fixed — coordinator will manually edit the row and re-validate
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, resolution: 'fixed' } : f))
+  }
+
+  function handleFlagAccept(flagId: string, note: string) {
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, resolution: 'accepted', acceptanceNote: note } : f))
+  }
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -392,6 +534,13 @@ export default function ExtractionReview({
           </div>
         </div>
       )}
+
+      <FlagsPanel
+        flags={flags}
+        onFix={handleFlagFix}
+        onAccept={handleFlagAccept}
+        onReUpload={onBack}
+      />
 
       {/* Duplicate warning banner */}
       {duplicates.length > 0 && (
@@ -915,11 +1064,14 @@ export default function ExtractionReview({
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || unresolvedCount > 0}
+              title={unresolvedCount > 0 ? `Resolve ${unresolvedCount} flagged issue${unresolvedCount !== 1 ? 's' : ''} to continue` : undefined}
               className="flex-1 py-3 px-6 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
             >
               {saving
                 ? 'Saving...'
+                : unresolvedCount > 0
+                ? `${unresolvedCount} issue${unresolvedCount !== 1 ? 's' : ''} to resolve`
                 : duplicates.length > 0 && !bypassDuplicate
                 ? 'Duplicate Detected — Confirm Below First'
                 : 'Save Agreement'}
