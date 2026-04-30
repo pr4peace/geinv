@@ -117,9 +117,14 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
 
 6. NOMINEES: Extract name and PAN of all nominees listed.
 
-7. If a field is not present in the document, return null.
+7. PAN AND AADHAAR: Look for "PAN No", "Aadhaar No", "Income Tax PAN", "UID No" or similar labels.
+   - For multi-applicant agreements (e.g. "Amrit and Dwaraka Pandurangi"), extract the PAN and Aadhaar of the FIRST named applicant.
+   - If the numbers are not found on the first page, check the signature/verification pages at the end of the document.
+   - Return as strings, including any spaces or dashes if present in the document.
 
-8. TDS FILING NAME: Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the investor_name value.
+8. If a field is not present in the document, return null.
+
+9. TDS FILING NAME: Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the investor_name value.
 
 9. PRINCIPAL REPAYMENT ROW: The final row in the payment table often contains the principal return. Mark is_principal_repayment: true ONLY if:
    - The row's gross_interest value equals or approximately equals the principal_amount, OR

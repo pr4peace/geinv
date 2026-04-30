@@ -15,6 +15,7 @@ insert into team_members (name, email, role) values
   ('Liya Mathew', 'liya.mathew@goodearth.org.in', 'financial_analyst'),
   ('Prashanth Palanisamy', 'prashanth.palanisamy@goodearth.org.in', 'coordinator'),
   ('Byju', 'byju@goodearth.org.in', 'salesperson'),
+  ('Byjoo', 'byjoo@goodearth.org.in', 'salesperson'),
   ('Preetha Shankar', 'preetha.shankar@goodearth.org.in', 'salesperson'),
   ('George Mathew', 'george.mathew@goodearth.org.in', 'salesperson'),
   ('Ajay Chandrashekar', 'ajay.chandrashekar@goodearth.org.in', 'salesperson')
