@@ -117,41 +117,44 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
 
 6. NOMINEES: Extract name and PAN of all nominees listed.
 
-7. PAN AND AADHAAR: Look for "PAN No", "Aadhaar No", "Income Tax PAN", "UID No" or similar labels.
-   - For multi-applicant agreements (e.g. "Amrit and Dwaraka Pandurangi"), extract the PAN and Aadhaar of the FIRST named applicant.
-   - If the numbers are not found on the first page, check the signature/verification pages at the end of the document.
-   - Return as strings, including any spaces or dashes if present in the document.
+7. PAN AND AADHAAR: Look for "PAN No", "Aadhaar No", "Income Tax PAN", "UID No", "Permanent Account Number" or similar labels.
+   - SEARCH STRATEGY: If not found in the primary applicant details section, YOU MUST scan the signature pages and the witness/verification section at the end of the document. These details are often placed there.
+   - MULTI-APPLICANT RULE: If the agreement mentions multiple investors (e.g., "Person A and Person B"), you must try to find IDs for BOTH. Combine them if possible (e.g., "PAN1 / PAN2") or at least prioritize the first applicant.
+   - DO NOT SKIP: If you see a label for PAN or Aadhaar but the value is hand-written or blurry, attempt to read it carefully. If you absolutely cannot read it, add a confidence_warning.
 
-8. If a field is not present in the document, return null.
+8. INVESTOR NAME: Extract the full name(s) of the investor(s). 
+   - If there are joint applicants, include BOTH names (e.g., "Amrit and Dwaraka Pandurangi").
+   - SEARCH PROTOCOL: If the first page refers to the investor generically (e.g., "The Party of the Second Part"), you MUST scan the signature blocks at the end of the document to find the actual names.
 
-9. TDS FILING NAME: Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the investor_name value.
+9. TDS FILING NAME: Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the first investor name.
 
-9. PRINCIPAL REPAYMENT ROW: The final row in the payment table often contains the principal return. Mark is_principal_repayment: true ONLY if:
-   - The row's gross_interest value equals or approximately equals the principal_amount, OR
-   - The row label/description contains words like "Principal", "Maturity Amount", or "Repayment"
-   Do NOT add extra rows beyond what appears in the document table. Do NOT mark a row as principal repayment if its amount matches a normal periodic interest payment.
+10. PRINCIPAL REPAYMENT ROW: The final row in the payment table often contains the principal return. Mark is_principal_repayment: true ONLY if:
+    - The row's gross_interest value equals or approximately equals the principal_amount, OR
+    - The row label/description contains words like "Principal", "Maturity Amount", or "Repayment"
+    Do NOT add extra rows beyond what appears in the document table. Do NOT mark a row as principal repayment if its amount matches a normal periodic interest payment.
 
-10. PAYMENTS: Extract ALL payment entries from the document. An investment may be funded in multiple tranches. For each entry record:
+11. PAYMENTS: Extract ALL payment entries from the document. An investment may be funded in multiple tranches. For each entry record:
     - date: ISO date (YYYY-MM-DD) or null
     - mode: payment method (e.g. "NEFT", "RTGS", "Cheque", "UPI", "Cash") or null
     - bank: bank name or null
     - amount: payment amount as a plain number, or null if not stated
     If only one payment, return a single-element array. If no payment info found, return [].
 
-11. ROW COUNT VERIFICATION: Before returning JSON, count the rows in the payout schedule table in the document. Your payout_schedule array must contain exactly that many entries — not more, not fewer. If your count does not match, re-read the table and correct it.
+12. ROW COUNT VERIFICATION: Before returning JSON, count the rows in the payout schedule table in the document. Your payout_schedule array must contain exactly that many entries — not more, not fewer. If your count does not match, re-read the table and correct it.
 
-12. MATH SELF-CHECK: For every payout row (non-principal rows only), verify:
+13. MATH SELF-CHECK: For every payout row (non-principal rows only), verify:
     - tds_amount = round(gross_interest × 0.10, 2)
     - net_interest = round(gross_interest - tds_amount, 2)
     If any row fails either check, correct the values before returning. Do not return rows with mismatched numbers.
 
-13. PERIOD COVERAGE: Your payout rows must cover the complete period from investment_start_date to maturity_date with no gaps. Verify:
+14. PERIOD COVERAGE: Your payout rows must cover the complete period from investment_start_date to maturity_date with no gaps. Verify:
     - Does period_from of row 1 equal investment_start_date?
     - Does period_to of the last non-principal row equal maturity_date?
     - Does period_from of each row equal the day after period_to of the previous row?
     If any check fails, re-read the document and add the missing row(s).
 
-14. COMPOUND INTEREST TDS ROWS: For compound interest agreements (interest_type = "compound"), TDS must be filed each Indian financial year (1 April – 31 March). You must extract one TDS row per financial year that overlaps with the investment term, including partial first and last years. These rows have is_tds_only: true. If the document shows annual TDS deduction rows, extract all of them — do not stop at 3 rows if the term spans 4 financial years. Set is_tds_only: false for all regular interest payout rows.
+15. COMPOUND INTEREST TDS ROWS:
+ For compound interest agreements (interest_type = "compound"), TDS must be filed each Indian financial year (1 April – 31 March). You must extract one TDS row per financial year that overlaps with the investment term, including partial first and last years. These rows have is_tds_only: true. If the document shows annual TDS deduction rows, extract all of them — do not stop at 3 rows if the term spans 4 financial years. Set is_tds_only: false for all regular interest payout rows.
 
 Return ONLY valid JSON matching this exact schema — no explanation, no markdown fences:
 {
