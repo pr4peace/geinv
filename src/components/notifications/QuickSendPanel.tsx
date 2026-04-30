@@ -58,18 +58,16 @@ export default function QuickSendPanel({
   const [previewed, setPreviewed] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const todayStr = new Date().toISOString().split('T')[0]
   const cutoffStr = new Date(Date.now() + timeframe * 86400000).toISOString().split('T')[0]
 
   const matchedItems = useMemo(() => {
     const types = FILTER_TYPES[filterType]
     return pending.filter(item =>
       item.due_date != null &&
-      item.due_date >= todayStr &&
       item.due_date <= cutoffStr &&
       types.includes(item.notification_type)
     )
-  }, [pending, filterType, timeframe, todayStr, cutoffStr])
+  }, [pending, filterType, cutoffStr])
 
   const selectedItems = matchedItems.filter(item => selected.has(item.id))
 

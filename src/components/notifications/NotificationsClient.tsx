@@ -307,10 +307,24 @@ export default function NotificationsClient({
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<'queue' | 'flags' | 'history'>('queue')
+  const [refreshing, setRefreshing] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null)
   const isCoordinator = userRole !== 'salesperson'
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      const res = await fetch('/api/reminders/process', { method: 'POST' })
+      if (!res.ok) throw new Error('Refresh failed')
+      router.refresh()
+    } catch {
+      setError('Failed to refresh queue')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   async function handleSend(ids: string[]) {
     setSending(true)
@@ -351,9 +365,20 @@ export default function NotificationsClient({
 
   return (
     <div className="p-6 space-y-6 min-h-screen bg-slate-950">
-      <div>
-        <h1 className="text-xl font-bold text-slate-100">Notifications</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Review and send upcoming reminders — nothing sends without your approval</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-100">Notifications</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Review and send upcoming reminders — nothing sends without your approval</p>
+        </div>
+        {isCoordinator && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors disabled:opacity-50"
+          >
+            <span>{refreshing ? 'Refreshing…' : '↻ Refresh Queue'}</span>
+          </button>
+        )}
       </div>
 
       <StatsHeader stats={stats} />

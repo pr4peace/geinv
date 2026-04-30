@@ -108,9 +108,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const userRole = request.headers.get('x-user-role')
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  
+  const isAuthorized = 
+    (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+    (userRole === 'coordinator' || userRole === 'admin')
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
