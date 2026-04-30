@@ -8,6 +8,7 @@ export type ExtractionFlagType =
   | 'row_count_warning'
   | 'generated_row'
   | 'start_date_mismatch'
+  | 'matured_agreement'
 
 export type ExtractionFlagSeverity = 'info' | 'warning' | 'error'
 
@@ -55,6 +56,23 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
         message: `Investment start date (${extracted.investment_start_date}) does not match first payout period (${firstRowFrom})`,
         expected: firstRowFrom,
         found: extracted.investment_start_date,
+        resolution: 'pending',
+      })
+    }
+  }
+
+  // matured agreement warning
+  if (extracted.maturity_date) {
+    const todayStr = new Date().toISOString().split('T')[0]
+    if (extracted.maturity_date < todayStr) {
+      flags.push({
+        id: `flag-${flagIndex++}`,
+        type: 'matured_agreement',
+        severity: 'info',
+        rowIndex: null,
+        message: `This agreement reached maturity on ${extracted.maturity_date}. It will be saved with status 'Matured'.`,
+        expected: `Status: Matured`,
+        found: `Matured on ${extracted.maturity_date}`,
         resolution: 'pending',
       })
     }

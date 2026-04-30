@@ -133,4 +133,17 @@ describe('validateExtraction', () => {
     expect(flags.some(f => f.type === 'start_date_mismatch')).toBe(true)
     expect(flags.find(f => f.type === 'start_date_mismatch')?.severity).toBe('error')
   })
+
+  it('flags matured_agreement when maturity_date is in the past', () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    const flags = validateExtraction(makeAgreement({
+      maturity_date: yesterdayStr,
+      payout_schedule: [makeRow({ period_to: yesterdayStr })],
+    }))
+    expect(flags.some(f => f.type === 'matured_agreement')).toBe(true)
+    expect(flags.find(f => f.type === 'matured_agreement')?.severity).toBe('info')
+  })
 })

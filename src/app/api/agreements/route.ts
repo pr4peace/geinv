@@ -173,12 +173,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert agreement
+    const todayStr = new Date().toISOString().split('T')[0]
+    const status = (agreementFields.maturity_date as string) < todayStr ? 'matured' : 'active'
+
     const { data: agreement, error: agreementError } = await supabase
       .from('agreements')
       .insert({ 
         ...agreementFields, 
         reference_id, 
         investor_id,
+        status,
         doc_status: 'draft' // Always start as draft, even if upload
       })
       .select()
