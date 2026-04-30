@@ -39,7 +39,6 @@ interface PaymentEntryRow {
 
 type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' | 'biannual'
 type InterestType = 'simple' | 'compound'
-
 interface FormState {
   reference_id: string
   agreement_date: string
@@ -744,6 +743,16 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
             <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Settings</h2>
             
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_draft}
+                onChange={e => update('is_draft', e.target.checked)}
+                className="accent-amber-500 w-4 h-4"
+              />
+              <span className="text-sm text-slate-100">Is Draft (pending signature)</span>
+            </label>
+
             <div className="space-y-1">
               <label className="text-xs text-slate-400">Salesperson</label>
               <select

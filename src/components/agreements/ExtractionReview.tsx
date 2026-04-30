@@ -45,6 +45,7 @@ interface ExtractionReviewProps {
   tempPath: string
   fileName: string
   file: File
+  isDraft: boolean
   salespersonId: string | null
   salespersonCustom: string | null
   teamMembers: TeamMember[]
@@ -73,11 +74,11 @@ interface FormState {
   maturity_date: string
   payments: PaymentEntryRow[]
   payout_schedule: ExtractedPayoutRow[]
+  is_draft: boolean
   mark_historical_paid: boolean
   salesperson_id: string
   salesperson_custom: string
   }
-
 
 function generateRefId(): string {
   const ts = Date.now().toString(36).toUpperCase()
@@ -209,6 +210,7 @@ export default function ExtractionReview({
   tempPath,
   fileName,
   file,
+  isDraft,
   salespersonId,
   salespersonCustom,
   teamMembers,
@@ -248,6 +250,7 @@ export default function ExtractionReview({
         amount: p.amount,
       })),
       payout_schedule: baseSchedule,
+      is_draft: isDraft,
       mark_historical_paid: false,
       salesperson_id: salespersonId ?? '',
       salesperson_custom: salespersonCustom ?? '',
@@ -454,6 +457,7 @@ export default function ExtractionReview({
         agreement_date: form.agreement_date,
         investment_start_date: form.investment_start_date,
         agreement_type: form.agreement_type,
+        is_draft: form.is_draft,
         investor_name: form.investor_name,
         investor_pan: form.investor_pan || null,
         investor_aadhaar: form.investor_aadhaar || null,

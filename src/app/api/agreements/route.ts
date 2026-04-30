@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status')
     const payoutFrequency = searchParams.get('payout_frequency')
+    const isDraft = searchParams.get('is_draft')
     let salespersonId = searchParams.get('salesperson_id')
     
     // RBAC: Salesperson can only see their own agreements
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
 
     if (status) query = query.eq('status', status)
     if (payoutFrequency) query = query.eq('payout_frequency', payoutFrequency)
+    if (isDraft !== null) query = query.eq('is_draft', isDraft === 'true')
     if (salespersonId) query = query.eq('salesperson_id', salespersonId)
 
     const { data, error } = await query
@@ -87,6 +89,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side validation
+    const isDraft = agreementFields.is_draft === true
+
     // Business rule: compound interest always means cumulative payout (single maturity payout)
     if (agreementFields.interest_type === 'compound') {
       agreementFields.payout_frequency = 'cumulative'
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Cumulative/compound agreements have no periodic payouts — TDS rows are generated server-side
     const isCumulativeType = frequency === 'cumulative' || agreementFields.interest_type === 'compound'
-    if (!isCumulativeType && (!Array.isArray(payoutScheduleRows) || payoutScheduleRows.length === 0)) {
+    if (!isDraft && !isCumulativeType && (!Array.isArray(payoutScheduleRows) || payoutScheduleRows.length === 0)) {
       return NextResponse.json({ error: 'Payout schedule is required for non-draft agreements' }, { status: 400 })
     }
 
@@ -203,8 +207,9 @@ export async function POST(request: NextRequest) {
           console.error(`CRITICAL: Failed to move document to permanent path for agreement ${agreement.id}. Temp path: ${temp_path}. Error: ${moveError.message}`)
         } else {
           // If move succeeds, doc is now in its permanent path
-          const updatePayload: Record<string, unknown> = {
-            doc_status: 'uploaded'
+          const updatePayload: Record<string, unknown> = {}
+          if (!agreementFields.is_draft) {
+            updatePayload.doc_status = 'uploaded'
           }
 
           // Try to generate 1-year signed URL

@@ -289,7 +289,7 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
             {sorted.map((a) => (
               <tr
                 key={a.id}
-                className={`border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors ${selected.has(a.id) ? 'bg-indigo-900/10' : ''}`}
+                className={`border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors ${a.is_draft ? 'border-l-2 border-l-amber-500' : ''} ${selected.has(a.id) ? 'bg-indigo-900/10' : ''}`}
               >
                 {!readOnly && (
                   <td className="py-2.5 pl-3 pr-2 w-8">
@@ -306,6 +306,9 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
                     <Link href={`/agreements/${a.id}`} className="font-medium text-slate-100 hover:text-indigo-400 transition-colors">
                       {a.investor_name}
                     </Link>
+                    {a.is_draft && (
+                      <span className="text-xs text-amber-400 bg-amber-900/30 px-1.5 py-0.5 rounded font-medium">Draft</span>
+                    )}
                     {a.rescan_required && (
                       <span className="text-[10px] text-amber-300 bg-amber-900/40 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-amber-800/50">Rescan required</span>
                     )}

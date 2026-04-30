@@ -70,7 +70,7 @@ export interface ExtractedAgreement {
   interest_type: 'simple' | 'compound'
   lock_in_years: number
   maturity_date: string            // ISO date
-  is_draft?: boolean
+  is_draft: boolean
   payments: Array<{ date: string | null; mode: string | null; bank: string | null; amount: number | null }>
   payout_schedule: ExtractedPayoutRow[]
   confidence_warnings?: string[]

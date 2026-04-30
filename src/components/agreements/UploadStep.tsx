@@ -15,6 +15,7 @@ interface UploadStepProps {
   teamMembers: TeamMember[]
   onExtract: (params: {
     file: File
+    isDraft: boolean
     salespersonId: string | null
     salespersonCustom: string | null
   }) => void
@@ -28,6 +29,7 @@ const MAX_SIZE = 10 * 1024 * 1024
 
 export default function UploadStep({ teamMembers, onExtract, isLoading, error, onBack }: UploadStepProps) {
   const [file, setFile] = useState<File | null>(null)
+  const [isDraft, setIsDraft] = useState(false)
   const [salespersonId, setSalespersonId] = useState<string>('')
   const [salespersonCustom, setSalespersonCustom] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -75,6 +77,7 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
     if (!file) return
     onExtract({
       file,
+      isDraft,
       salespersonId: salespersonId === 'other' || salespersonId === '' ? null : salespersonId,
       salespersonCustom: salespersonId === 'other' ? salespersonCustom : null,
     })
@@ -148,6 +151,40 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
       {fileError && (
         <p className="text-red-400 text-sm">{fileError}</p>
       )}
+
+      {/* Agreement type */}
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Agreement Status</p>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="agreementType"
+            checked={!isDraft}
+            onChange={() => setIsDraft(false)}
+            className="mt-0.5 accent-indigo-500"
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-100">Signed Agreement</p>
+            <p className="text-xs text-slate-500">Document has been signed by all parties</p>
+          </div>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="agreementType"
+            checked={isDraft}
+            onChange={() => setIsDraft(true)}
+            className="mt-0.5 accent-amber-500"
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-100">
+              Draft Agreement
+              <span className="ml-2 inline-block px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded font-semibold">DRAFT</span>
+            </p>
+            <p className="text-xs text-slate-500">Document not yet signed — tracking starts now</p>
+          </div>
+        </label>
+      </div>
 
       {/* Salesperson */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
