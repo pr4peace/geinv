@@ -1,10 +1,10 @@
 
-export const APP_VERSION = 'C.2'
+export const APP_VERSION = 'D.1'
 
 export const WHATS_NEW_CONTENT = [
-  'TDS-only rows are now automatically generated for cumulative/compound agreements on 31 March each year.',
-  'Re-scan documents without re-uploading — find the "Re-scan Doc" button on any agreement detail page.',
-  'Bulk mark past payouts as paid with a single click and easy undo.',
-  'Per-row undo for payout status changes with a 5-second grace period.',
-  'Performance improvements and bug fixes for TDS calculations.',
+  'Streamlined Document Import — Unlocked saving and added "Mark all as correct" for faster approvals.',
+  'Integrated TDS Review — View and verify auto-generated TDS rows directly in the extraction table.',
+  'Safer Re-scans — Status and payment history are now preserved when rescanning an agreement.',
+  'Secure Investor Merging — New safety checks for salespersons when merging investor profiles.',
+  'Smart Notifications — The queue now automatically hides reminders for payouts already marked as paid.',
 ]

@@ -19,56 +19,20 @@ export async function POST(
     const userRole = request.headers.get('x-user-role') ?? ''
     const userTeamId = request.headers.get('x-user-team-id') ?? ''
 
-    if (userRole === 'salesperson') {
-      const { count } = await supabase
-        .from('agreements')
-        .select('id', { count: 'exact', head: true })
-        .eq('investor_id', id)
-        .eq('salesperson_id', userTeamId)
-        .is('deleted_at', null)
+    const { error } = await supabase.rpc('merge_investors', {
+      p_source_id: id,
+      p_target_id: into,
+      p_user_role: userRole,
+      p_user_team_id: userTeamId || null
+    })
 
-      if ((count ?? 0) === 0) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-      }
+    if (error) {
+      const status = error.message.includes('Unauthorized') ? 403 : 
+                     error.message.includes('not found') ? 404 : 400
+      return NextResponse.json({ error: error.message }, { status })
     }
 
-    // Verify both investors exist
-    const [{ data: source }, { data: target }] = await Promise.all([
-      supabase.from('investors').select('id, name').eq('id', id).single(),
-      supabase.from('investors').select('id, name').eq('id', into).single(),
-    ])
-
-    if (!source || !target) {
-      return NextResponse.json({ error: 'Investor not found' }, { status: 404 })
-    }
-
-    // Re-point all agreements from source → target
-    const { error: updateError } = await supabase
-      .from('agreements')
-      .update({ investor_id: into })
-      .eq('investor_id', id)
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
-    }
-
-    // Re-point all notes from source → target
-    await supabase
-      .from('investor_notes')
-      .update({ investor_id: into })
-      .eq('investor_id', id)
-
-    // Delete the source investor (now orphaned)
-    const { error: deleteError } = await supabase
-      .from('investors')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, merged_into: target.name })
+    return NextResponse.json({ success: true })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },

@@ -16,13 +16,14 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         agreement:agreements(id, investor_name, reference_id, salesperson_id),
+        payout:payout_schedule!payout_schedule_id(status),
         sent_by_member:team_members!sent_by(name)
       `)
       .eq('status', status)
       .order('due_date', { ascending: true })
       .limit(limit)
 
-    // Salesperson sees only their agreements' items; never sees summary/forecast
+    // Salesperson sees only their agreements' items
     if (userRole === 'salesperson') {
       const { data: spAgreements } = await supabase
         .from('agreements')
@@ -36,7 +37,15 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data ?? [])
+
+    // Post-filter stale items: if it's a payout reminder but the payout is already paid, skip it
+    // NOTE: This is safer than an inner join if some notification types (like forecast) don't have a payout_schedule_id
+    const filtered = (data ?? []).filter(item => {
+      if (item.type === 'payout' && item.payout?.status === 'paid') return false
+      return true
+    })
+
+    return NextResponse.json(filtered)
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
