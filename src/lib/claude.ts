@@ -80,13 +80,11 @@ const EXTRACTION_PROMPT = `You are an expert at extracting structured data from 
 Extract ALL fields exactly as they appear in the document. Follow these rules:
 
 1. DATES: Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed.
-   - investment_start_date is the date the investor's funds were actually received / when interest begins accruing. Use this priority order:
-     a. FIRST: Look in the body paragraphs for an explicit statement of when funds were received or when interest starts — phrases like "interest shall accrue from [date]", "investment commences on [date]", "received on [date]", "w.e.f [date]", "with effect from [date]". This is the most reliable source.
-     b. SECOND: Look at the payment/funding table for the date funds were received or transferred (NEFT/RTGS/Cheque date). This is the actual money-received date.
-     c. LAST RESORT: Use the first period_from of the payout schedule ONLY if nothing else is found.
-   - CRITICAL DISTINCTION: Indian payout schedules often align periods to fixed calendar dates (e.g. 01-Apr, 01-Jul) even when funds arrived mid-year. The payout schedule period_from is NOT the same as when funds were received. Do NOT use period_from as the investment_start_date if an actual funding date is available elsewhere.
-   - NEVER use the agreement_date as investment_start_date unless explicitly stated.
-   - Add a confidence_warning if you are unsure which date to use.
+   - investment_start_date is the date when interest begins accruing. 
+   - CRITICAL RULE: The investment_start_date MUST match exactly with the 'period_from' of the FIRST row in the payout_schedule. 
+   - The payout schedule reflects the agreed-upon interest accrual. Even if funds were received on a different date (payment table), for the purposes of this system, the start of the first interest period IS the investment_start_date.
+   - NEVER use the agreement_date as investment_start_date unless it happens to be the same as the first period_from.
+   - Add a confidence_warning if you find a conflict between the stated 'investment commences on' date and the first row of the payout table.
 
 2. PAYOUT SCHEDULE: Extract EVERY row from the interest payout table. Each row has:
    - period_from and period_to (the interest accrual period)

@@ -124,4 +124,13 @@ describe('validateExtraction', () => {
     }))
     expect(flags.filter(f => f.type === 'tds_mismatch')).toHaveLength(0)
   })
+
+  it('flags start_date_mismatch when investment_start_date ≠ first period_from', () => {
+    const flags = validateExtraction(makeAgreement({
+      investment_start_date: '2026-03-15',
+      payout_schedule: [makeRow({ period_from: '2026-04-01' })],
+    }))
+    expect(flags.some(f => f.type === 'start_date_mismatch')).toBe(true)
+    expect(flags.find(f => f.type === 'start_date_mismatch')?.severity).toBe('error')
+  })
 })

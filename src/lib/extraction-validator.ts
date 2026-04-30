@@ -7,6 +7,7 @@ export type ExtractionFlagType =
   | 'coverage_short'
   | 'row_count_warning'
   | 'generated_row'
+  | 'start_date_mismatch'
 
 export type ExtractionFlagSeverity = 'info' | 'warning' | 'error'
 
@@ -41,6 +42,23 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
   let flagIndex = 0
 
   const rows = extracted.payout_schedule ?? []
+
+  // investment_start_date mismatch with first row
+  if (rows.length > 0 && extracted.investment_start_date) {
+    const firstRowFrom = rows[0].period_from
+    if (extracted.investment_start_date !== firstRowFrom) {
+      flags.push({
+        id: `flag-${flagIndex++}`,
+        type: 'start_date_mismatch',
+        severity: 'error',
+        rowIndex: null,
+        message: `Investment start date (${extracted.investment_start_date}) does not match first payout period (${firstRowFrom})`,
+        expected: firstRowFrom,
+        found: extracted.investment_start_date,
+        resolution: 'pending',
+      })
+    }
+  }
 
   rows.forEach((row, i) => {
     if (row.is_principal_repayment) return
