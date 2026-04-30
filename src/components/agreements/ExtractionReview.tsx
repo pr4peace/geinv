@@ -76,8 +76,8 @@ interface FormState {
   payout_schedule: ExtractedPayoutRow[]
   is_draft: boolean
   mark_historical_paid: boolean
-  salesperson_id: string
-  salesperson_custom: string
+  salesperson_id?: string
+  salesperson_custom?: string
 }
 
 function generateRefId(): string {
@@ -986,23 +986,36 @@ export default function ExtractionReview({
             </div>
           </div>
 
-          {/* Meta */}
+          {/* Agreement Settings */}
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Meta</h2>
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Settings</h2>
 
-            {/* Is Draft checkbox */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_draft}
-                onChange={e => update('is_draft', e.target.checked)}
-                className="accent-amber-500 w-4 h-4"
-              />
-              <span className="text-sm text-slate-100">Is Draft</span>
-            </label>
+            <div className="grid grid-cols-2 gap-4 pb-2">
+              {/* Is Draft checkbox */}
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_draft}
+                  onChange={e => update('is_draft', e.target.checked)}
+                  className="accent-amber-500 w-4 h-4"
+                />
+                <span className="text-sm text-slate-100">Is Draft</span>
+              </label>
+
+              {/* Salesperson display */}
+              <div className="space-y-0.5">
+                <label className="text-[10px] text-slate-500 uppercase font-bold">Salesperson</label>
+                <p className="text-sm text-slate-200">
+                  {form.salesperson_id === 'other' || !form.salesperson_id
+                    ? (form.salesperson_custom || '— None —')
+                    : (salespersonOptions.find(m => m.id === form.salesperson_id)?.name || '— None —')
+                  }
+                </p>
+              </div>
+            </div>
 
             {/* Mark historical payouts as paid */}
-            <label className="flex items-start gap-3 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-pointer border-t border-slate-700/50 pt-4">
               <input
                 type="checkbox"
                 checked={form.mark_historical_paid}
@@ -1014,31 +1027,6 @@ export default function ExtractionReview({
                 <span className="block text-xs text-slate-400 mt-0.5">For existing agreements — marks all payout rows with due date before today as paid</span>
               </span>
             </label>
-
-            {/* Salesperson */}
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Salesperson</label>
-              <select
-                value={form.salesperson_id}
-                onChange={e => update('salesperson_id', e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">— None —</option>
-                {salespersonOptions.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-                <option value="other">Other (custom)</option>
-              </select>
-              {form.salesperson_id === 'other' && (
-                <input
-                  type="text"
-                  placeholder="Enter salesperson name"
-                  value={form.salesperson_custom}
-                  onChange={e => update('salesperson_custom', e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 mt-2"
-                />
-              )}
-            </div>
           </div>
 
           {/* Validation errors */}

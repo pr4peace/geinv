@@ -742,7 +742,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
           </div>
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Meta</h2>
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Settings</h2>
             
             <label className="flex items-center gap-3 cursor-pointer">
               <input
