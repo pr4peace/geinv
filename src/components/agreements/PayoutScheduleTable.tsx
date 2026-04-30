@@ -53,9 +53,17 @@ export default function PayoutScheduleTable({ rows }: PayoutScheduleTableProps) 
           {rows.map((row, idx) => (
             <tr
               key={idx}
-              className={`border-b border-slate-700/50 ${row.is_principal_repayment ? 'bg-emerald-900/20' : idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-800/40'}`}
+              id={`payout-row-${idx}`}
+              className={`border-b border-slate-700/50 ${row.is_principal_repayment ? 'bg-emerald-900/20' : row.is_tds_only ? 'bg-violet-900/10' : idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-800/40'}`}
             >
-              <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.period_from)}</td>
+              <td className="px-3 py-2 whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  {formatDate(row.period_from)}
+                  {row.is_tds_only && (
+                    <span className="px-1.5 py-0.5 rounded bg-violet-900/40 text-violet-400 text-[9px] font-bold uppercase border border-violet-800/50">TDS Only</span>
+                  )}
+                </div>
+              </td>
               <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.period_to)}</td>
               <td className="px-3 py-2 text-right">{row.no_of_days ?? '—'}</td>
               <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.due_by)}</td>

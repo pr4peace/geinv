@@ -73,6 +73,7 @@ interface FormState {
   lock_in_years: string
   maturity_date: string
   payments: PaymentEntryRow[]
+  payout_schedule: ExtractedPayoutRow[]
   is_draft: boolean
   mark_historical_paid: boolean
   salesperson_id: string
@@ -130,122 +131,75 @@ function fieldMentionedInWarning(field: keyof FormState, warnings: string[]): bo
 function FlagsPanel({
   flags,
   onFix,
-  onAccept,
+  onAcceptAll,
   onReUpload,
 }: {
   flags: ExtractionFlag[]
   onFix: (flagId: string, rowIndex: number) => void
-  onAccept: (flagId: string, note: string) => void
+  onAcceptAll: () => void
   onReUpload: () => void
 }) {
-  const [acceptNotes, setAcceptNotes] = useState<Record<string, string>>({})
-  const [accepting, setAccepting] = useState<string | null>(null)
-
   const pending = flags.filter(f => f.resolution === 'pending')
-  const resolved = flags.filter(f => f.resolution !== 'pending')
+  if (pending.length === 0) return null
 
-  if (flags.length === 0) return null
+  const errors = pending.filter(f => f.severity === 'error')
+  const warnings = pending.filter(f => f.severity === 'warning')
+  const infos = pending.filter(f => f.severity === 'info')
 
   return (
-    <div className="mb-6 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-red-400 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          {pending.length} issue{pending.length !== 1 ? 's' : ''} found — resolve all before saving
-        </h3>
-        <span className="text-xs text-slate-500">{resolved.length} of {flags.length} resolved</span>
+    <div className="mb-6 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 bg-slate-800/50 flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <h3 className="text-sm font-semibold text-slate-200">
+            {pending.length} item{pending.length !== 1 ? 's' : ''} to review
+          </h3>
+          <div className="flex items-center gap-1.5 ml-2">
+            {errors.length > 0 && <span className="px-1.5 py-0.5 rounded bg-red-900/40 text-red-400 text-[10px] font-bold uppercase">{errors.length} Errors</span>}
+            {warnings.length > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 text-[10px] font-bold uppercase">{warnings.length} Warnings</span>}
+            {infos.length > 0 && <span className="px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-400 text-[10px] font-bold uppercase">{infos.length} Info</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onAcceptAll}
+            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+          >
+            Mark all as correct
+          </button>
+          <button
+            type="button"
+            onClick={onReUpload}
+            className="text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            Re-upload
+          </button>
+        </div>
       </div>
-
-      {flags.map(flag => (
-        <div
-          key={flag.id}
-          className={`border-l-4 rounded-xl p-4 space-y-3 ${
-            flag.resolution === 'pending'
-              ? 'border-red-500 bg-red-900/10'
-              : flag.resolution === 'accepted'
-              ? 'border-amber-500 bg-amber-900/10'
-              : 'border-emerald-500 bg-emerald-900/10'
-          }`}
-        >
-          <div className="flex items-start justify-between gap-4">
+      <div className="max-h-48 overflow-y-auto px-5 py-3 space-y-2.5">
+        {pending.map(flag => (
+          <div key={flag.id} className="flex items-start justify-between gap-4 group">
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-slate-200">{flag.message}</p>
-              <p className="text-xs text-slate-400">
-                Expected: <span className="text-emerald-400">{flag.expected}</span>
-                {' · '}
-                Found: <span className="text-red-400">{flag.found}</span>
+              <p className={`text-xs ${flag.severity === 'error' ? 'text-red-400' : flag.severity === 'warning' ? 'text-amber-400' : 'text-slate-300'}`}>
+                {flag.message}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                Expected: <span className="text-emerald-500/80">{flag.expected}</span> · Found: <span className="text-red-500/80">{flag.found}</span>
               </p>
             </div>
-            {flag.resolution !== 'pending' && (
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                flag.resolution === 'accepted' ? 'bg-amber-900/40 text-amber-400' : 'bg-emerald-900/40 text-emerald-400'
-              }`}>
-                {flag.resolution}
-              </span>
-            )}
-          </div>
-
-          {flag.resolution === 'pending' && (
-            <div className="flex flex-wrap gap-2">
-              {flag.rowIndex !== null && (
-                <button
-                  type="button"
-                  onClick={() => onFix(flag.id, flag.rowIndex!)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-900/40 text-indigo-400 hover:bg-indigo-800/40 rounded-lg transition-colors"
-                >
-                  Fix value
-                </button>
-              )}
+            {flag.rowIndex !== null && (
               <button
                 type="button"
-                onClick={onReUpload}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg transition-colors"
+                onClick={() => onFix(flag.id, flag.rowIndex!)}
+                className="text-[10px] font-bold uppercase text-indigo-400 hover:text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                Re-upload document
+                Locate
               </button>
-              {accepting === flag.id ? (
-                <div className="flex items-center gap-2 w-full">
-                  <input
-                    type="text"
-                    placeholder="Why is this value correct? (required)"
-                    value={acceptNotes[flag.id] ?? ''}
-                    onChange={e => setAcceptNotes(n => ({ ...n, [flag.id]: e.target.value }))}
-                    className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    disabled={(acceptNotes[flag.id] ?? '').trim().length < 5}
-                    onClick={() => { onAccept(flag.id, acceptNotes[flag.id]); setAccepting(null) }}
-                    className="px-3 py-1.5 text-xs font-semibold bg-amber-700 text-white hover:bg-amber-600 disabled:opacity-40 rounded-lg transition-colors"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAccepting(null)}
-                    className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setAccepting(flag.id)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 rounded-lg transition-colors"
-                >
-                  Accept as-is
-                </button>
-              )}
-            </div>
-          )}
-
-          {flag.resolution === 'accepted' && flag.acceptanceNote && (
-            <p className="text-xs text-amber-400/70 italic">Note: {flag.acceptanceNote}</p>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -265,57 +219,107 @@ export default function ExtractionReview({
   const router = useRouter()
   const warnings: string[] = extracted.confidence_warnings ?? []
 
-  const [form, setForm] = useState<FormState>({
-    reference_id: generateRefId(),
-    agreement_date: toDateInput(extracted.agreement_date),
-    investment_start_date: toDateInput(extracted.investment_start_date),
-    agreement_type: extracted.agreement_type ?? 'Investment Agreement',
-    investor_name: extracted.investor_name ?? '',
-    investor_pan: extracted.investor_pan ?? '',
-    investor_aadhaar: extracted.investor_aadhaar ?? '',
-    investor_address: extracted.investor_address ?? '',
-    tds_filing_name: extracted.tds_filing_name ?? extracted.investor_name ?? '',
-    nominees: (extracted.nominees ?? []).map(n => ({
-      name: n.name ?? '',
-      relationship: '',
-      share: '',
-      pan: n.pan ?? '',
-    })),
-    principal_amount: extracted.principal_amount != null ? String(extracted.principal_amount) : '',
-    roi_percentage: extracted.roi_percentage != null ? String(extracted.roi_percentage) : '',
-    payout_frequency: extracted.interest_type === 'compound' ? 'cumulative' : (extracted.payout_frequency ?? 'quarterly'),
-    interest_type: extracted.interest_type ?? 'simple',
-    lock_in_years: extracted.lock_in_years != null ? String(extracted.lock_in_years) : '',
-    maturity_date: toDateInput(extracted.maturity_date),
-    payments: (extracted.payments ?? []).map(p => ({
-      date: toDateInput(p.date),
-      mode: p.mode,
-      bank: p.bank,
-      amount: p.amount,
-    })),
-    is_draft: isDraft,
-    mark_historical_paid: false,
-    salesperson_id: salespersonId ?? '',
-    salesperson_custom: salespersonCustom ?? '',
+  const [form, setForm] = useState<FormState>(() => {
+    const baseSchedule = [...(extracted.payout_schedule ?? [])]
+    return {
+      reference_id: generateRefId(),
+      agreement_date: toDateInput(extracted.agreement_date),
+      investment_start_date: toDateInput(extracted.investment_start_date),
+      agreement_type: extracted.agreement_type ?? 'Investment Agreement',
+      investor_name: extracted.investor_name ?? '',
+      investor_pan: extracted.investor_pan ?? '',
+      investor_aadhaar: extracted.investor_aadhaar ?? '',
+      investor_address: extracted.investor_address ?? '',
+      tds_filing_name: extracted.tds_filing_name ?? extracted.investor_name ?? '',
+      nominees: (extracted.nominees ?? []).map(n => ({
+        name: n.name ?? '',
+        relationship: '',
+        share: '',
+        pan: n.pan ?? '',
+      })),
+      principal_amount: extracted.principal_amount != null ? String(extracted.principal_amount) : '',
+      roi_percentage: extracted.roi_percentage != null ? String(extracted.roi_percentage) : '',
+      payout_frequency: extracted.interest_type === 'compound' ? 'cumulative' : (extracted.payout_frequency ?? 'quarterly'),
+      interest_type: extracted.interest_type ?? 'simple',
+      lock_in_years: extracted.lock_in_years != null ? String(extracted.lock_in_years) : '',
+      maturity_date: toDateInput(extracted.maturity_date),
+      payments: (extracted.payments ?? []).map(p => ({
+        date: toDateInput(p.date),
+        mode: p.mode,
+        bank: p.bank,
+        amount: p.amount,
+      })),
+      payout_schedule: baseSchedule,
+      is_draft: isDraft,
+      mark_historical_paid: false,
+      salesperson_id: salespersonId ?? '',
+      salesperson_custom: salespersonCustom ?? '',
+    }
   })
 
-  const [flags, setFlags] = useState<ExtractionFlag[]>(() => validateExtraction(extracted))
+  const [flags, setFlags] = useState<ExtractionFlag[]>(() => validateExtraction({
+    ...extracted,
+    payout_schedule: form.payout_schedule
+  }))
+
+  // Re-validate and generate TDS rows when key fields change
+  useEffect(() => {
+    const isCumulative = form.payout_frequency === 'cumulative' || form.interest_type === 'compound'
+    const updatedSchedule = [...form.payout_schedule]
+
+    if (isCumulative && form.investment_start_date && form.maturity_date) {
+      // Dynamic import to avoid SSR require issues
+      import('@/lib/tds-calculator').then(({ generateTdsOnlyRows }) => {
+        const tdsRows = generateTdsOnlyRows({
+          startDate: form.investment_start_date,
+          maturityDate: form.maturity_date,
+          principal: Number(form.principal_amount) || 0,
+          roi: Number(form.roi_percentage) || 0,
+          interestType: form.interest_type,
+          agreementId: '', // Not needed for review
+        })
+
+        // Merge TDS rows into schedule if not already present
+        let changed = false
+        for (const tds of tdsRows) {
+          if (!updatedSchedule.some(r => r.is_tds_only && r.period_to === tds.period_to)) {
+            updatedSchedule.push({ ...tds, is_principal_repayment: false })
+            changed = true
+          }
+        }
+        if (changed) {
+          updatedSchedule.sort((a, b) => a.due_by.localeCompare(b.due_by))
+          setForm(f => ({ ...f, payout_schedule: updatedSchedule }))
+        }
+      })
+    }
+
+    setFlags(validateExtraction({
+      ...extracted,
+      agreement_date: form.agreement_date,
+      investment_start_date: form.investment_start_date,
+      maturity_date: form.maturity_date,
+      principal_amount: Number(form.principal_amount) || 0,
+      roi_percentage: Number(form.roi_percentage) || 0,
+      payout_schedule: updatedSchedule
+    }))
+    // We omit form.payout_schedule here to avoid infinite loop since we update it inside
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.agreement_date, form.investment_start_date, form.maturity_date, form.principal_amount, form.roi_percentage, form.payout_frequency, form.interest_type, extracted])
+
   const unresolvedCount = flags.filter(f => f.resolution === 'pending').length
 
   function handleFlagFix(flagId: string, rowIndex: number) {
-    // Scroll to the payout row — the row is already editable in the payout schedule table
     const rowEl = document.getElementById(`payout-row-${rowIndex}`)
     rowEl?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     rowEl?.classList.add('ring-2', 'ring-red-500')
     setTimeout(() => rowEl?.classList.remove('ring-2', 'ring-red-500'), 3000)
-    // Mark as fixed — coordinator will manually edit the row and re-validate
     setFlags(prev => prev.map(f => f.id === flagId ? { ...f, resolution: 'fixed' } : f))
   }
 
-  function handleFlagAccept(flagId: string, note: string) {
-    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, resolution: 'accepted', acceptanceNote: note } : f))
+  function handleAcceptAll() {
+    setFlags(prev => prev.map(f => ({ ...f, resolution: 'accepted' })))
   }
-
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -470,7 +474,7 @@ export default function ExtractionReview({
         salesperson_id: (form.salesperson_id === '' || form.salesperson_id === 'other') ? null : (form.salesperson_id || null),
         salesperson_custom: form.salesperson_custom || null,
         temp_path: tempPath,
-        payout_schedule: extracted.payout_schedule ?? [],
+        payout_schedule: form.payout_schedule,
         mark_historical_paid: form.mark_historical_paid,
       }
 
@@ -538,7 +542,7 @@ export default function ExtractionReview({
       <FlagsPanel
         flags={flags}
         onFix={handleFlagFix}
-        onAccept={handleFlagAccept}
+        onAcceptAll={handleAcceptAll}
         onReUpload={onBack}
       />
 
@@ -1064,14 +1068,13 @@ export default function ExtractionReview({
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || unresolvedCount > 0}
-              title={unresolvedCount > 0 ? `Resolve ${unresolvedCount} flagged issue${unresolvedCount !== 1 ? 's' : ''} to continue` : undefined}
+              disabled={saving}
               className="flex-1 py-3 px-6 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
             >
               {saving
                 ? 'Saving...'
                 : unresolvedCount > 0
-                ? `${unresolvedCount} issue${unresolvedCount !== 1 ? 's' : ''} to resolve`
+                ? `Save with ${unresolvedCount} item${unresolvedCount !== 1 ? 's' : ''} to review`
                 : duplicates.length > 0 && !bypassDuplicate
                 ? 'Duplicate Detected — Confirm Below First'
                 : 'Save Agreement'}
@@ -1123,46 +1126,11 @@ export default function ExtractionReview({
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
           <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
             Payout Schedule
-            <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(read-only — extracted from document)</span>
+            <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(extracted + auto-generated)</span>
           </h2>
-          <PayoutScheduleTable rows={extracted.payout_schedule ?? []} />
+          <PayoutScheduleTable rows={form.payout_schedule} />
         </div>
       )}
-
-      {/* TDS Filing Preview — for cumulative/compound agreements */}
-      {(form.payout_frequency === 'cumulative' || form.interest_type === 'compound') && form.investment_start_date && form.maturity_date && (() => {
-        const start = new Date(form.investment_start_date)
-        const maturity = new Date(form.maturity_date)
-        const tdsRows: { year: number; date: string }[] = []
-        let year = start.getUTCFullYear()
-        while (true) {
-          const march31 = new Date(Date.UTC(year, 2, 31))
-          if (march31 < start) { year++; continue }
-          if (march31 > maturity) break
-          tdsRows.push({ year, date: march31.toISOString().split('T')[0] })
-          year++
-        }
-        if (tdsRows.length === 0) return null
-        return (
-          <div className="bg-violet-900/10 border border-violet-800/30 rounded-xl p-5 space-y-3">
-            <div>
-              <h2 className="text-sm font-semibold text-violet-300 uppercase tracking-wider">
-                TDS Filing Dates
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">These rows will be auto-generated on save — one per 31 March in the agreement term</p>
-            </div>
-            <div className="space-y-2">
-              {tdsRows.map(row => (
-                <div key={row.year} className="flex items-center gap-3 text-sm">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-900/40 text-violet-400 border border-violet-800/50 uppercase">TDS Filing</span>
-                  <span className="text-slate-300">31 Mar {row.year}</span>
-                  <span className="text-slate-500 text-xs">({row.date})</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
     </div>
   )
 }

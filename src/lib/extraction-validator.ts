@@ -6,12 +6,16 @@ export type ExtractionFlagType =
   | 'period_gap'
   | 'coverage_short'
   | 'row_count_warning'
+  | 'generated_row'
+
+export type ExtractionFlagSeverity = 'info' | 'warning' | 'error'
 
 export type ExtractionFlagResolution = 'pending' | 'fixed' | 'accepted'
 
 export interface ExtractionFlag {
   id: string
   type: ExtractionFlagType
+  severity: ExtractionFlagSeverity
   rowIndex: number | null
   message: string
   expected: string
@@ -47,8 +51,9 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
       flags.push({
         id: `flag-${flagIndex++}`,
         type: 'tds_mismatch',
+        severity: row.is_tds_only ? 'info' : 'warning',
         rowIndex: i,
-        message: `Row ${i + 1}: TDS does not equal 10% of gross interest`,
+        message: `Row ${i + 1}: TDS amount (₹${row.tds_amount}) differs from calculated 10% (₹${expectedTds})`,
         expected: `₹${expectedTds.toLocaleString('en-IN')}`,
         found: `₹${row.tds_amount.toLocaleString('en-IN')}`,
         resolution: 'pending',
@@ -61,8 +66,9 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
       flags.push({
         id: `flag-${flagIndex++}`,
         type: 'net_mismatch',
+        severity: 'warning',
         rowIndex: i,
-        message: `Row ${i + 1}: Net interest does not equal gross minus TDS`,
+        message: `Row ${i + 1}: Net interest (₹${row.net_interest}) doesn't match Gross - TDS (₹${expectedNet})`,
         expected: `₹${expectedNet.toLocaleString('en-IN')}`,
         found: `₹${row.net_interest.toLocaleString('en-IN')}`,
         resolution: 'pending',
@@ -77,10 +83,11 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
         flags.push({
           id: `flag-${flagIndex++}`,
           type: 'period_gap',
+          severity: 'info',
           rowIndex: i,
-          message: `Gap between row ${i + 1} and row ${i + 2}: missing coverage`,
-          expected: `Row ${i + 2} period_from = ${expectedNextFrom}`,
-          found: `Row ${i + 2} period_from = ${nextRow.period_from}`,
+          message: `Date gap: Row ${i + 1} ends ${row.period_to}, but Row ${i + 2} starts ${nextRow.period_from}`,
+          expected: `Start date: ${expectedNextFrom}`,
+          found: `Start date: ${nextRow.period_from}`,
           resolution: 'pending',
         })
       }
@@ -94,10 +101,11 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
       flags.push({
         id: `flag-${flagIndex++}`,
         type: 'coverage_short',
+        severity: 'warning',
         rowIndex: rows.length - 1,
-        message: `Payout schedule does not reach maturity date — likely a missing row`,
-        expected: `Last row period_to = ${extracted.maturity_date}`,
-        found: `Last row period_to = ${lastRow.period_to}`,
+        message: `Payout schedule ends on ${lastRow.period_to}, but maturity is ${extracted.maturity_date}`,
+        expected: `End date: ${extracted.maturity_date}`,
+        found: `End date: ${lastRow.period_to}`,
         resolution: 'pending',
       })
     }
