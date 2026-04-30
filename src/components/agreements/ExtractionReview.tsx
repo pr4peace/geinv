@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, Download, ChevronLeft, Plus, X, ExternalLink } from 'lucide-react'
-import type { ExtractedAgreement } from '@/lib/claude'
+import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
 import PayoutScheduleTable from './PayoutScheduleTable'
 import { validateExtraction } from '@/lib/extraction-validator'
 import type { ExtractionFlag } from '@/lib/extraction-validator'
