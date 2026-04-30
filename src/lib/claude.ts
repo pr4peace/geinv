@@ -56,7 +56,7 @@ export interface ExtractedPayoutRow {
 
 export interface ExtractedAgreement {
   agreement_date: string           // ISO date
-  investment_start_date: string    // ISO date — when money was received
+  investment_start_date: string    // ISO date — when interest starts
   agreement_type: string
   investor_name: string
   investor_pan: string | null
@@ -70,6 +70,7 @@ export interface ExtractedAgreement {
   interest_type: 'simple' | 'compound'
   lock_in_years: number
   maturity_date: string            // ISO date
+  is_draft?: boolean
   payments: Array<{ date: string | null; mode: string | null; bank: string | null; amount: number | null }>
   payout_schedule: ExtractedPayoutRow[]
   confidence_warnings?: string[]
@@ -86,7 +87,14 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
    - NEVER use the agreement_date as investment_start_date unless it happens to be the same as the first period_from.
    - Add a confidence_warning if you find a conflict between the stated 'investment commences on' date and the first row of the payout table.
 
-2. PAYOUT SCHEDULE: Extract EVERY row from the interest payout table. Each row has:
+2. PRINCIPAL AMOUNT: Extract the numerical principal amount (e.g. 5000000).
+   - VERIFICATION: You MUST cross-verify the number with the word-form stated in the document (e.g., "Fifty Lakhs").
+   - SAFETY CHECK: If the number and words do not match (e.g., you see 5,00,00,000 but the text says "Fifty Lakhs"), YOU MUST PRIORITIZE THE WORDS and add a confidence_warning.
+   - INDIAN NOTATION: Be extremely careful with Lakhs (1,00,000) vs Crores (1,00,00,000). 50 Lakhs is 50,00,000. 5 Crores is 5,00,00,000. Count the digit groups carefully!
+   - COMMON ERROR: Do not misread 5,00,000 as 5,00,00,000. Count the zeros!
+
+   4. PAYOUT SCHEDULE:
+ Extract EVERY row from the interest payout table. Each row has:
    - period_from and period_to (the interest accrual period)
    - no_of_days (number of days in that period)
    - due_by (the "on or before" date — this is when payment must be made)

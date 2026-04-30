@@ -33,7 +33,6 @@ export default function NewAgreementPage() {
 
   // Carry through for review
   const [file, setFile] = useState<File | null>(null)
-  const [isDraft, setIsDraft] = useState(false)
   const [salespersonId, setSalespersonId] = useState<string | null>(null)
   const [salespersonCustom, setSalespersonCustom] = useState<string | null>(null)
 
@@ -55,13 +54,11 @@ export default function NewAgreementPage() {
 
   async function handleExtract(params: {
     file: File
-    isDraft: boolean
     salespersonId: string | null
     salespersonCustom: string | null
   }) {
     setUploadError(null)
     setFile(params.file)
-    setIsDraft(params.isDraft)
     setSalespersonId(params.salespersonId)
     setSalespersonCustom(params.salespersonCustom)
     setStep('loading')
@@ -72,7 +69,7 @@ export default function NewAgreementPage() {
     try {
       const formData = new FormData()
       formData.append('file', params.file)
-      formData.append('is_draft', String(params.isDraft))
+      // is_draft is no longer used
 
       const res = await fetch('/api/extract', {
         method: 'POST',
@@ -244,7 +241,6 @@ export default function NewAgreementPage() {
           tempPath={extractResult.temp_path}
           fileName={file.name}
           file={file}
-          isDraft={isDraft}
           salespersonId={salespersonId}
           salespersonCustom={salespersonCustom}
           teamMembers={teamMembers}

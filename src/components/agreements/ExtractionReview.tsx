@@ -45,7 +45,6 @@ interface ExtractionReviewProps {
   tempPath: string
   fileName: string
   file: File
-  isDraft: boolean
   salespersonId: string | null
   salespersonCustom: string | null
   teamMembers: TeamMember[]
@@ -74,11 +73,11 @@ interface FormState {
   maturity_date: string
   payments: PaymentEntryRow[]
   payout_schedule: ExtractedPayoutRow[]
-  is_draft: boolean
   mark_historical_paid: boolean
-  salesperson_id?: string
-  salesperson_custom?: string
-}
+  salesperson_id: string
+  salesperson_custom: string
+  }
+
 
 function generateRefId(): string {
   const ts = Date.now().toString(36).toUpperCase()
@@ -210,7 +209,6 @@ export default function ExtractionReview({
   tempPath,
   fileName,
   file,
-  isDraft,
   salespersonId,
   salespersonCustom,
   teamMembers,
@@ -250,7 +248,6 @@ export default function ExtractionReview({
         amount: p.amount,
       })),
       payout_schedule: baseSchedule,
-      is_draft: isDraft,
       mark_historical_paid: false,
       salesperson_id: salespersonId ?? '',
       salesperson_custom: salespersonCustom ?? '',
@@ -457,7 +454,6 @@ export default function ExtractionReview({
         agreement_date: form.agreement_date,
         investment_start_date: form.investment_start_date,
         agreement_type: form.agreement_type,
-        is_draft: form.is_draft,
         investor_name: form.investor_name,
         investor_pan: form.investor_pan || null,
         investor_aadhaar: form.investor_aadhaar || null,
@@ -592,14 +588,6 @@ export default function ExtractionReview({
               I confirm this is a new agreement and not a duplicate of the above
             </span>
           </label>
-        </div>
-      )}
-
-      {/* Draft badge */}
-      {form.is_draft && (
-        <div className="bg-amber-900/20 border border-amber-700 rounded-xl px-4 py-2 flex items-center gap-2">
-          <span className="inline-block px-2 py-0.5 bg-amber-500/30 text-amber-400 text-xs rounded font-bold">DRAFT</span>
-          <span className="text-xs text-amber-300">This agreement is being saved as a draft. It will be marked pending signature.</span>
         </div>
       )}
 
@@ -990,18 +978,7 @@ export default function ExtractionReview({
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
             <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Settings</h2>
 
-            <div className="grid grid-cols-2 gap-4 pb-2">
-              {/* Is Draft checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_draft}
-                  onChange={e => update('is_draft', e.target.checked)}
-                  className="accent-amber-500 w-4 h-4"
-                />
-                <span className="text-sm text-slate-100">Is Draft</span>
-              </label>
-
+            <div className="pb-2">
               {/* Salesperson display */}
               <div className="space-y-0.5">
                 <label className="text-[10px] text-slate-500 uppercase font-bold">Salesperson</label>

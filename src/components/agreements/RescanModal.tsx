@@ -408,48 +408,48 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                       label="Investor Name" 
                       oldVal={current.agreement.investor_name}
                       newVal={extracted.investor_name} 
-                      onChange={(v) => setExtracted({ ...extracted, investor_name: String(v) })}
+                      onChange={(v) => setExtracted(prev => prev ? { ...prev, investor_name: String(v) } : null)}
                     />
                     <RescanDiff 
                       label="Principal" 
                       oldVal={current.agreement.principal_amount}
                       newVal={extracted.principal_amount} 
                       type="number"
-                      onChange={(v) => setExtracted({ ...extracted, principal_amount: Number(v) })}
+                      onChange={(v) => setExtracted(prev => prev ? { ...prev, principal_amount: Number(v) } : null)}
                     />
                     <RescanDiff 
                       label="Agreement Date" 
                       oldVal={current.agreement.agreement_date}
                       newVal={extracted.agreement_date} 
                       type="date"
-                      onChange={(v) => setExtracted({ ...extracted, agreement_date: String(v) })}
+                      onChange={(v) => setExtracted(prev => prev ? { ...prev, agreement_date: String(v) } : null)}
                     />
                     <RescanDiff 
                       label="Start Date" 
                       oldVal={current.agreement.investment_start_date}
                       newVal={extracted.investment_start_date} 
                       type="date"
-                      onChange={(v) => setExtracted({ ...extracted, investment_start_date: String(v) })}
+                      onChange={(v) => setExtracted(prev => prev ? { ...prev, investment_start_date: String(v) } : null)}
                     />
                     <RescanDiff 
                       label="Maturity Date" 
                       oldVal={current.agreement.maturity_date}
                       newVal={extracted.maturity_date} 
                       type="date"
-                      onChange={(v) => setExtracted({ ...extracted, maturity_date: String(v) })}
+                      onChange={(v) => setExtracted(prev => prev ? { ...prev, maturity_date: String(v) } : null)}
                     />
                     <RescanDiff 
                       label="ROI %" 
                       oldVal={current.agreement.roi_percentage}
                       newVal={extracted.roi_percentage} 
                       type="number"
-                      onChange={(v) => setExtracted({ ...extracted, roi_percentage: Number(v) })}
+                      onChange={(v) => setExtracted(prev => prev ? { ...prev, roi_percentage: Number(v) } : null)}
                     />
                     <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
                       <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Frequency</p>
                       <select
                         value={extracted.payout_frequency || ''}
-                        onChange={(e) => setExtracted({ ...extracted, payout_frequency: e.target.value as PayoutFrequency })}
+                        onChange={(e) => setExtracted(prev => prev ? { ...prev, payout_frequency: e.target.value as PayoutFrequency } : null)}
                         className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="monthly">Monthly</option>
@@ -463,7 +463,7 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                       <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Interest Type</p>
                       <select
                         value={extracted.interest_type || ''}
-                        onChange={(e) => setExtracted({ ...extracted, interest_type: e.target.value as InterestType })}
+                        onChange={(e) => setExtracted(prev => prev ? { ...prev, interest_type: e.target.value as InterestType } : null)}
                         className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="simple">Simple</option>
@@ -477,7 +477,7 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                     <textarea
                       rows={2}
                       value={extracted.investor_address || ''}
-                      onChange={(e) => setExtracted({ ...extracted, investor_address: e.target.value })}
+                      onChange={(e) => setExtracted(prev => prev ? { ...prev, investor_address: e.target.value } : null)}
                       className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                     />
                   </div>
