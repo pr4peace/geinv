@@ -87,32 +87,33 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
    - NEVER use the agreement_date as investment_start_date unless it happens to be the same as the first period_from.
    - Add a confidence_warning if you find a conflict between the stated 'investment commences on' date and the first row of the payout table.
 
-2. PRINCIPAL AMOUNT: Extract the numerical principal amount (e.g. 5000000).
-   - VERIFICATION: You MUST cross-verify the number with the word-form stated in the document (e.g., "Fifty Lakhs").
-   - SAFETY CHECK: If the number and words do not match (e.g., you see 5,00,00,000 but the text says "Fifty Lakhs"), YOU MUST PRIORITIZE THE WORDS and add a confidence_warning.
-   - INDIAN NOTATION: Be extremely careful with Lakhs (1,00,000) vs Crores (1,00,00,000). 50 Lakhs is 50,00,000. 5 Crores is 5,00,00,000. Count the digit groups carefully!
-   - COMMON ERROR: Do not misread 5,00,000 as 5,00,00,000. Count the zeros!
+2. PRINCIPAL AMOUNT (TRIPLE-VERIFICATION REQUIRED):
+   - This is the MOST CRITICAL field. You must use this search protocol:
+   - STEP A (Words): Locate the principal amount written in WORDS (e.g., "Sixty Lakhs"). This is your primary source of truth.
+   - STEP B (Digits): Locate the principal amount in DIGITS (e.g., "60,00,000").
+   - STEP C (Check): Count the digits. 
+     - 7 digits total (e.g., 60,00,000) = Lakhs.
+     - 8 or more digits total (e.g., 6,00,00,000) = Crores.
+   - CONFLICT RESOLUTION: If digits look like 6,00,00,000 but words say "Sixty Lakhs", YOU MUST USE 6000000. Words are more reliable.
+   - CROSS-CHECK: Verify this amount against the Payout Schedule table and any Receipt/Payment sections.
 
-   4. PAYOUT SCHEDULE:
- Extract EVERY row from the interest payout table. Each row has:
+3. AMOUNTS (Indian Notation Awareness):
+   Be extremely careful with Lakhs vs Crores:
+   - 1,00,000 = 1 Lakh (5 zeros)
+   - 10,00,000 = 10 Lakhs (6 zeros)
+   - 1,00,00,000 = 1 Crore (7 zeros)
+   A single extra zero is a catastrophic 10x error. Count the zeros one by one!
+
+4. PAYOUT SCHEDULE: Extract EVERY row from the interest payout table. Each row has:
    - period_from and period_to (the interest accrual period)
    - no_of_days (number of days in that period)
    - due_by (the "on or before" date — this is when payment must be made)
    - gross_interest (interest before TDS)
    - tds_amount (tax deducted at source, typically 10%)
    - net_interest (gross_interest minus tds_amount)
-   - is_principal_repayment: true ONLY for the final row if it represents principal return (see rule 9)
+   - is_principal_repayment: true ONLY for the final row if it represents principal return (see rule 10)
 
-3. AMOUNTS: These are Indian investment agreements. Indian number formatting uses commas differently from Western format:
-   - 1,00,000 = 1 lakh = 100,000 (NOT 1 million)
-   - 10,00,000 = 10 lakhs = 1,000,000
-   - 20,00,000 = 20 lakhs = 2,000,000 (NOT 2 crores)
-   - 1,00,00,000 = 1 crore = 10,000,000
-   - 2,00,00,000 = 2 crores = 20,000,000
-   CRITICAL: Count the digit groups carefully. "20,00,000" has 7 digits = 20 lakhs. "2,00,00,000" has 9 digits = 2 crores. These are very different.
-   Return as plain integers without commas or currency symbols (e.g., 2000000 for 20 lakhs, not 20000000).
-
-4. PAYOUT FREQUENCY:
+5. PAYOUT FREQUENCY:
    - "monthly" if interest is paid every month
    - "quarterly" if interest is paid every quarter
    - "biannual" if interest is paid every 6 months (also: "bi-annual", "half-yearly", "semi-annual", "half yearly", "semi annual")
@@ -141,12 +142,7 @@ Extract ALL fields exactly as they appear in the document. Follow these rules:
     - The row label/description contains words like "Principal", "Maturity Amount", or "Repayment"
     Do NOT add extra rows beyond what appears in the document table. Do NOT mark a row as principal repayment if its amount matches a normal periodic interest payment.
 
-11. PAYMENTS: Extract ALL payment entries from the document. An investment may be funded in multiple tranches. For each entry record:
-    - date: ISO date (YYYY-MM-DD) or null
-    - mode: payment method (e.g. "NEFT", "RTGS", "Cheque", "UPI", "Cash") or null
-    - bank: bank name or null
-    - amount: payment amount as a plain number, or null if not stated
-    If only one payment, return a single-element array. If no payment info found, return [].
+11. PAYMENTS:
 
 12. ROW COUNT VERIFICATION: Before returning JSON, count the rows in the payout schedule table in the document. Your payout_schedule array must contain exactly that many entries — not more, not fewer. If your count does not match, re-read the table and correct it.
 
@@ -195,7 +191,7 @@ export async function extractAgreementData(
   }
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.0-flash',
     generationConfig: {
       maxOutputTokens: 65536,
       responseMimeType: 'application/json',
