@@ -15,10 +15,10 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ### 🩹 Batch C.3 — Rescan Improvements (next hotfix batch)
 
-| Item | Notes |
-|---|---|
-| **Rescan: include payout schedule update** | `RescanModal` + `handleConfirm` currently skips payout rows entirely. On confirm: delete existing `payout_schedule` rows for the agreement and re-insert using the freshly extracted `payout_schedule` from Gemini. Wire up via `PATCH /api/agreements/[id]` or a new `POST /api/agreements/[id]/rescan/apply`. |
-| **Rescan: show diff of what changed** | Before showing editable fields, fetch current stored agreement + payout rows and compare against extracted. Highlight changed fields in amber, unchanged in grey. Show old payout rows vs new payout rows side by side so coordinator can see exactly what Gemini corrected before confirming. |
+| Item | Status | Notes |
+|---|---|---|
+| **Rescan: include payout schedule update** | ✅ main | Done in D.1 |
+| **Rescan: show diff of what changed** | ✅ main | Done in D.1 (side-by-side diff with amber highlights) |
 
 ---
 
@@ -112,7 +112,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 |---|---|
 | **PDF pre-processing for extraction accuracy** | Before sending to Gemini, convert each PDF page to a high-contrast B&W image (grayscale + contrast boost + sharpen) using `sharp` + `pdf2pic` or `pdfjs-dist`. Eliminates grey backgrounds, light ink, and scan artifacts that cause Gemini to misread numbers. Particularly important for payout schedule tables. Implement in `src/lib/claude.ts` as a pre-processing step before the Gemini API call. |
 | **Versioning system rework** | Full rework of `src/lib/version.ts` + `src/components/WhatsNewModal.tsx` — current implementation needs review. Ensure version bump, localStorage tracking (max 3 views), and modal display all work correctly end-to-end. |
-| **Quick Send — extended timeframes** | Add `Quarter (90 days)`, `6 months (180 days)`, `1 year (365 days)` to the timeframe dropdown in `QuickSendPanel`. Simple change to `TIMEFRAME_OPTIONS` array in `src/components/notifications/QuickSendPanel.tsx`. |
+| **Quick Send — extended timeframes** | ✅ main | Done in D.1 |
 | **E-sign integration** | Replace physical signing step with third-party e-sign (Dropbox Sign / DocuSign). Magic link flow, webhook to auto-update `doc_status`. Build after Batch D is stable. |
 | **Slack integration** | Automated notifications. External dependency. |
 | **Custom domain** | Move off Vercel subdomain to a proper domain. |

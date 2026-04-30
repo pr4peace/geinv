@@ -13,7 +13,7 @@ type EnrichedItem = NotificationQueue & {
 }
 
 type FilterType = 'all' | 'payout' | 'maturity' | 'tds_filing'
-type Timeframe = 7 | 14 | 31
+type Timeframe = 7 | 14 | 31 | 90 | 180 | 365
 
 const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -26,6 +26,9 @@ const TIMEFRAME_OPTIONS: { value: Timeframe; label: string }[] = [
   { value: 7, label: '7 days' },
   { value: 14, label: '14 days' },
   { value: 31, label: '31 days' },
+  { value: 90, label: 'Quarter (90d)' },
+  { value: 180, label: '6 months (180d)' },
+  { value: 365, label: '1 year (365d)' },
 ]
 
 const FILTER_TYPES: Record<FilterType, NotificationType[]> = {

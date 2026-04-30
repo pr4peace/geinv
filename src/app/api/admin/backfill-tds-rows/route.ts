@@ -6,7 +6,7 @@ import { generateTdsOnlyRows } from '@/lib/tds-calculator'
 export async function POST(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
-    if (userRole !== 'admin') {
+    if (userRole !== 'coordinator' && userRole !== 'accountant') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

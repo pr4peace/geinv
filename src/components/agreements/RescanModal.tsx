@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw, X, AlertTriangle, Check, ArrowRight } from 'lucide-react'
 import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
@@ -185,6 +185,79 @@ function RescanDiff({
           />
         </div>
       </div>
+    </div>
+  )
+}
+
+function PayoutScheduleDiff({
+  currentRows,
+  extractedRows,
+}: {
+  currentRows: ExtractedPayoutRow[]
+  extractedRows: ExtractedPayoutRow[]
+}) {
+  const maxLength = Math.max(currentRows.length, extractedRows.length)
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2">Payout Schedule Comparison</p>
+      <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/50">
+        <table className="w-full text-[10px]">
+          <thead>
+            <tr className="border-b border-slate-700 bg-slate-800/50">
+              <th className="px-2 py-2 text-left text-slate-400">#</th>
+              <th className="px-2 py-2 text-left text-slate-400">Property</th>
+              <th className="px-2 py-2 text-left text-slate-500 italic">Current</th>
+              <th className="px-2 py-2 text-left text-indigo-400">Extracted</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800">
+            {Array.from({ length: maxLength }).map((_, i) => {
+              const cur = currentRows[i]
+              const ext = extractedRows[i]
+
+              const props: (keyof ExtractedPayoutRow)[] = [
+                'period_from',
+                'period_to',
+                'due_by',
+                'gross_interest',
+                'net_interest',
+              ]
+
+              return (
+                <React.Fragment key={i}>
+                  <tr className="bg-slate-800/20">
+                    <td rowSpan={props.length} className="px-2 py-2 align-top font-bold text-slate-500 border-r border-slate-800">
+                      {i + 1}
+                    </td>
+                    <td className="px-2 py-1 text-slate-500">{props[0]}</td>
+                    <td className="px-2 py-1 text-slate-400">{cur?.[props[0]] ?? '—'}</td>
+                    <td className={`px-2 py-1 ${cur?.[props[0]] !== ext?.[props[0]] ? 'bg-amber-900/20 text-amber-200' : 'text-slate-300'}`}>
+                      {ext?.[props[0]] ?? '—'}
+                    </td>
+                  </tr>
+                  {props.slice(1).map((p) => (
+                    <tr key={p}>
+                      <td className="px-2 py-1 text-slate-500">{p}</td>
+                      <td className="px-2 py-1 text-slate-400">
+                        {typeof cur?.[p] === 'number' ? cur[p].toLocaleString('en-IN') : (cur?.[p] ?? '—')}
+                      </td>
+                      <td className={`px-2 py-1 ${String(cur?.[p]) !== String(ext?.[p]) ? 'bg-amber-900/20 text-amber-200' : 'text-slate-300'}`}>
+                        {typeof ext?.[p] === 'number' ? ext[p].toLocaleString('en-IN') : (ext?.[p] ?? '—')}
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {currentRows.length !== extractedRows.length && (
+        <p className="text-[10px] text-amber-500 italic">
+          ⚠️ Row count mismatch: Current has {currentRows.length} rows, Extracted has {extractedRows.length} rows.
+        </p>
+      )}
     </div>
   )
 }
@@ -408,6 +481,11 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
                       className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                     />
                   </div>
+
+                  <PayoutScheduleDiff 
+                    currentRows={current.payoutRows}
+                    extractedRows={extracted.payout_schedule}
+                  />
                 </div>
               )}
             </div>
