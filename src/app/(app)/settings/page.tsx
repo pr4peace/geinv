@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { TeamMember, TeamMemberRole } from '@/types/database'
 import BackfillTdsButton from '@/components/settings/BackfillTdsButton'
+import SyncMaturedButton from '@/components/settings/SyncMaturedButton'
 
 const ROLES: { value: TeamMemberRole; label: string }[] = [
   { value: 'coordinator', label: 'Coordinator' },
@@ -414,15 +415,29 @@ export default function SettingsPage() {
           title="Maintenance"
           subtitle="One-time repair tools and administrative tasks"
         />
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-slate-100">Backfill TDS Filing Rows</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-md">
-                Finds cumulative or compound agreements without TDS tracking rows and generates missing 31st March entries for each year in the term.
-              </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="flex flex-col h-full justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-100">Sync Matured Status</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Finds active agreements with past maturity dates and updates them to &apos;Matured&apos; status.
+                </p>
+              </div>
+              <SyncMaturedButton />
             </div>
-            <BackfillTdsButton />
+          </div>
+
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="flex flex-col h-full justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-100">Backfill TDS Filing Rows</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Generates missing 31st March TDS rows for cumulative/compound agreements.
+                </p>
+              </div>
+              <BackfillTdsButton />
+            </div>
           </div>
         </div>
       </section>

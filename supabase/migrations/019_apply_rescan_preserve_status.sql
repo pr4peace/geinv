@@ -1,13 +1,26 @@
 
 -- Improve apply_rescan_update to preserve status and tds_filed for existing rows
+-- AND auto-update agreement status if matured
 CREATE OR REPLACE FUNCTION apply_rescan_update(
   p_agreement_id UUID,
   p_agreement_data JSONB,
   p_payout_rows JSONB
 ) RETURNS VOID AS $$
+DECLARE
+  v_maturity_date DATE;
+  v_status agreement_status;
 BEGIN
+  v_maturity_date := (p_agreement_data->>'maturity_date')::DATE;
+  
+  -- Determine if status should be 'matured' (only if currently 'active')
+  -- We fetch current status first
+  SELECT status INTO v_status FROM agreements WHERE id = p_agreement_id;
+  
+  IF v_status = 'active' AND v_maturity_date < CURRENT_DATE THEN
+    v_status := 'matured';
+  END IF;
+
   -- 1. Create a temp table of existing statuses to preserve them
-  -- We match on period_from, period_to and is_tds_only to be safe
   CREATE TEMP TABLE existing_payout_statuses AS
   SELECT period_from, period_to, is_tds_only, status, tds_filed
   FROM payout_schedule
@@ -30,7 +43,8 @@ BEGIN
     payout_frequency = (p_agreement_data->>'payout_frequency')::payout_frequency,
     interest_type = (p_agreement_data->>'interest_type')::interest_type,
     lock_in_years = (p_agreement_data->>'lock_in_years')::INTEGER,
-    maturity_date = (p_agreement_data->>'maturity_date')::DATE,
+    maturity_date = v_maturity_date,
+    status = v_status,
     payments = COALESCE(p_agreement_data->'payments', '[]'::JSONB),
     rescan_required = FALSE,
     updated_at = NOW()
@@ -56,15 +70,15 @@ BEGIN
   )
   SELECT
     p_agreement_id,
-    (row->>'period_from')::DATE as pf,
-    (row->>'period_to')::DATE as pt,
+    (row->>'period_from')::DATE,
+    (row->>'period_to')::DATE,
     (row->>'no_of_days')::INTEGER,
     (row->>'due_by')::DATE,
     (row->>'gross_interest')::NUMERIC,
     (row->>'tds_amount')::NUMERIC,
     (row->>'net_interest')::NUMERIC,
     COALESCE((row->>'is_principal_repayment')::BOOLEAN, FALSE),
-    COALESCE((row->>'is_tds_only')::BOOLEAN, FALSE) as ito,
+    COALESCE((row->>'is_tds_only')::BOOLEAN, FALSE),
     COALESCE(
       (SELECT tds_filed FROM existing_payout_statuses 
        WHERE period_from = (row->>'period_from')::DATE 
