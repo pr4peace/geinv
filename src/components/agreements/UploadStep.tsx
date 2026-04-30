@@ -36,7 +36,7 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
   const [fileError, setFileError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const salespersonOptions = teamMembers.filter(m => m.role === 'salesperson' && m.is_active)
+  const salespersonOptions = teamMembers.filter(m => (m.role === 'salesperson' || m.role === 'coordinator') && m.is_active)
 
   function validateAndSetFile(f: File) {
     setFileError(null)

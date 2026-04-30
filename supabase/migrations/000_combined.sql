@@ -17,14 +17,13 @@ create table if not exists team_members (
 
 -- Seed initial team
 insert into team_members (name, email, role) values
-  ('Irene', 'irene@goodearth.com', 'coordinator'),
+  ('Irene Mariam', 'irene.mariam@goodearth.org.in', 'coordinator'),
   ('Valli', 'valli@goodearth.com', 'accountant'),
   ('Liya', 'liya@goodearth.com', 'financial_analyst'),
   ('Preetha', 'preetha@goodearth.com', 'salesperson'),
   ('George', 'george@goodearth.com', 'salesperson'),
   ('Ajay', 'ajay@goodearth.com', 'salesperson'),
-  ('Byju', 'byju@goodearth.org.in', 'salesperson'),
-  ('Irene', 'irene.sales@goodearth.org.in', 'salesperson')
+  ('Byju', 'byju@goodearth.org.in', 'salesperson')
 on conflict (email) do nothing;
 
 -- ============================================================

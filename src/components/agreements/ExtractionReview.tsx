@@ -508,7 +508,7 @@ export default function ExtractionReview({
 
   const isPdf = fileName.toLowerCase().endsWith('.pdf')
   const isDocx = fileName.toLowerCase().endsWith('.docx')
-  const salespersonOptions = teamMembers.filter(m => m.role === 'salesperson' && m.is_active)
+  const salespersonOptions = teamMembers.filter(m => (m.role === 'salesperson' || m.role === 'coordinator') && m.is_active)
 
   return (
     <div className="space-y-6">

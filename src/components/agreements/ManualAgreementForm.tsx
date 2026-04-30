@@ -348,7 +348,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
     }
   }
 
-  const salespersonOptions = teamMembers.filter(m => m.role === 'salesperson' && m.is_active)
+  const salespersonOptions = teamMembers.filter(m => (m.role === 'salesperson' || m.role === 'coordinator') && m.is_active)
 
   const inputBaseClass = "w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
 
