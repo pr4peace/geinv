@@ -23,7 +23,7 @@ insert into team_members (name, email, role) values
   ('Preetha', 'preetha@goodearth.com', 'salesperson'),
   ('George', 'george@goodearth.com', 'salesperson'),
   ('Ajay', 'ajay@goodearth.com', 'salesperson'),
-  ('Byjoo', 'byjoo@goodearth.com', 'salesperson'),
+  ('Byju', 'byju@goodearth.org.in', 'salesperson'),
   ('Irene (Sales)', 'irene.sales@goodearth.com', 'salesperson')
 on conflict (email) do nothing;
 
