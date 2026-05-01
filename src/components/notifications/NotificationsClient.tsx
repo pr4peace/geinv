@@ -326,14 +326,14 @@ export default function NotificationsClient({
     }
   }
 
-  async function handleSend(ids: string[]) {
+  async function handleSend(ids: string[], mode?: 'batched' | 'per-salesperson') {
     setSending(true)
     setError(null)
     try {
       const res = await fetch('/api/notifications/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids, mode: mode ?? 'batched' }),
       })
       const data = await res.json()
       if (!res.ok) setError(data.error ?? 'Send failed')
