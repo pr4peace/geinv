@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Post-filter stale items: if it's a payout reminder but the payout is already paid, skip it
     // NOTE: This is safer than an inner join if some notification types (like forecast) don't have a payout_schedule_id
     const filtered = (data ?? []).filter(item => {
-      if (item.type === 'payout' && item.payout?.status === 'paid') return false
+      if (item.notification_type === 'payout' && item.payout?.status === 'paid') return false
       return true
     })
 

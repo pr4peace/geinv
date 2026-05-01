@@ -8,6 +8,7 @@ import { UndoToast } from '@/components/UndoToast'
 interface Props {
   agreementId: string
   payouts: PayoutSchedule[]
+  userRole: string
 }
 
 function fmtDate(dateStr: string | null | undefined): string {
@@ -67,12 +68,13 @@ function MarkTdsFiledButton({ payoutId, onError }: { payoutId: string; onError: 
   )
 }
 
-export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
+export default function PayoutScheduleSection({ agreementId, payouts, userRole }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null)
+  const isCoordinator = userRole !== 'salesperson'
 
   const interestRows = payouts
     .filter(r => !r.is_principal_repayment && !r.is_tds_only)
@@ -166,7 +168,7 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
 
   return (
     <div className="space-y-6">
-      {hasPastPending && (
+      {isCoordinator && hasPastPending && (
         <div className="flex justify-end items-center gap-4">
           {confirmBulk ? (
             <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-right-2">
@@ -234,23 +236,26 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                   <td className="py-3 pr-3 text-center"><PayoutStatusBadge status={row.status} /></td>
                   <td className="py-3 pr-3 text-xs text-slate-500">{fmtDate(row.paid_date)}</td>
                   <td className="py-3 text-center">
-                    {row.status !== 'paid' ? (
-                      <button
-                        onClick={() => markAsPaid(row.id)}
-                        disabled={loading === row.id}
-                        className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase"
-                      >
-                        {loading === row.id ? '…' : 'Paid'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => revertPayout(row.id)}
-                        disabled={loading === row.id}
-                        className="text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
-                      >
-                        {loading === row.id ? '…' : 'Undo'}
-                      </button>
+                    {isCoordinator && (
+                      row.status !== 'paid' ? (
+                        <button
+                          onClick={() => markAsPaid(row.id)}
+                          disabled={loading === row.id}
+                          className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase"
+                        >
+                          {loading === row.id ? '…' : 'Paid'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => revertPayout(row.id)}
+                          disabled={loading === row.id}
+                          className="text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
+                        >
+                          {loading === row.id ? '…' : 'Undo'}
+                        </button>
+                      )
                     )}
+                    {!isCoordinator && <span className="text-[10px] text-slate-600">—</span>}
                   </td>
                 </tr>
               ))}
@@ -286,7 +291,8 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      {!row.tds_filed && <MarkTdsFiledButton payoutId={row.id} onError={setError} />}
+                      {isCoordinator && !row.tds_filed && <MarkTdsFiledButton payoutId={row.id} onError={setError} />}
+                      {!isCoordinator && <span className="text-[10px] text-slate-600">—</span>}
                     </td>
                   </tr>
                 ))}
@@ -308,22 +314,24 @@ export default function PayoutScheduleSection({ agreementId, payouts }: Props) {
               </div>
               <div className="flex items-center gap-4">
                 <PayoutStatusBadge status={row.status} />
-                {row.status !== 'paid' ? (
-                  <button
-                    onClick={() => markAsPaid(row.id)}
-                    disabled={loading === row.id}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors uppercase disabled:opacity-50"
-                  >
-                    {loading === row.id ? '…' : 'Mark Repaid'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => revertPayout(row.id)}
-                    disabled={loading === row.id}
-                    className="text-xs font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
-                  >
-                    Undo
-                  </button>
+                {isCoordinator && (
+                  row.status !== 'paid' ? (
+                    <button
+                      onClick={() => markAsPaid(row.id)}
+                      disabled={loading === row.id}
+                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors uppercase disabled:opacity-50"
+                    >
+                      {loading === row.id ? '…' : 'Mark Repaid'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => revertPayout(row.id)}
+                      disabled={loading === row.id}
+                      className="text-xs font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase"
+                    >
+                      Undo
+                    </button>
+                  )
                 )}
               </div>
             </div>

@@ -9,6 +9,7 @@ import type { ExtractionFlag } from '@/lib/extraction-validator'
 
 interface RescanModalProps {
   agreementId: string
+  userRole: string
 }
 
 interface AgreementFields {
@@ -262,7 +263,7 @@ function PayoutScheduleDiff({
   )
 }
 
-export default function RescanModal({ agreementId }: RescanModalProps) {
+export default function RescanModal({ agreementId, userRole }: RescanModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [extracted, setExtracted] = useState<ExtractedAgreement | null>(null)
@@ -273,6 +274,8 @@ export default function RescanModal({ agreementId }: RescanModalProps) {
   const router = useRouter()
 
   const unresolvedCount = useMemo(() => flags.filter(f => f.resolution === 'pending').length, [flags])
+
+  if (userRole === 'salesperson') return null
 
   async function handleRescan() {
     setLoading(true)

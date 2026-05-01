@@ -248,7 +248,7 @@ export default async function AgreementDetailPage({
                 A rescan is recommended to ensure all payout and TDS data is accurate.
               </p>
             </div>
-            <RescanModal agreementId={agreement.id} />
+            <RescanModal agreementId={agreement.id} userRole={userRole} />
           </div>
         )}
 
@@ -287,7 +287,7 @@ export default async function AgreementDetailPage({
                 </span>
               )}
               {agreement.document_url && (
-                <RescanModal agreementId={agreement.id} />
+                <RescanModal agreementId={agreement.id} userRole={userRole} />
               )}
               {(agreement.is_draft || !agreement.document_url) && (
                 <UploadSignedButton
@@ -404,6 +404,7 @@ export default async function AgreementDetailPage({
           <PayoutScheduleSection
             agreementId={agreement.id}
             payouts={payout_schedule}
+            userRole={userRole}
           />
         </SectionCard>
 
