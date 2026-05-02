@@ -257,6 +257,29 @@ export async function buildMonthlySummaryQueueItem(
   }
 }
 
+// Build and insert all notification queue items for today.
+// Safe to call at any time — duplicate inserts are silently ignored (error code 23505).
+export async function queueNotificationsNow(supabase: SupabaseClient): Promise<void> {
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const accountsEmails = await getAccountsEmails(supabase)
+
+  const [payoutItems, maturityItems, tdsItems, docItems] = await Promise.all([
+    buildPayoutQueueItems(supabase, todayStr, accountsEmails),
+    buildMaturityQueueItems(supabase, todayStr, accountsEmails),
+    buildTdsFilingQueueItems(supabase, todayStr, accountsEmails),
+    buildDocReturnQueueItems(supabase, todayStr, accountsEmails),
+  ])
+
+  const allItems = [...payoutItems, ...maturityItems, ...tdsItems, ...docItems]
+
+  for (const item of allItems) {
+    const { error } = await supabase.from('notification_queue').insert(item)
+    if (error && error.code !== '23505') {
+      console.error('queueNotificationsNow insert error:', error.message)
+    }
+  }
+}
+
 // Build quarterly forecast queue item — only on quarter start dates
 export function isQuarterStart(dateStr: string): boolean {
   const d = new Date(dateStr)

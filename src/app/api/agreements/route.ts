@@ -11,6 +11,7 @@ import type { ExtractedPayoutRow } from '@/lib/claude'
 import { findOrCreateInvestor } from '@/lib/investors'
 
 import { generateTdsOnlyRows } from '@/lib/tds-calculator'
+import { queueNotificationsNow } from '@/lib/notification-queue'
 
 export async function GET(request: NextRequest) {
   try {
@@ -374,6 +375,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Failed to insert reminders: ${reminderError.message}` }, { status: 500 })
       }
     }
+
+    // Fire-and-forget: queue notifications for the new agreement immediately
+    queueNotificationsNow(supabase).catch(err =>
+      console.error('queueNotificationsNow after agreement creation failed:', err)
+    )
 
     return NextResponse.json(finalAgreement, { status: 201 })
   } catch (err) {
