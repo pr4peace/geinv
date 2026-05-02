@@ -8,7 +8,7 @@ export interface ExtractedPayoutRow {
   period_from: string        // ISO date
   period_to: string          // ISO date
   no_of_days: number | null
-  due_by: string             // ISO date — the "on or before" date
+  due_by: string             // ISO date — payable-to date for investor
   gross_interest: number
   tds_amount: number
   net_interest: number
@@ -58,7 +58,7 @@ RULE 2 — PAYOUT SCHEDULE (READ EACH CELL DIGIT-BY-DIGIT):
 Extract EVERY row from the interest payout table. For each cell, read every digit individually:
   - period_from and period_to: the interest accrual period dates
   - no_of_days: number of days in that period
-  - due_by: the "on or before" payment date
+  - due_by: the date the interest is PAYABLE TO the investor. Look for columns labeled "Payable to", "Payment date", "Due date", or "Interest date". If both a "Payable to" column and an "On or before" (TDS deadline) column exist, ALWAYS use "Payable to".
   - gross_interest: interest amount before TDS — read each digit carefully, note comma positions
   - tds_amount: tax deducted at source (typically 10% of gross_interest)
   - net_interest: gross_interest minus tds_amount
@@ -340,7 +340,12 @@ async function extractWithClaude(
   let userContent: Anthropic.MessageParam['content']
 
   if (mimeType === 'application/pdf') {
-    // Try native PDF first (Claude supports this directly)
+    // Pre-extract text layer to inject as ground-truth digit context
+    const textLayer = await extractPdfTextLayer(fileBuffer)
+    const textLayerContext = textLayer && (textLayer.tableRows.length > 0 || textLayer.allAmounts.length > 0)
+      ? buildTextLayerContext(textLayer)
+      : ''
+
     userContent = [
       {
         type: 'document',
@@ -350,7 +355,7 @@ async function extractWithClaude(
           data: fileBuffer.toString('base64'),
         },
       },
-      { type: 'text', text: EXTRACTION_PROMPT },
+      { type: 'text', text: textLayerContext + EXTRACTION_PROMPT },
     ]
   } else {
     // DOCX → text via mammoth
@@ -392,10 +397,16 @@ async function extractWithGemini(
   let parts: Parameters<typeof model.generateContent>[0]
 
   if (mimeType === 'application/pdf') {
+    // Pre-extract text layer to inject as ground-truth digit context
+    const textLayer = await extractPdfTextLayer(fileBuffer)
+    const textLayerContext = textLayer && (textLayer.tableRows.length > 0 || textLayer.allAmounts.length > 0)
+      ? buildTextLayerContext(textLayer)
+      : ''
+
     try {
-      // PDF → high-contrast images (Gemini vision works better than raw PDF for scanned docs)
       const pageImages = await pdfToHighContrastImages(fileBuffer)
       parts = [
+        ...(textLayerContext ? [textLayerContext] : []),
         ...pageImages.map(img => ({
           inlineData: {
             mimeType: 'image/png' as const,
@@ -405,8 +416,8 @@ async function extractWithGemini(
         EXTRACTION_PROMPT,
       ]
     } catch {
-      // Fallback to raw PDF
       parts = [
+        ...(textLayerContext ? [textLayerContext] : []),
         {
           inlineData: {
             mimeType: 'application/pdf' as const,
@@ -518,4 +529,98 @@ async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
   }
 
   return images
+}
+
+interface PdfTextLayer {
+  allAmounts: string[]      // every INR-style number found
+  tableRows: string[]       // lines that look like payout table rows (date + numbers)
+  rawText: string           // full document text, pages joined by newline
+}
+
+async function extractPdfTextLayer(buffer: Buffer): Promise<PdfTextLayer | null> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
+    const pdf = await loadingTask.promise
+
+    const pageTexts: string[] = []
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum)
+      const textContent = await page.getTextContent()
+
+      // Group text items by Y coordinate (±3px tolerance = same line)
+      const lineMap = new Map<number, string[]>()
+      for (const item of textContent.items as any[]) {
+        if (!item.str?.trim()) continue
+        const y = Math.round(item.transform[5] / 3) * 3
+        if (!lineMap.has(y)) lineMap.set(y, [])
+        lineMap.get(y)!.push(item.str)
+      }
+
+      // Sort lines top-to-bottom (higher Y = higher on page in PDF coords)
+      const sortedLines = Array.from(lineMap.entries())
+        .sort((a, b) => b[0] - a[0])
+        .map(([, parts]) => parts.join(' ').trim())
+        .filter(Boolean)
+
+      pageTexts.push(sortedLines.join('\n'))
+    }
+
+    const rawText = pageTexts.join('\n')
+
+    // Extract all Indian-format currency amounts
+    const amountRegex = /(?:₹\s*)?(\d{1,3}(?:,\d{2})*(?:,\d{3})?|\d+)(?:\.\d{2})?(?=\s|$|[,;])/g
+    const amountSet = new Set<string>()
+    for (const match of Array.from(rawText.matchAll(amountRegex))) {
+      const val = match[0].trim()
+      if (val.length >= 4) amountSet.add(val)
+    }
+
+    // Detect payout table rows: lines with date pattern AND at least 2 numbers
+    const datePattern = /\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}-\d{2}-\d{2}/
+    const numberPattern = /\d{1,3}(?:,\d+)+|\d{4,}/g
+    const tableRows = rawText
+      .split('\n')
+      .filter(line => {
+        if (!datePattern.test(line)) return false
+        const nums = line.match(numberPattern)
+        return nums && nums.length >= 2
+      })
+
+    return {
+      allAmounts: Array.from(amountSet),
+      tableRows,
+      rawText,
+    }
+  } catch {
+    // Scanned PDFs have no text layer — fail silently
+    return null
+  }
+}
+
+function buildTextLayerContext(layer: PdfTextLayer): string {
+  const parts: string[] = []
+
+  parts.push('=== PRE-EXTRACTED TEXT LAYER (treat as ground truth for digits) ===')
+
+  if (layer.tableRows.length > 0) {
+    parts.push(`\nPAYOUT TABLE ROWS DETECTED (${layer.tableRows.length} rows):`)
+    layer.tableRows.forEach((row, i) => {
+      parts.push(`  Row ${i + 1}: ${row}`)
+    })
+    parts.push(`\nIMPORTANT: Your payout_schedule array MUST contain exactly ${layer.tableRows.length} non-TDS entries matching these rows.`)
+  }
+
+  if (layer.allAmounts.length > 0) {
+    const sortedAmounts = layer.allAmounts
+      .sort((a, b) => b.replace(/[^0-9]/g, '').length - a.replace(/[^0-9]/g, '').length)
+      .slice(0, 30)
+    parts.push(`\nALL NUMERIC AMOUNTS IN DOCUMENT:`)
+    parts.push(`  ${sortedAmounts.join(' | ')}`)
+    parts.push(`NOTE: The principal_amount MUST be one of these values. If your visual read differs, use the amount from this list.`)
+  }
+
+  parts.push('=== END PRE-EXTRACTED DATA ===\n')
+  return parts.join('\n')
 }
