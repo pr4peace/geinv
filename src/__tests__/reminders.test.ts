@@ -19,7 +19,8 @@ const BASE_AGREEMENT: Agreement = {
   doc_returned_date: null, doc_return_reminder_days: 14, investor_id: null,
   investor_birth_year: null, investor2_name: null, investor2_pan: null,
   investor2_aadhaar: null, investor2_address: null, investor2_birth_year: null,
-  deleted_at: null, created_at: '2026-01-01T00:00:00.000Z',
+  deleted_at: null, rescan_required: false,
+  created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
 }
 
