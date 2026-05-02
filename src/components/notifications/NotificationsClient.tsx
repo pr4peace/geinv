@@ -231,7 +231,7 @@ export default function NotificationsClient({
                   </div>
                 </div>
 
-                {(interestPayouts.some(p => p.is_overdue) || maturities.some(m => m.is_overdue) || tdsFilings.some(t => p.is_overdue)) && (
+                {(interestPayouts.some(p => p.is_overdue) || maturities.some(m => m.is_overdue) || tdsFilings.some(t => t.is_overdue)) && (
                   <div className="bg-red-900/10 border border-red-900/20 rounded-xl p-4">
                     <p className="text-xs text-red-400 leading-relaxed font-medium">
                       Note: This email includes <strong>Overdue</strong> items from previous months that have not yet been marked as paid.
