@@ -33,7 +33,6 @@ export default function BatchRescanPage() {
   const [loaded, setLoaded] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<string>('all')
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
   const [scanTotal, setScanTotal] = useState(0)
@@ -46,15 +45,18 @@ export default function BatchRescanPage() {
   async function loadAgreements() {
     const res = await fetch('/api/agreements?status=active&sort_by=created_at&sort_order=desc')
     const data = await res.json()
-    setAgreements((data ?? []).map((a: Record<string, unknown>) => ({
-      id: a.id as string,
-      reference_id: a.reference_id as string,
-      investor_name: a.investor_name as string,
-      principal_amount: Number(a.principal_amount) ?? 0,
-      roi_percentage: Number(a.roi_percentage) ?? 0,
-      maturity_date: (a.maturity_date as string) ?? '',
-      doc_status: (a.doc_status as string) ?? 'draft',
-    })))
+    const filtered = (data ?? [])
+      .filter((a: Record<string, unknown>) => a.rescan_required === true)
+      .map((a: Record<string, unknown>) => ({
+        id: a.id as string,
+        reference_id: a.reference_id as string,
+        investor_name: a.investor_name as string,
+        principal_amount: Number(a.principal_amount) ?? 0,
+        roi_percentage: Number(a.roi_percentage) ?? 0,
+        maturity_date: (a.maturity_date as string) ?? '',
+        doc_status: (a.doc_status as string) ?? 'draft',
+      }))
+    setAgreements(filtered)
     setLoaded(true)
   }
 
@@ -147,7 +149,6 @@ export default function BatchRescanPage() {
 
   const filtered = agreements.filter(a => {
     if (search && !a.investor_name.toLowerCase().includes(search.toLowerCase()) && !a.reference_id.toLowerCase().includes(search.toLowerCase())) return false
-    if (filterStatus !== 'all' && a.doc_status !== filterStatus) return false
     return true
   })
 
@@ -162,7 +163,7 @@ export default function BatchRescanPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-100">Batch Rescan</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Select agreements → scan in parallel → review diffs → apply in bulk</p>
+          <p className="text-xs text-slate-500 mt-0.5">Only agreements with rescan_required=true are shown</p>
         </div>
         {loaded && results.length === 0 && (
           <button
@@ -208,21 +209,12 @@ export default function BatchRescanPage() {
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-            <select
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
-            >
-              <option value="all">All Status</option>
-              <option value="uploaded">Uploaded</option>
-              <option value="draft">Draft</option>
-            </select>
             {!loaded && (
               <button
                 onClick={loadAgreements}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg"
               >
-                Load Agreements
+                Load Rescan Queue
               </button>
             )}
           </div>
