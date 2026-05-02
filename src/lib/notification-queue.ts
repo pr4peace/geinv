@@ -112,7 +112,7 @@ export async function buildMaturityQueueItems(
   })
 }
 
-// Build TDS filing queue items — is_tds_only rows due within 60 days
+// Build TDS filing queue items — is_tds_only rows due within 60 days OR overdue (not paid/filed)
 export async function buildTdsFilingQueueItems(
   supabase: SupabaseClient,
   todayStr: string,
@@ -120,6 +120,8 @@ export async function buildTdsFilingQueueItems(
 ): Promise<QueueInsert[]> {
   const until = format(addDays(new Date(todayStr), 60), 'yyyy-MM-dd')
 
+  // Include overdue TDS rows too — the old query only looked at future dates,
+  // meaning TDS filings due in the past were silently dropped
   const { data } = await supabase
     .from('payout_schedule')
     .select(`
@@ -133,7 +135,6 @@ export async function buildTdsFilingQueueItems(
     .neq('status', 'paid')
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
-    .gte('due_by', todayStr)
     .lte('due_by', until)
 
   if (!data) return []
@@ -144,7 +145,10 @@ export async function buildTdsFilingQueueItems(
     agreement: Agreement & { salesperson?: { email: string } | null }
   }>).map(row => {
     const salespersonEmail = row.agreement.salesperson?.email ?? null
-    const subject = `TDS Filing Due: ${row.agreement.investor_name} — 31 Mar ${new Date(row.due_by).getFullYear()}`
+    const isOverdue = row.due_by < todayStr
+    const fyYear = new Date(row.due_by).getFullYear()
+    const overdueLabel = isOverdue ? ' (OVERDUE)' : ''
+    const subject = `TDS Filing Due${overdueLabel}: ${row.agreement.investor_name} — 31 Mar ${fyYear}`
     const body = buildTdsFilingReminderBody(row.agreement, row.due_by)
     return {
       agreement_id: row.agreement.id,

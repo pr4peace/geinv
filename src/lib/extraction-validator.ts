@@ -10,6 +10,9 @@ export type ExtractionFlagType =
   | 'start_date_mismatch'
   | 'matured_agreement'
   | 'principal_mismatch'
+  | 'invalid_pan'
+  | 'invalid_aadhaar'
+  | 'low_confidence'
 
 export type ExtractionFlagSeverity = 'info' | 'warning' | 'error'
 
@@ -27,16 +30,24 @@ export interface ExtractionFlag {
   acceptanceNote?: string
 }
 
-const TOLERANCE = 0.5
+const TOLERANCE = 0.1
+
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const AADHAAR_REGEX = /^[0-9]{12}$/
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
 function dayAfter(dateStr: string): string {
-  const d = new Date(dateStr)
-  d.setUTCDate(d.getUTCDate() + 1)
-  return d.toISOString().split('T')[0]
+  // Parse as local date (IST for India) to avoid UTC timezone shifts
+  const parts = dateStr.split('-')
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  d.setDate(d.getDate() + 1)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 export function validateExtraction(extracted: ExtractedAgreement): ExtractionFlag[] {
@@ -44,6 +55,67 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
   let flagIndex = 0
 
   const rows = extracted.payout_schedule ?? []
+
+  // PAN format validation
+  if (extracted.investor_pan && !PAN_REGEX.test(extracted.investor_pan.replace(/\s/g, ''))) {
+    flags.push({
+      id: `flag-${flagIndex++}`,
+      type: 'invalid_pan',
+      severity: 'error',
+      rowIndex: null,
+      message: `PAN format is invalid: "${extracted.investor_pan}". Expected format: ABCDE1234F`,
+      expected: 'ABCDE1234F format',
+      found: extracted.investor_pan,
+      resolution: 'pending',
+    })
+  }
+
+  // Aadhaar format validation
+  if (extracted.investor_aadhaar && !AADHAAR_REGEX.test(extracted.investor_aadhaar.replace(/\s/g, ''))) {
+    flags.push({
+      id: `flag-${flagIndex++}`,
+      type: 'invalid_aadhaar',
+      severity: 'warning',
+      rowIndex: null,
+      message: `Aadhaar format is invalid: "${extracted.investor_aadhaar}". Expected: 12 digits`,
+      expected: '12-digit number',
+      found: extracted.investor_aadhaar,
+      resolution: 'pending',
+    })
+  }
+
+  // Low confidence field warnings
+  if (extracted.confidence) {
+    const LOW_THRESHOLD = 0.7
+    const fieldLabels: Record<string, string> = {
+      principal_amount: 'Principal Amount',
+      roi_percentage: 'ROI',
+      payout_frequency: 'Payout Frequency',
+      investor_pan: 'PAN',
+      investor_aadhaar: 'Aadhaar',
+      investor_name: 'Investor Name',
+      investment_start_date: 'Start Date',
+      maturity_date: 'Maturity Date',
+      agreement_date: 'Agreement Date',
+      interest_type: 'Interest Type',
+      lock_in_years: 'Lock-in Years',
+      agreement_type: 'Agreement Type',
+    }
+    for (const [field, score] of Object.entries(extracted.confidence)) {
+      if (score < LOW_THRESHOLD && fieldLabels[field]) {
+        flags.push({
+          id: `flag-${flagIndex++}`,
+          type: 'low_confidence',
+          severity: score < 0.5 ? 'error' : 'warning',
+          rowIndex: null,
+          message: `Low confidence on ${fieldLabels[field]} (${Math.round(score * 100)}%). Verify carefully.`,
+          expected: '>70% confidence',
+          found: `${Math.round(score * 100)}%`,
+          resolution: 'pending',
+        })
+      }
+    }
+  }
 
   // investment_start_date mismatch with first row
   if (rows.length > 0 && extracted.investment_start_date) {
@@ -64,11 +136,11 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
 
   // principal_mismatch — cross-check principal against payout schedule
   if (rows.length > 0 && extracted.roi_percentage > 0 && extracted.payout_frequency) {
-    const nonPrincipalRows = rows.filter(r => !r.is_principal_repayment && !r.is_tds_only)
-    if (nonPrincipalRows.length > 0) {
-      // For simple interest, gross_interest = principal × roi × (no_of_days / 365) / 100
-      // So principal = gross_interest × 365 / (roi × no_of_days) × 100
-      const firstRow = nonPrincipalRows[0]
+    const regularRows = rows.filter(r => !r.is_principal_repayment && !r.is_tds_only)
+    if (regularRows.length > 0) {
+      // For simple interest: gross_interest = principal × roi × (no_of_days / 365) / 100
+      // So: principal = gross_interest × 365 × 100 / (roi × no_of_days)
+      const firstRow = regularRows[0]
       const days = firstRow.no_of_days ?? 0
       if (days > 0) {
         const impliedPrincipal = round2((firstRow.gross_interest * 365 * 100) / (extracted.roi_percentage * days))
@@ -140,21 +212,23 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
       })
     }
 
-    // period_gap — compare with next row
+    // period_gap — compare with next row (skip TDS-only rows in gap check)
     if (i < rows.length - 1) {
       const nextRow = rows[i + 1]
-      const expectedNextFrom = dayAfter(row.period_to)
-      if (nextRow.period_from !== expectedNextFrom) {
-        flags.push({
-          id: `flag-${flagIndex++}`,
-          type: 'period_gap',
-          severity: 'info',
-          rowIndex: i,
-          message: `Date gap: Row ${i + 1} ends ${row.period_to}, but Row ${i + 2} starts ${nextRow.period_from}`,
-          expected: `Start date: ${expectedNextFrom}`,
-          found: `Start date: ${nextRow.period_from}`,
-          resolution: 'pending',
-        })
+      if (!row.is_tds_only && !nextRow.is_tds_only) {
+        const expectedNextFrom = dayAfter(row.period_to)
+        if (nextRow.period_from !== expectedNextFrom) {
+          flags.push({
+            id: `flag-${flagIndex++}`,
+            type: 'period_gap',
+            severity: 'info',
+            rowIndex: i,
+            message: `Date gap: Row ${i + 1} ends ${row.period_to}, but Row ${i + 2} starts ${nextRow.period_from}`,
+            expected: `Start date: ${expectedNextFrom}`,
+            found: `Start date: ${nextRow.period_from}`,
+            resolution: 'pending',
+          })
+        }
       }
     }
   })

@@ -1,111 +1,8 @@
+import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
-
-// Deskew: try multiple rotation angles, pick the one with highest horizontal edge concentration.
-// Scanned docs are often off by <1.5° which breaks digit reading in tables.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function deskewImage(sharp: any, pngBuffer: Buffer): Promise<Buffer> {
-  const angles = [-1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5]
-  let bestScore = -1
-  let bestAngle = 0
-
-  for (const angle of angles) {
-    let img = sharp(pngBuffer)
-    if (angle !== 0) {
-      img = img.rotate(-angle, { background: { r: 255, g: 255, b: 255 } })
-    }
-    const buf = await img
-      .resize({ width: 500 })
-      .greyscale()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-
-    const score = measureHorizontalEdges(buf.data, buf.info.width, buf.info.height)
-    if (score > bestScore) {
-      bestScore = score
-      bestAngle = angle
-    }
-  }
-
-  if (bestAngle === 0) return pngBuffer
-
-  return sharp(pngBuffer)
-    .rotate(-bestAngle, { background: { r: 255, g: 255, b: 255 } })
-    .png()
-    .toBuffer()
-}
-
-// Measure horizontal edge strength using Sobel Y operator.
-// Properly aligned text has strong horizontal edges; skewed text has weaker alignment.
-function measureHorizontalEdges(data: Buffer, width: number, height: number): number {
-  let total = 0
-  const stride = width * 1 // 1 channel (greyscale)
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const p = (dx: number, dy: number) => data[(y + dy) * stride + (x + dx)] ?? 0
-      // Sobel Y kernel: detects horizontal edges (text baselines)
-      // [ 1,  2,  1]
-      // [ 0,  0,  0]
-      // [-1, -2, -1]
-      const gy =
-        -1 * p(-1, -1) -
-        2 * p(0, -1) -
-        1 * p(1, -1) +
-        1 * p(-1, 1) +
-        2 * p(0, 1) +
-        1 * p(1, 1)
-      total += Math.abs(gy)
-    }
-  }
-  return total
-}
-
-async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
-  const sharp = (await import('sharp')).default
-  // pdfjs legacy build required for Node.js environments
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const { createCanvas } = await import('canvas')
-
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
-  const pdf = await loadingTask.promise
-
-  const images: Buffer[] = []
-
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum)
-    // 4x scale for maximum clarity on small table numbers
-    const viewport = page.getViewport({ scale: 4.0 })
-
-    const canvas = createCanvas(viewport.width, viewport.height)
-    const context = canvas.getContext('2d')
-
-    await page.render({
-      // @ts-expect-error — canvasContext expects a specific type that the canvas library provides but doesn't perfectly match the internal DOM types
-      canvasContext: context,
-      viewport,
-    }).promise
-
-    const pngBuffer = canvas.toBuffer('image/png')
-
-    // Step 1: Deskew — correct rotation for scanned docs
-    const deskewed = await deskewImage(sharp, pngBuffer)
-
-    // Step 2: Contrast boost + adaptive threshold → binary-like B&W
-    // Makes numbers pop from colored backgrounds, stamps, and watermarks
-    const processed = await sharp(deskewed)
-      .linear(1.5, -30) // Boost contrast: multiply by 1.5, shift darker
-      .normalise() // Histogram stretch for maximum contrast
-      .threshold(140) // Binary threshold — numbers pop from backgrounds
-      .median(3) // Remove small noise speckles (prevents false decimal points)
-      .png()
-      .toBuffer()
-
-    images.push(processed)
-  }
-
-  return images
-}
 
 export interface ExtractedPayoutRow {
   period_from: string        // ISO date
@@ -139,9 +36,10 @@ export interface ExtractedAgreement {
   payments: Array<{ date: string | null; mode: string | null; bank: string | null; amount: number | null }>
   payout_schedule: ExtractedPayoutRow[]
   confidence_warnings?: string[]
+  confidence?: Record<string, number>  // per-field confidence 0.0-1.0
 }
 
-const EXTRACTION_PROMPT = `You are an expert at extracting structured data from Indian investment agreement documents.
+const EXTRACTION_PROMPT = `You are an expert at extracting structured data from Indian Fixed Deposit (FD) receipt documents.
 
 Extract ALL fields exactly as they appear in the document. Follow these rules:
 
@@ -223,6 +121,13 @@ RULE 11 — PRINCIPAL REPAYMENT ROW:
 RULE 12 — COMPOUND INTEREST TDS ROWS:
   For compound interest agreements, TDS must be filed each Indian financial year (1 April – 31 March). Extract one TDS row per financial year overlapping with the investment term, including partial first and last years. These rows have is_tds_only: true. Set is_tds_only: false for all regular interest payout rows.
 
+CONFIDENCE SCORING:
+For each field, provide a confidence score between 0.0 and 1.0 indicating how certain you are of the extracted value:
+  - 1.0: Clearly visible, unambiguous, verified by cross-checks
+  - 0.8-0.9: Clear but slightly ambiguous or partially obscured
+  - 0.6-0.7: Blurry, handwritten, or conflicting sources
+  - <0.6: Very uncertain, likely guessed — flag in confidence_warnings
+
 Return ONLY valid JSON matching this exact schema — no explanation, no markdown fences:
 {
   "agreement_date": "YYYY-MM-DD",
@@ -241,18 +146,239 @@ Return ONLY valid JSON matching this exact schema — no explanation, no markdow
   "lock_in_years": 0,
   "maturity_date": "YYYY-MM-DD",
   "payments": [{"date": "YYYY-MM-DD or null", "mode": "string or null", "bank": "string or null", "amount": 0}],
-  "payout_schedule": [{"period_from": "YYYY-MM-DD", "period_to": "YYYY-MM-DD", "due_by": "YYYY-MM-DD", "gross_interest": 0, "tds_amount": 0, "net_interest": 0, "is_principal_repayment": false, "is_tds_only": false}],
-  "confidence_warnings": []
+  "payout_schedule": [{"period_from": "YYYY-MM-DD", "period_to": "YYYY-MM-DD", "no_of_days": 0, "due_by": "YYYY-MM-DD", "gross_interest": 0, "tds_amount": 0, "net_interest": 0, "is_principal_repayment": false, "is_tds_only": false}],
+  "confidence_warnings": [],
+  "confidence": {"agreement_date": 1.0, "investment_start_date": 1.0, "agreement_type": 1.0, "investor_name": 1.0, "investor_pan": 1.0, "investor_aadhaar": 1.0, "investor_address": 1.0, "tds_filing_name": 1.0, "principal_amount": 1.0, "roi_percentage": 1.0, "payout_frequency": 1.0, "interest_type": 1.0, "lock_in_years": 1.0, "maturity_date": 1.0}
 }`
+
+// Retry a promise up to `retries` times with exponential backoff.
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, label = 'operation'): Promise<T> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (attempt < retries) {
+        const delay = Math.min(1000 * 2 ** attempt, 5000)
+        await new Promise(r => setTimeout(r, delay))
+      }
+    }
+  }
+  throw new Error(`${label} failed after ${retries + 1} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
+}
+
+function parseAndRepair(text: string, stopReason?: string | null): unknown {
+  // Strip markdown code fences
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/m, '')
+    .replace(/\s*```\s*$/m, '')
+    .trim()
+
+  const directParse = (() => { try { return JSON.parse(cleaned) } catch { return null } })()
+  if (directParse) return directParse
+
+  // Only attempt repair if we hit token limit — otherwise the JSON is genuinely broken
+  if (stopReason === 'max_tokens' || stopReason === 'MAX_TOKENS') {
+    const repaired = repairPartialJson(cleaned)
+    const repairedParse = (() => { try { return JSON.parse(repaired) } catch { return null } })()
+    if (repairedParse) {
+      if (!repairedParse.confidence_warnings) repairedParse.confidence_warnings = []
+      repairedParse.confidence_warnings.push(
+        'WARNING: Model hit output token limit — some fields may be incomplete. Check investor address and payout schedule carefully.'
+      )
+      if (!Array.isArray(repairedParse.payout_schedule)) repairedParse.payout_schedule = []
+      return repairedParse
+    }
+  }
+
+  throw new Error(`Invalid JSON returned. Response: ${cleaned.slice(0, 300)}`)
+}
+
+function repairPartialJson(partial: string): string {
+  let s = partial.trimEnd()
+  // Close unclosed string
+  const quoteCount = (s.match(/(?<!\\)"/g) ?? []).length
+  if (quoteCount % 2 !== 0) s += '"'
+  // Count unclosed braces/brackets
+  let braces = 0, brackets = 0
+  let inStr = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === '"' && (i === 0 || s[i - 1] !== '\\')) inStr = !inStr
+    if (!inStr) {
+      if (c === '{') braces++
+      if (c === '}') braces--
+      if (c === '[') brackets++
+      if (c === ']') brackets--
+    }
+  }
+  if (brackets > 0) s += ']'.repeat(brackets)
+  if (braces > 0) s += '}'.repeat(braces)
+  return s
+}
+
+function sanitizeExtracted(data: ExtractedAgreement): ExtractedAgreement {
+  // Validate critical numeric fields — coerce or throw
+  const numericFields = ['principal_amount', 'roi_percentage', 'lock_in_years'] as const
+  for (const field of numericFields) {
+    if (typeof data[field] !== 'number') {
+      const coerced = parseFloat(String(data[field]).replace(/,/g, ''))
+      if (isNaN(coerced)) {
+        throw new Error(`Extracted field '${field}' is not a valid number: ${JSON.stringify(data[field])}`)
+      }
+      data[field] = coerced as never
+    }
+  }
+
+  // Validate payout_frequency — coerce to nearest valid
+  const allowedFrequencies = ['monthly', 'quarterly', 'biannual', 'annual', 'cumulative'] as const
+  if (!allowedFrequencies.includes(data.payout_frequency)) {
+    const lower = String(data.payout_frequency).toLowerCase()
+    const mapping: Record<string, typeof allowedFrequencies[number]> = {
+      'monthly': 'monthly',
+      'quarterly': 'quarterly',
+      'biannual': 'biannual',
+      'bi-annual': 'biannual',
+      'half-yearly': 'biannual',
+      'half yearly': 'biannual',
+      'semi-annual': 'biannual',
+      'semi annual': 'biannual',
+      'annual': 'annual',
+      'cumulative': 'cumulative',
+      'compounded': 'cumulative',
+      'compound': 'cumulative',
+      'on maturity': 'cumulative',
+      'at maturity': 'cumulative',
+    }
+    const mapped = mapping[lower]
+    if (mapped) {
+      data.payout_frequency = mapped
+      if (!data.confidence_warnings) data.confidence_warnings = []
+      data.confidence_warnings.push(`Payout frequency coerced from "${data.payout_frequency}" to "${mapped}"`)
+    } else {
+      throw new Error(`Unrecognized payout_frequency: ${data.payout_frequency}`)
+    }
+  }
+
+  // Sanitize payout schedule
+  if (!Array.isArray(data.payout_schedule)) {
+    data.payout_schedule = []
+  }
+  for (const row of data.payout_schedule) {
+    for (const f of ['gross_interest', 'tds_amount', 'net_interest'] as const) {
+      if (row[f] == null || typeof row[f] !== 'number') {
+        row[f] = typeof row[f] === 'number' ? row[f] : parseFloat(String(row[f]).replace(/,/g, ''))
+        if (isNaN(row[f])) row[f] = 0
+      }
+    }
+    if (row.no_of_days != null && typeof row.no_of_days !== 'number') {
+      const coerced = parseInt(String(row.no_of_days).replace(/,/g, ''), 10)
+      row.no_of_days = isNaN(coerced) ? null : coerced
+    }
+    // Ensure booleans
+    row.is_principal_repayment = !!row.is_principal_repayment
+    row.is_tds_only = !!row.is_tds_only
+  }
+
+  // Ensure arrays
+  if (!Array.isArray(data.payments)) data.payments = []
+  if (!Array.isArray(data.nominees)) data.nominees = []
+  if (!Array.isArray(data.confidence_warnings)) data.confidence_warnings = []
+
+  // Ensure confidence object exists
+  if (!data.confidence || typeof data.confidence !== 'object') {
+    data.confidence = {}
+  }
+
+  // Ensure string fields are strings
+  data.agreement_date = String(data.agreement_date || '')
+  data.investment_start_date = String(data.investment_start_date || '')
+  data.agreement_type = String(data.agreement_type || 'new')
+  data.investor_name = String(data.investor_name || '')
+  data.maturity_date = String(data.maturity_date || '')
+  data.interest_type = data.interest_type === 'compound' ? 'compound' : 'simple'
+  data.investor_pan = data.investor_pan ? String(data.investor_pan) : null
+  data.investor_aadhaar = data.investor_aadhaar ? String(data.investor_aadhaar) : null
+  data.investor_address = data.investor_address ? String(data.investor_address) : null
+  data.tds_filing_name = data.tds_filing_name ? String(data.tds_filing_name) : null
+  data.is_draft = !!data.is_draft
+
+  return data
+}
 
 export async function extractAgreementData(
   fileBuffer: Buffer,
   mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ): Promise<ExtractedAgreement> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not set')
+  // Primary: Claude Sonnet 4 (best accuracy for financial documents)
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      return await withRetry(() => extractWithClaude(fileBuffer, mimeType), 2, 'Claude extraction')
+    } catch (claudeErr) {
+      console.error('Claude extraction failed, falling back to Gemini:', claudeErr)
+      // Fall through to Gemini
+    }
   }
 
+  // Fallback: Gemini 2.5 Flash (still strong, cheaper)
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await withRetry(() => extractWithGemini(fileBuffer, mimeType), 2, 'Gemini extraction')
+    } catch (geminiErr) {
+      console.error('Gemini extraction also failed:', geminiErr)
+    }
+  }
+
+  throw new Error('Both Claude and Gemini extraction failed. Check API keys and try again.')
+}
+
+async function extractWithClaude(
+  fileBuffer: Buffer,
+  mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+): Promise<ExtractedAgreement> {
+  let userContent: Anthropic.MessageParam['content']
+
+  if (mimeType === 'application/pdf') {
+    // Try native PDF first (Claude supports this directly)
+    userContent = [
+      {
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: 'application/pdf',
+          data: fileBuffer.toString('base64'),
+        },
+      },
+      { type: 'text', text: EXTRACTION_PROMPT },
+    ]
+  } else {
+    // DOCX → text via mammoth
+    const mammoth = await import('mammoth')
+    const extracted = await mammoth.extractRawText({ buffer: fileBuffer })
+    userContent = `${EXTRACTION_PROMPT}\n\nDocument text:\n\n${extracted.value}`
+  }
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 8192,
+    system: 'You are a precise document extraction specialist for Indian FD receipts. Return ONLY valid JSON — no explanations, no markdown fences, no preamble.',
+    messages: [{ role: 'user', content: userContent }],
+  })
+
+  const text = response.content
+    .filter(block => block.type === 'text')
+    .map(block => (block as { type: 'text'; text: string }).text)
+    .join('\n')
+
+  const parsed = parseAndRepair(text, response.stop_reason) as ExtractedAgreement
+  return sanitizeExtracted(parsed)
+}
+
+async function extractWithGemini(
+  fileBuffer: Buffer,
+  mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+): Promise<ExtractedAgreement> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
@@ -260,158 +386,136 @@ export async function extractAgreementData(
       responseMimeType: 'application/json',
       // @ts-expect-error — thinkingConfig is supported but not yet in type definitions
       thinkingConfig: { thinkingBudget: 2048 },
-    }
+    },
   })
 
-  let result: Awaited<ReturnType<typeof model.generateContent>>
+  let parts: Parameters<typeof model.generateContent>[0]
 
-  try {
-    if (mimeType === 'application/pdf') {
-      let parts: Parameters<typeof model.generateContent>[0]
-
-      try {
-        // Convert PDF pages to high-contrast B&W images for accurate number reading
-        const pageImages = await pdfToHighContrastImages(fileBuffer)
-        parts = [
-          ...pageImages.map(img => ({
-            inlineData: {
-              mimeType: 'image/png' as const,
-              data: img.toString('base64'),
-            },
-          })),
-          EXTRACTION_PROMPT,
-        ]
-      } catch (err) {
-        console.error('PDF pre-processing failed, falling back to raw PDF:', err)
-        // Fall back to raw PDF if image conversion fails (e.g. missing native deps)
-        parts = [
-          {
-            inlineData: {
-              mimeType: 'application/pdf' as const,
-              data: fileBuffer.toString('base64'),
-            },
+  if (mimeType === 'application/pdf') {
+    try {
+      // PDF → high-contrast images (Gemini vision works better than raw PDF for scanned docs)
+      const pageImages = await pdfToHighContrastImages(fileBuffer)
+      parts = [
+        ...pageImages.map(img => ({
+          inlineData: {
+            mimeType: 'image/png' as const,
+            data: img.toString('base64'),
           },
-          EXTRACTION_PROMPT,
-        ]
-      }
-
-      result = await model.generateContent(parts)
-    } else {
-      // DOCX — extract text via mammoth then send as text
-      const mammoth = await import('mammoth')
-      const extracted = await mammoth.extractRawText({ buffer: fileBuffer })
-      result = await model.generateContent([
-        `${EXTRACTION_PROMPT}\n\nDocument text:\n\n${extracted.value}`,
-      ])
-    }
-  } catch (err) {
-    throw new Error(`Gemini API call failed: ${err instanceof Error ? err.message : String(err)}`)
-  }
-
-  let text: string
-  try {
-    text = result.response.text()
-  } catch (err) {
-    if (err instanceof Error && err.message.includes('finishReason: RECITATION')) {
-      throw new Error('Gemini failed to generate content due to safety filters (potential recitation). Please try a different document.')
-    }
-    throw err
-  }
-
-  // Check if Gemini hit token limit
-  const finishReason = result.response.candidates?.[0]?.finishReason
-  const hitTokenLimit = finishReason === 'MAX_TOKENS'
-
-  // Strip markdown code fences if present
-  const json = text
-    .replace(/^```(?:json)?\n?/m, '')
-    .replace(/\n?```$/m, '')
-    .trim()
-
-  let parsed: unknown
-
-  // Try parsing as-is first
-  const directParse = (() => { try { return JSON.parse(json) } catch { return null } })()
-
-  if (directParse) {
-    parsed = directParse
-  } else if (hitTokenLimit) {
-    // Gemini hit MAX_TOKENS — attempt to repair partial JSON by closing unclosed structures
-    const repaired = repairPartialJson(json)
-    const repairedParse = (() => { try { return JSON.parse(repaired) } catch { return null } })()
-    if (repairedParse) {
-      // Add warning about truncation
-      if (!repairedParse.confidence_warnings) repairedParse.confidence_warnings = []
-      repairedParse.confidence_warnings.push(
-        'WARNING: Gemini hit output token limit — some fields may be incomplete. Check investor address and payout schedule carefully.'
-      )
-      if (!Array.isArray(repairedParse.payout_schedule)) repairedParse.payout_schedule = []
-      parsed = repairedParse
-    } else {
-      throw new Error(
-        'Gemini hit its output limit and the response could not be recovered. ' +
-        'Try splitting the document into smaller sections, or use the manual entry form.'
-      )
+        })),
+        EXTRACTION_PROMPT,
+      ]
+    } catch {
+      // Fallback to raw PDF
+      parts = [
+        {
+          inlineData: {
+            mimeType: 'application/pdf' as const,
+            data: fileBuffer.toString('base64'),
+          },
+        },
+        EXTRACTION_PROMPT,
+      ]
     }
   } else {
-    throw new Error(`Gemini returned invalid JSON. Response: ${json.slice(0, 300)}`)
+    const mammoth = await import('mammoth')
+    const extracted = await mammoth.extractRawText({ buffer: fileBuffer })
+    parts = [`${EXTRACTION_PROMPT}\n\nDocument text:\n\n${extracted.value}`]
   }
 
-  // Repair helper — closes unclosed JSON strings, arrays, and objects
-  function repairPartialJson(partial: string): string {
-    let s = partial.trimEnd()
-    // Close unclosed string — if odd number of unescaped quotes
-    const quoteCount = (s.match(/(?<!\\)"/g) ?? []).length
-    if (quoteCount % 2 !== 0) s += '"'
-    // Count unclosed braces/brackets
-    let braces = 0, brackets = 0
-    let inStr = false
-    for (let i = 0; i < s.length; i++) {
-      const c = s[i]
-      if (c === '"' && (i === 0 || s[i - 1] !== '\\')) inStr = !inStr
-      if (!inStr) {
-        if (c === '{') braces++
-        if (c === '}') braces--
-        if (c === '[') brackets++
-        if (c === ']') brackets--
-      }
+  const result = await model.generateContent(parts)
+  const text = result.response.text()
+  const parsed = JSON.parse(text) as ExtractedAgreement
+  return sanitizeExtracted(parsed)
+}
+
+// Deskew: try multiple rotation angles, pick the one with highest horizontal edge concentration.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function deskewImage(sharp: any, pngBuffer: Buffer): Promise<Buffer> {
+  const angles = [-1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5]
+  let bestScore = -1
+  let bestAngle = 0
+
+  for (const angle of angles) {
+    let img = sharp(pngBuffer)
+    if (angle !== 0) {
+      img = img.rotate(-angle, { background: { r: 255, g: 255, b: 255 } })
     }
-    // Close any open array/object with null values to make valid JSON
-    if (brackets > 0) s += ']'.repeat(brackets)
-    if (braces > 0) s += '}'.repeat(braces)
-    return s
-  }
+    const buf = await img
+      .resize({ width: 500 })
+      .greyscale()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
 
-  const data = parsed as ExtractedAgreement
-
-  // Validate critical numeric fields
-  const numericFields = ['principal_amount', 'roi_percentage', 'lock_in_years'] as const
-  for (const field of numericFields) {
-    if (typeof data[field] !== 'number') {
-      throw new Error(`Extracted field '${field}' is not a number: ${JSON.stringify(data[field])}`)
+    const score = measureHorizontalEdges(buf.data, buf.info.width, buf.info.height)
+    if (score > bestScore) {
+      bestScore = score
+      bestAngle = angle
     }
   }
 
-  // Validate payout_frequency
-  const allowedFrequencies = ['monthly', 'quarterly', 'biannual', 'annual', 'cumulative']
-  if (!allowedFrequencies.includes(data.payout_frequency)) {
-    throw new Error(`Extracted invalid payout_frequency: ${data.payout_frequency}`)
-  }
+  if (bestAngle === 0) return pngBuffer
 
-  // Validate and coerce payout schedule numeric fields — null/missing → 0
-  if (!Array.isArray(data.payout_schedule)) {
-    throw new Error('Extracted payout_schedule is not an array')
-  }
-  for (const row of data.payout_schedule) {
-    for (const f of ['gross_interest', 'tds_amount', 'net_interest'] as const) {
-      if (row[f] == null) {
-        row[f] = 0
-      } else if (typeof row[f] !== 'number') {
-        const coerced = parseFloat(String(row[f]).replace(/,/g, ''))
-        row[f] = isNaN(coerced) ? 0 : coerced
-      }
+  return sharp(pngBuffer)
+    .rotate(-bestAngle, { background: { r: 255, g: 255, b: 255 } })
+    .png()
+    .toBuffer()
+}
+
+function measureHorizontalEdges(data: Buffer, width: number, height: number): number {
+  let total = 0
+  const stride = width * 1
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const p = (dx: number, dy: number) => data[(y + dy) * stride + (x + dx)] ?? 0
+      const gy =
+        -1 * p(-1, -1) -
+        2 * p(0, -1) -
+        1 * p(1, -1) +
+        1 * p(-1, 1) +
+        2 * p(0, 1) +
+        1 * p(1, 1)
+      total += Math.abs(gy)
     }
   }
+  return total
+}
 
-  return data
+async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
+  const sharp = (await import('sharp')).default
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const { createCanvas } = await import('canvas')
+
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
+  const pdf = await loadingTask.promise
+
+  const images: Buffer[] = []
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    const viewport = page.getViewport({ scale: 4.0 })
+
+    const canvas = createCanvas(viewport.width, viewport.height)
+    const context = canvas.getContext('2d')
+
+    await page.render({
+      // @ts-expect-error — canvasContext type mismatch between canvas lib and PDF.js
+      canvasContext: context,
+      viewport,
+    }).promise
+
+    const pngBuffer = canvas.toBuffer('image/png')
+    const deskewed = await deskewImage(sharp, pngBuffer)
+
+    const processed = await sharp(deskewed)
+      .linear(1.5, -30)
+      .normalise()
+      .threshold(140)
+      .median(3)
+      .png()
+      .toBuffer()
+
+    images.push(processed)
+  }
+
+  return images
 }

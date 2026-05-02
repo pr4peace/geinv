@@ -46,6 +46,8 @@ function makeAgreement(overrides: Partial<ExtractedAgreement> = {}): ExtractedAg
     payments: [],
     payout_schedule: [makeRow()],
     confidence_warnings: [],
+    confidence: {},
+    is_draft: false,
     ...overrides,
   }
 }
@@ -64,9 +66,9 @@ describe('validateExtraction', () => {
     expect(flags.find(f => f.type === 'tds_mismatch')?.rowIndex).toBe(0)
   })
 
-  it('does not flag tds_mismatch within ₹0.50 tolerance', () => {
+  it('does not flag tds_mismatch within ₹0.10 tolerance', () => {
     const flags = validateExtraction(makeAgreement({
-      payout_schedule: [makeRow({ gross_interest: 140000, tds_amount: 14000.49, net_interest: 125999.51 })],
+      payout_schedule: [makeRow({ gross_interest: 140000, tds_amount: 14000.09, net_interest: 125999.91 })],
     }))
     expect(flags.some(f => f.type === 'tds_mismatch')).toBe(false)
   })

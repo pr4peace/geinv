@@ -94,10 +94,22 @@ function reminderTypeLabel(type: string): string {
   const map: Record<string, string> = {
     payout: 'Payout',
     maturity: 'Maturity',
+    tds_filing: 'TDS Filing',
     doc_return: 'Doc Return',
+    monthly_summary: 'Monthly Summary',
     quarterly_forecast: 'Quarterly Forecast',
+    payout_monthly_summary: 'Monthly Summary',
   }
   return map[type] ?? type
+}
+
+function NotificationSourceBadge({ source }: { source: string }) {
+  if (source === 'reminder') return null
+  return (
+    <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-900/40 text-indigo-400 border border-indigo-800/50">
+      QUEUE
+    </span>
+  )
 }
 
 function ReminderStatusBadge({ status }: { status: string }) {
@@ -113,37 +125,6 @@ function ReminderStatusBadge({ status }: { status: string }) {
       {status}
     </span>
   )
-}
-
-// ─── TDS Summary ─────────────────────────────────────────────────────────────
-
-function getIndianFYQuarterLabel(dateStr: string): string {
-  const date = new Date(dateStr)
-  const month = date.getMonth() // 0-indexed
-  const year = date.getFullYear()
-  if (month >= 3 && month <= 5) return `Q1 ${year}-${String(year + 1).slice(2)}`
-  if (month >= 6 && month <= 8) return `Q2 ${year}-${String(year + 1).slice(2)}`
-  if (month >= 9 && month <= 11) return `Q3 ${year}-${String(year + 1).slice(2)}`
-  return `Q4 ${year - 1}-${String(year).slice(2)}`
-}
-
-function buildTdsSummary(rows: PayoutSchedule[]) {
-  const byQuarter: Record<string, { gross: number; tds: number; net: number; sortKey: string }> = {}
-  for (const row of rows) {
-    if (!row.due_by || row.is_principal_repayment) continue
-    const label = getIndianFYQuarterLabel(row.due_by)
-    const parts = label.split(' ')
-    const qNum = parseInt(parts[0].slice(1), 10)
-    const fyYear = parseInt(parts[1].split('-')[0], 10)
-    const sortKey = `${fyYear}-${qNum}`
-    if (!byQuarter[label]) byQuarter[label] = { gross: 0, tds: 0, net: 0, sortKey }
-    byQuarter[label].gross += row.gross_interest
-    byQuarter[label].tds += row.tds_amount
-    byQuarter[label].net += row.net_interest
-  }
-  return Object.entries(byQuarter)
-    .sort(([, a], [, b]) => a.sortKey.localeCompare(b.sortKey))
-    .map(([label, totals]) => [label, totals] as [string, { gross: number; tds: number; net: number; sortKey: string }])
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -189,6 +170,12 @@ export default async function AgreementDetailPage({
     .eq('agreement_id', id)
     .order('created_at', { ascending: false })
 
+  const { data: notificationQueueEntries } = await supabase
+    .from('notification_queue')
+    .select('*')
+    .eq('agreement_id', id)
+    .order('due_date', { ascending: true })
+
   const agreement = rawAgreement as unknown as AgreementDetail
 
   const { payout_schedule, reminders, salesperson, investor } = agreement as AgreementDetail & { investor?: { id: string; name: string } }
@@ -196,9 +183,45 @@ export default async function AgreementDetailPage({
   const salespersonName =
     salesperson?.name ?? agreement.salesperson_custom ?? '—'
 
-  const tdsSummary = buildTdsSummary(payout_schedule)
-
   const nominees = Array.isArray(agreement.nominees) ? agreement.nominees : []
+
+  // Merge old reminders + new notification queue into unified timeline
+  type UnifiedNotification = {
+    id: string
+    type: string
+    dueDate: string | null
+    scheduledAt: string
+    status: string
+    sentAt: string | null
+    subject: string | null
+    source: 'reminder' | 'notification_queue'
+    payoutScheduleId: string | null
+  }
+
+  const unifiedNotifications: UnifiedNotification[] = [
+    ...reminders.map(r => ({
+      id: r.id,
+      type: r.reminder_type,
+      dueDate: null,
+      scheduledAt: r.scheduled_at,
+      status: r.status,
+      sentAt: r.sent_at,
+      subject: r.email_subject,
+      source: 'reminder' as const,
+      payoutScheduleId: r.payout_schedule_id,
+    })),
+    ...(notificationQueueEntries ?? []).map(n => ({
+      id: n.id,
+      type: n.notification_type,
+      dueDate: n.due_date,
+      scheduledAt: n.created_at,
+      status: n.status,
+      sentAt: n.sent_at,
+      subject: n.suggested_subject,
+      source: 'notification_queue' as const,
+      payoutScheduleId: n.payout_schedule_id,
+    })),
+  ].sort((a, b) => (b.dueDate ?? b.scheduledAt).localeCompare(a.dueDate ?? a.scheduledAt))
 
   // ─── Status badge ────────────────────────────────────────────────────────
   const statusMap: Record<string, { label: string; cls: string }> = {
@@ -399,8 +422,8 @@ export default async function AgreementDetailPage({
           />
         </SectionCard>
 
-        {/* ── Payout Schedule ── */}
-        <SectionCard title="Payout Schedule">
+        {/* ── Unified Payout & TDS Schedule ── */}
+        <SectionCard title="Payout & TDS Schedule">
           <PayoutScheduleSection
             agreementId={agreement.id}
             payouts={payout_schedule}
@@ -408,75 +431,57 @@ export default async function AgreementDetailPage({
           />
         </SectionCard>
 
-        {/* ── TDS Summary ── */}
-        <SectionCard title="TDS Summary by Quarter">
-          {tdsSummary.length === 0 ? (
-            <p className="text-slate-500 text-sm italic">No payout data for TDS summary.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700 text-xs text-slate-400">
-                    <th className="pb-2 text-left pr-6">Quarter</th>
-                    <th className="pb-2 text-right pr-6">Gross Interest</th>
-                    <th className="pb-2 text-right pr-6">TDS</th>
-                    <th className="pb-2 text-right">Net Interest</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tdsSummary.map(([year, totals]) => (
-                    <tr key={year} className="border-b border-slate-700/40">
-                      <td className="py-2 pr-6 font-medium text-slate-200">{year}</td>
-                      <td className="py-2 pr-6 text-right tabular-nums text-slate-300">{fmtCurrency(totals.gross)}</td>
-                      <td className="py-2 pr-6 text-right tabular-nums text-red-400">{fmtCurrency(totals.tds)}</td>
-                      <td className="py-2 text-right tabular-nums text-green-400 font-medium">{fmtCurrency(totals.net)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </SectionCard>
-
-        {/* ── Reminder History ── */}
-        <SectionCard title="Reminder History">
-          {reminders.length === 0 ? (
-            <p className="text-slate-500 text-sm italic">No reminders for this agreement.</p>
+        {/* ── Reminders & Notifications ── */}
+        <SectionCard title="Reminders & Notifications">
+          {unifiedNotifications.length === 0 ? (
+            <p className="text-slate-500 text-sm italic">No reminders or notifications for this agreement.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 text-xs text-slate-400">
                     <th className="pb-2 text-left pr-4 whitespace-nowrap">Type</th>
-                    <th className="pb-2 text-left pr-4 whitespace-nowrap">Scheduled At</th>
+                    <th className="pb-2 text-left pr-4 whitespace-nowrap">Due Date</th>
                     <th className="pb-2 text-center pr-4 whitespace-nowrap">Status</th>
                     <th className="pb-2 text-left pr-4 whitespace-nowrap">Sent At</th>
                     <th className="pb-2 text-left whitespace-nowrap">Subject</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reminders.map((r) => (
-                    <tr key={r.id} className="border-b border-slate-700/40 hover:bg-slate-700/20">
-                      <td className="py-2 pr-4">
-                        <span className="inline-flex items-center gap-1.5 text-slate-300">
-                          <Bell className="w-3 h-3 text-slate-500 flex-shrink-0" />
-                          <span className="whitespace-nowrap">{reminderTypeLabel(r.reminder_type)}</span>
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4 whitespace-nowrap text-slate-400">
-                        {fmtDate(r.scheduled_at)}
-                      </td>
-                      <td className="py-2 pr-4 text-center">
-                        <ReminderStatusBadge status={r.status} />
-                      </td>
-                      <td className="py-2 pr-4 whitespace-nowrap text-slate-400">
-                        {r.sent_at ? fmtDate(r.sent_at) : '—'}
-                      </td>
-                      <td className="py-2 text-slate-400 max-w-xs truncate">
-                        {r.email_subject ?? '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {unifiedNotifications.map((n) => {
+                    const todayStr = new Date().toISOString().split('T')[0]
+                    const isOverdue = n.status === 'pending' && n.dueDate && n.dueDate < todayStr
+                    return (
+                      <tr key={n.id} className={`border-b border-slate-700/40 hover:bg-slate-700/20 ${isOverdue ? 'bg-red-900/10' : ''}`}>
+                        <td className="py-2 pr-4">
+                          <span className={`inline-flex items-center gap-1.5 ${isOverdue ? 'text-red-400 font-semibold' : 'text-slate-300'}`}>
+                            <Bell className="w-3 h-3 flex-shrink-0" />
+                            <span className="whitespace-nowrap">{reminderTypeLabel(n.type)}</span>
+                            <NotificationSourceBadge source={n.source} />
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4 whitespace-nowrap">
+                          {n.dueDate ? (
+                            <span className={isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}>
+                              {fmtDate(n.dueDate)}
+                              {isOverdue && <span className="ml-1 text-[10px] font-bold uppercase">(overdue)</span>}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">{fmtDate(n.scheduledAt)}</span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-center">
+                          <ReminderStatusBadge status={n.status} />
+                        </td>
+                        <td className="py-2 pr-4 whitespace-nowrap text-slate-400">
+                          {n.sentAt ? fmtDate(n.sentAt) : '—'}
+                        </td>
+                        <td className="py-2 text-slate-400 max-w-xs truncate">
+                          {n.subject ?? '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

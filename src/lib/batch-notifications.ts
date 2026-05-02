@@ -5,6 +5,7 @@ type EnrichedItem = NotificationQueue & {
     id: string
     investor_name: string
     reference_id: string
+    principal_amount?: number
     salesperson?: { name: string; email?: string } | null
   } | null
   gross_interest?: number | null
@@ -65,11 +66,18 @@ function calcAmounts(items: EnrichedItem[]): AmountSummary {
       tds += item.tds_amount ?? 0
       net += item.net_interest ?? 0
     }
+    if (item.notification_type === 'maturity') {
+      net += item.agreement?.principal_amount ?? 0
+    }
   }
   return { gross, tds, net }
 }
 
 function fmtCurrency(n: number): string {
+  return n === 0 ? '—' : `₹${n.toLocaleString('en-IN')}`
+}
+
+function fmtCurrencyStrict(n: number): string {
   return `₹${n.toLocaleString('en-IN')}`
 }
 
@@ -92,57 +100,119 @@ function buildBatchSubject(items: EnrichedItem[], isSalespersonBatch: boolean): 
 function buildBatchBody(items: EnrichedItem[], isSalespersonBatch: boolean, amounts: AmountSummary): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://geinv.vercel.app'
 
-  const rows = items
-    .map(item => {
-      const inv = item.agreement?.investor_name ?? '—'
-      const ref = item.agreement?.reference_id ?? '—'
-      const type = TYPE_LABEL[item.notification_type] ?? item.notification_type
-      const due = fmtDate(item.due_date)
-      const link = `${appUrl}/agreements/${item.agreement_id}`
+  // Group by type
+  const byType: Record<string, EnrichedItem[]> = {}
+  const typeOrder: NotificationType[] = ['payout', 'tds_filing', 'maturity', 'doc_return', 'monthly_summary', 'quarterly_forecast']
+  for (const item of items) {
+    if (!byType[item.notification_type]) byType[item.notification_type] = []
+    byType[item.notification_type].push(item)
+  }
 
-      // For payout types, show amounts in the row
-      let amountCell = ''
-      if (item.notification_type === 'payout' || item.notification_type === 'tds_filing') {
-        amountCell = `<td style="padding:10px 12px; text-align:right; font-family:monospace; font-size:12px; color:#e2e8f0;">${fmtCurrency(item.net_interest ?? 0)}</td>`
-      } else {
-        amountCell = `<td style="padding:10px 12px; font-size:12px; color:#64748b;">—</td>`
-      }
+  const typeSections = typeOrder
+    .filter(t => byType[t]?.length)
+    .map(type => {
+      const typeItems = byType[type]
+      const typeLabel = TYPE_LABEL[type] ?? type
+      const typeAmounts = calcAmounts(typeItems)
+      const hasAmounts = type === 'payout' || type === 'tds_filing' || type === 'maturity'
 
-      let extra = ''
-      if (item.notification_type === 'payout' || item.notification_type === 'tds_filing') {
-        extra = `
-          <tr>
-            <td colspan="6" style="padding:0 12px 6px 12px; color:#94a3b8; font-size:12px;">
-              Gross: ${fmtCurrency(item.gross_interest ?? 0)} · TDS: ${fmtCurrency(item.tds_amount ?? 0)} · Due: ${esc(due)} · <a href="${esc(link)}" style="color:#818cf8;">View Agreement →</a>
-            </td>
+      const rows = typeItems.map(item => {
+        const inv = item.agreement?.investor_name ?? '—'
+        const ref = item.agreement?.reference_id ?? '—'
+        const due = fmtDate(item.due_date)
+        const link = `${appUrl}/agreements/${item.agreement_id}`
+
+        let amountCell = ''
+        if (type === 'payout' || type === 'tds_filing') {
+          amountCell = fmtCurrencyStrict(item.net_interest ?? 0)
+        } else if (type === 'maturity') {
+          amountCell = fmtCurrencyStrict(item.agreement?.principal_amount ?? 0)
+        } else {
+          amountCell = '—'
+        }
+
+        let extra = ''
+        if (type === 'payout' || type === 'tds_filing') {
+          extra = `
+            <tr>
+              <td colspan="6" style="padding:0 12px 6px 12px; color:#94a3b8; font-size:12px;">
+                Gross: ${fmtCurrencyStrict(item.gross_interest ?? 0)} · TDS: ${fmtCurrencyStrict(item.tds_amount ?? 0)} · Due: ${esc(due)} · <a href="${esc(link)}" style="color:#818cf8;">View Agreement →</a>
+              </td>
+            </tr>
+          `
+        } else if (type === 'maturity') {
+          const principal = item.agreement?.principal_amount ?? 0
+          const maturityDate = item.due_date ?? '—'
+          extra = `
+            <tr>
+              <td colspan="6" style="padding:0 12px 6px 12px; color:#94a3b8; font-size:12px;">
+                Principal: ${fmtCurrencyStrict(principal)} · Matures: ${esc(maturityDate)} · <a href="${esc(link)}" style="color:#818cf8;">View Agreement →</a>
+              </td>
+            </tr>
+          `
+        } else {
+          extra = `
+            <tr>
+              <td colspan="6" style="padding:0 12px 6px 12px; color:#94a3b8; font-size:12px;">
+                Due: ${esc(due)} · <a href="${esc(link)}" style="color:#818cf8;">View Agreement →</a>
+              </td>
+            </tr>
+          `
+        }
+
+        return `
+          <tr style="border-bottom:1px solid #1e293b;">
+            <td style="padding:10px 12px; font-weight:600; color:#e2e8f0;">${esc(inv)}</td>
+            <td style="padding:10px 12px; font-family:monospace; font-size:12px; color:#64748b;">${esc(ref)}</td>
+            <td style="padding:10px 12px; font-size:12px; color:#94a3b8;">${esc(due)}</td>
+            <td style="padding:10px 12px; font-family:monospace; font-size:12px; color:#e2e8f0; text-align:right;">${esc(amountCell)}</td>
+            <td style="padding:10px 12px; color:#94a3b8;">${item.agreement?.salesperson?.name ? esc(item.agreement.salesperson.name) : '<span style="color:#64748b;font-style:italic;">Unassigned</span>'}</td>
+          </tr>
+          ${extra}
+        `
+      }).join('')
+
+      const subtotalRow = hasAmounts && typeAmounts.net > 0
+        ? `
+          <tr style="background:#0f172a;">
+            <td colspan="3" style="padding:8px 12px; color:#94a3b8; font-size:12px; font-weight:600;">SUBTOTAL</td>
+            <td style="padding:8px 12px; text-align:right; font-family:monospace; font-size:12px; color:#e2e8f0; font-weight:600;">${fmtCurrencyStrict(typeAmounts.net)}</td>
+            <td></td>
           </tr>
         `
-      }
+        : ''
 
       return `
-        <tr style="border-bottom:1px solid #1e293b;">
-          <td style="padding:10px 12px; font-weight:600; color:#e2e8f0;">${esc(inv)}</td>
-          <td style="padding:10px 12px; font-family:monospace; font-size:12px; color:#64748b;">${esc(ref)}</td>
-          <td style="padding:10px 12px; color:#94a3b8;">${esc(type)}</td>
-          <td style="padding:10px 12px; font-size:12px; color:#94a3b8;">${esc(due)}</td>
-          ${amountCell}
-          <td style="padding:10px 12px; color:#94a3b8;">${item.agreement?.salesperson?.name ? esc(item.agreement.salesperson.name) : '<span style="color:#64748b;font-style:italic;">Unassigned</span>'}</td>
-        </tr>
-        ${extra}
+        <div style="margin-bottom:20px;">
+          <h3 style="margin:0 0 8px 0; font-size:14px; color:#f1f5f9; padding-bottom:6px; border-bottom:2px solid #334155;">
+            ${esc(typeLabel)} (${typeItems.length} item${typeItems.length !== 1 ? 's' : ''})
+          </h3>
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="background:#0f172a; text-align:left;">
+                <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Investor</th>
+                <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Ref</th>
+                <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Due Date</th>
+                <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; text-align:right;">Amount</th>
+                <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Salesperson</th>
+              </tr>
+            </thead>
+            <tbody>${rows}${subtotalRow}</tbody>
+          </table>
+        </div>
       `
-    })
-    .join('')
+    }).join('')
 
   const totalLabel = items.length === 1 ? '1 notification' : `${items.length} notifications`
   const contextLabel = isSalespersonBatch ? 'for your assigned agreements' : 'for the accounts team to process'
 
-  const totalsRow = amounts.net > 0
+  const grandTotals = amounts.net > 0
     ? `
-      <tr style="background:#0f172a; font-weight:bold;">
-        <td colspan="4" style="padding:10px 12px; color:#f1f5f9;">TOTAL</td>
-        <td style="padding:10px 12px; text-align:right; font-family:monospace; color:#f1f5f9;">${fmtCurrency(amounts.net)}</td>
-        <td></td>
-      </tr>
+      <div style="background:#1e293b; border-radius:8px; padding:12px 16px; margin-top:20px; display:flex; gap:24px; font-size:13px;">
+        ${amounts.gross > 0 ? `<div><span style="color:#64748b;">Total Gross:</span> <strong style="color:#e2e8f0;">${fmtCurrencyStrict(amounts.gross)}</strong></div>` : ''}
+        ${amounts.tds > 0 ? `<div><span style="color:#64748b;">Total TDS:</span> <strong style="color:#e2e8f0;">${fmtCurrencyStrict(amounts.tds)}</strong></div>` : ''}
+        <div><span style="color:#64748b;">Total Net:</span> <strong style="color:#e2e8f0;">${fmtCurrencyStrict(amounts.net)}</strong></div>
+      </div>
     `
     : ''
 
@@ -152,27 +222,9 @@ function buildBatchBody(items: EnrichedItem[], isSalespersonBatch: boolean, amou
       <p style="margin:0 0 16px 0; color:#94a3b8; font-size:14px;">
         The following items are due and require action ${contextLabel}.
       </p>
-      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:20px;">
-        <thead>
-          <tr style="background:#0f172a; text-align:left;">
-            <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Investor</th>
-            <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Ref</th>
-            <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Type</th>
-            <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Due Date</th>
-            <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; text-align:right;">Net Amount</th>
-            <th style="padding:8px 12px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Salesperson</th>
-          </tr>
-        </thead>
-        <tbody>${rows}${totalsRow}</tbody>
-      </table>
-      ${amounts.net > 0 ? `
-      <div style="background:#1e293b; border-radius:8px; padding:12px 16px; margin-bottom:20px; display:flex; gap:24px; font-size:13px;">
-        <div><span style="color:#64748b;">Total Gross:</span> <strong style="color:#e2e8f0;">${fmtCurrency(amounts.gross)}</strong></div>
-        <div><span style="color:#64748b;">Total TDS:</span> <strong style="color:#e2e8f0;">${fmtCurrency(amounts.tds)}</strong></div>
-        <div><span style="color:#64748b;">Total Net:</span> <strong style="color:#e2e8f0;">${fmtCurrency(amounts.net)}</strong></div>
-      </div>
-      ` : ''}
-      <p style="margin:0; font-size:12px; color:#64748b;">
+      ${typeSections}
+      ${grandTotals}
+      <p style="margin:16px 0 0; font-size:12px; color:#64748b;">
         <a href="${appUrl}/notifications" style="color:#818cf8;">View all notifications →</a>
       </p>
     </div>
