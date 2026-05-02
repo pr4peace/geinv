@@ -9,12 +9,14 @@ export interface MonthlySummaryData {
     tds_amount: number
     net_interest: number
     is_tds_only: boolean
+    is_overdue?: boolean
   }>
   maturities: Array<{
     investor_name: string
     reference_id: string
     maturity_date: string
     principal_amount: number
+    is_overdue?: boolean
   }>
 }
 
@@ -25,18 +27,18 @@ export function buildMonthlySummaryEmail(monthLabel: string, data: MonthlySummar
 
   let body = `<h2>Monthly Investment Summary — ${esc(monthLabel)}</h2>`
 
+  const renderPayoutRow = (p: MonthlySummaryData['payouts'][0]) => `
+    <tr style="${p.is_overdue ? 'color:#b91c1c;background:#fef2f2' : ''}">
+      <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.investor_name)}${p.is_overdue ? ' <strong style="font-size:10px;text-transform:uppercase">[Overdue]</strong>' : ''}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${esc(p.reference_id)}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.due_by)}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">₹${p.gross_interest.toLocaleString('en-IN')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">₹${p.tds_amount.toLocaleString('en-IN')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">₹${p.net_interest.toLocaleString('en-IN')}</td>
+    </tr>`
+
   // Interest Payouts Section
   if (interestPayouts.length > 0) {
-    const rows = interestPayouts.map(p => `
-      <tr>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.investor_name)}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${esc(p.reference_id)}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.due_by)}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">₹${p.gross_interest.toLocaleString('en-IN')}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">₹${p.tds_amount.toLocaleString('en-IN')}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">₹${p.net_interest.toLocaleString('en-IN')}</td>
-      </tr>`).join('')
-
     body += `
       <h3 style="margin-top:24px;color:#1e293b">Interest Payouts Due</h3>
       <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px">
@@ -50,15 +52,15 @@ export function buildMonthlySummaryEmail(monthLabel: string, data: MonthlySummar
             <th style="padding:8px 12px;text-align:right">Net Payable</th>
           </tr>
         </thead>
-        <tbody>${rows}</tbody>
+        <tbody>${interestPayouts.map(renderPayoutRow).join('')}</tbody>
       </table>`
   }
 
   // Maturities Section
   if (maturities.length > 0) {
     const rows = maturities.map(m => `
-      <tr>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(m.investor_name)}</td>
+      <tr style="${m.is_overdue ? 'color:#b91c1c;background:#fef2f2' : ''}">
+        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(m.investor_name)}${m.is_overdue ? ' <strong style="font-size:10px;text-transform:uppercase">[Overdue]</strong>' : ''}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${esc(m.reference_id)}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(m.maturity_date)}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">₹${m.principal_amount.toLocaleString('en-IN')}</td>
@@ -82,8 +84,8 @@ export function buildMonthlySummaryEmail(monthLabel: string, data: MonthlySummar
   // TDS Filing Section
   if (tdsFilings.length > 0) {
     const rows = tdsFilings.map(p => `
-      <tr>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.investor_name)}</td>
+      <tr style="${p.is_overdue ? 'color:#b91c1c;background:#fef2f2' : ''}">
+        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.investor_name)}${p.is_overdue ? ' <strong style="font-size:10px;text-transform:uppercase">[Overdue]</strong>' : ''}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${esc(p.reference_id)}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(p.due_by)}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">₹${p.tds_amount.toLocaleString('en-IN')}</td>

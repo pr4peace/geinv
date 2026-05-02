@@ -23,7 +23,7 @@ export default async function NotificationsPage() {
   const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd')
   const monthLabel = format(today, 'MMMM yyyy')
 
-  // 1. Fetch Payouts due this month
+  // 1. Fetch Payouts (Current Month + Overdue)
   const { data: payouts } = await supabase
     .from('payout_schedule')
     .select(`
@@ -33,17 +33,15 @@ export default async function NotificationsPage() {
     .eq('status', 'pending')
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
-    .gte('due_by', monthStart)
     .lte('due_by', monthEnd)
     .order('due_by', { ascending: true })
 
-  // 2. Fetch Maturities this month
+  // 2. Fetch Maturities (Current Month + Overdue)
   const { data: maturities } = await supabase
     .from('agreements')
     .select('id, investor_name, reference_id, maturity_date, principal_amount')
     .eq('status', 'active')
     .is('deleted_at', null)
-    .gte('maturity_date', monthStart)
     .lte('maturity_date', monthEnd)
     .order('maturity_date', { ascending: true })
 
@@ -58,12 +56,14 @@ export default async function NotificationsPage() {
       tds_amount: p.tds_amount,
       net_interest: p.net_interest,
       is_tds_only: p.is_tds_only,
+      is_overdue: p.due_by < monthStart,
     })),
     maturities: (maturities ?? []).map((m) => ({
       investor_name: m.investor_name,
       reference_id: m.reference_id,
       maturity_date: m.maturity_date,
       principal_amount: m.principal_amount,
+      is_overdue: m.maturity_date < monthStart,
     })),
   }
 
