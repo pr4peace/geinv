@@ -9,6 +9,7 @@ export type ExtractionFlagType =
   | 'generated_row'
   | 'start_date_mismatch'
   | 'matured_agreement'
+  | 'principal_mismatch'
 
 export type ExtractionFlagSeverity = 'info' | 'warning' | 'error'
 
@@ -58,6 +59,34 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
         found: extracted.investment_start_date,
         resolution: 'pending',
       })
+    }
+  }
+
+  // principal_mismatch — cross-check principal against payout schedule
+  if (rows.length > 0 && extracted.roi_percentage > 0 && extracted.payout_frequency) {
+    const nonPrincipalRows = rows.filter(r => !r.is_principal_repayment && !r.is_tds_only)
+    if (nonPrincipalRows.length > 0) {
+      // For simple interest, gross_interest = principal × roi × (no_of_days / 365) / 100
+      // So principal = gross_interest × 365 / (roi × no_of_days) × 100
+      const firstRow = nonPrincipalRows[0]
+      const days = firstRow.no_of_days ?? 0
+      if (days > 0) {
+        const impliedPrincipal = round2((firstRow.gross_interest * 365 * 100) / (extracted.roi_percentage * days))
+        const ratio = extracted.principal_amount / impliedPrincipal
+        // Flag if principal is off by more than 5x (likely extra/missing zero)
+        if (ratio > 5 || ratio < 0.2) {
+          flags.push({
+            id: `flag-${flagIndex++}`,
+            type: 'principal_mismatch',
+            severity: 'error',
+            rowIndex: null,
+            message: `Principal amount (₹${extracted.principal_amount.toLocaleString('en-IN')}) appears incorrect. Based on first payout row's gross interest (₹${firstRow.gross_interest.toLocaleString('en-IN')}) over ${days} days at ${extracted.roi_percentage}%, the implied principal is ₹${impliedPrincipal.toLocaleString('en-IN')}.`,
+            expected: `₹${impliedPrincipal.toLocaleString('en-IN')}`,
+            found: `₹${extracted.principal_amount.toLocaleString('en-IN')}`,
+            resolution: 'pending',
+          })
+        }
+      }
     }
   }
 
