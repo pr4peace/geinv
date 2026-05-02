@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import NotificationsClient from '@/components/notifications/NotificationsClient'
-import type { NotificationQueue } from '@/types/database'
+import type { NotificationQueue, NotificationType, NotificationStatus } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,9 +10,13 @@ type EnrichedItem = NotificationQueue & {
     id: string
     investor_name: string
     reference_id: string
+    principal_amount?: number
     salesperson?: { id?: string; name: string } | null
   } | null
   sent_by_member?: { name: string } | null
+  gross_interest?: number | null
+  tds_amount?: number | null
+  net_interest?: number | null
 }
 
 type NotificationStats = {
@@ -32,9 +36,9 @@ async function fetchItems(status: string, salespersonId?: string): Promise<Enric
     .from('notification_queue')
     .select(`
       *,
-      agreement:agreements(id, investor_name, reference_id, salesperson:team_members!salesperson_id(id, name)),
+      agreement:agreements(id, investor_name, reference_id, principal_amount, salesperson:team_members!salesperson_id(id, name)),
       sent_by_member:team_members!sent_by(name),
-      payout_schedule!notification_queue_payout_schedule_id_fkey(gross_interest, tds_amount, net_interest)
+      payout_schedule:payout_schedule(gross_interest, tds_amount, net_interest)
     `)
     .eq('status', status)
     .order('due_date', { ascending: true })
@@ -52,14 +56,31 @@ async function fetchItems(status: string, salespersonId?: string): Promise<Enric
   }
 
   const { data } = await query
-  return (data ?? []).map((item: Record<string, unknown>) => {
-    const { payout_schedule, ...rest } = item as { payout_schedule?: Array<{ gross_interest: number | null; tds_amount: number | null; net_interest: number | null }> | null } & Omit<EnrichedItem, 'gross_interest' | 'tds_amount' | 'net_interest'>
-    return {
-      ...rest,
-      gross_interest: payout_schedule?.[0]?.gross_interest ?? null,
-      tds_amount: payout_schedule?.[0]?.tds_amount ?? null,
-      net_interest: payout_schedule?.[0]?.net_interest ?? null,
-    } as EnrichedItem
+  return (data ?? []).map((raw: Record<string, unknown>) => {
+    const ps = raw.payout_schedule as { gross_interest: number | null; tds_amount: number | null; net_interest: number | null } | null
+    const agreement = raw.agreement as { id: string; investor_name: string; reference_id: string; principal_amount?: number; salesperson?: { id: string; name: string } | null } | null
+    const sentBy = raw.sent_by_member as { name: string } | null
+
+    const item: EnrichedItem = {
+      id: raw.id as string,
+      agreement_id: raw.agreement_id as string | null,
+      payout_schedule_id: raw.payout_schedule_id as string | null,
+      notification_type: raw.notification_type as NotificationType,
+      due_date: raw.due_date as string | null,
+      status: raw.status as NotificationStatus,
+      recipients: raw.recipients as { accounts: string[]; salesperson: string | null },
+      suggested_subject: raw.suggested_subject as string | null,
+      suggested_body: raw.suggested_body as string | null,
+      sent_at: raw.sent_at as string | null,
+      sent_by: raw.sent_by as string | null,
+      created_at: raw.created_at as string,
+      agreement,
+      sent_by_member: sentBy,
+      gross_interest: ps?.gross_interest ?? null,
+      tds_amount: ps?.tds_amount ?? null,
+      net_interest: ps?.net_interest ?? null,
+    }
+    return item
   })
 }
 

@@ -17,6 +17,10 @@ type EnrichedItem = NotificationQueue & {
 }
 
 type PresetKey =
+  | 'all'
+  | 'next-7'
+  | 'next-14'
+  | 'next-30'
   | 'this-week'
   | 'this-fortnight'
   | 'this-month'
@@ -30,8 +34,10 @@ type PresetKey =
   | 'none'
 
 const DATE_PRESETS: { key: PresetKey; label: string }[] = [
-  { key: 'this-week', label: 'This Week' },
-  { key: 'this-fortnight', label: 'This Fortnight' },
+  { key: 'all', label: 'All' },
+  { key: 'next-7', label: 'Next 7 days' },
+  { key: 'next-14', label: 'Next 14 days' },
+  { key: 'next-30', label: 'Next 30 days' },
   { key: 'this-month', label: 'This Month' },
   { key: 'this-quarter', label: 'This Quarter' },
   { key: 'this-fy', label: 'This FY' },
@@ -87,12 +93,17 @@ function getCalendarWindow(preset: PresetKey): { from: string; to: string; types
   const todayStr = now.toISOString().split('T')[0]
   const plus7 = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
   const plus14 = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+  const plus30 = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
 
   switch (preset) {
-    case 'this-week':
-      return { from: todayStr, to: plus7, types: ['payout', 'tds_filing'] }
-    case 'this-fortnight':
+    case 'all':
+      return { from: '2000-01-01', to: '2099-12-31' }
+    case 'next-7':
+      return { from: todayStr, to: plus7 }
+    case 'next-14':
       return { from: todayStr, to: plus14 }
+    case 'next-30':
+      return { from: todayStr, to: plus30 }
     case 'this-month':
       return { from: monthFrom, to: monthTo }
     case 'this-quarter':
@@ -293,12 +304,14 @@ export default function QuickSendPanel({
   ].filter(Boolean).length
 
   const dateRangeText = datePreset !== 'none' && datePreset !== 'custom'
-    ? (() => {
-        const w = getCalendarWindow(datePreset)
-        if (!w) return ''
-        const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-        return `${fmt(w.from)} – ${fmt(w.to)}, ${new Date(w.to).getFullYear()}`
-      })()
+    ? datePreset === 'all'
+      ? 'All dates'
+      : (() => {
+          const w = getCalendarWindow(datePreset)
+          if (!w) return ''
+          const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          return `${fmt(w.from)} – ${fmt(w.to)}, ${new Date(w.to).getFullYear()}`
+        })()
     : null
 
   return (
