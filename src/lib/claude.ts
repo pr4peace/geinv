@@ -2,6 +2,65 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
+// Deskew: try multiple rotation angles, pick the one with highest horizontal edge concentration.
+// Scanned docs are often off by <1.5° which breaks digit reading in tables.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function deskewImage(sharp: any, pngBuffer: Buffer): Promise<Buffer> {
+  const angles = [-1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5]
+  let bestScore = -1
+  let bestAngle = 0
+
+  for (const angle of angles) {
+    let img = sharp(pngBuffer)
+    if (angle !== 0) {
+      img = img.rotate(-angle, { background: { r: 255, g: 255, b: 255 } })
+    }
+    const buf = await img
+      .resize({ width: 500 })
+      .greyscale()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+
+    const score = measureHorizontalEdges(buf.data, buf.info.width, buf.info.height)
+    if (score > bestScore) {
+      bestScore = score
+      bestAngle = angle
+    }
+  }
+
+  if (bestAngle === 0) return pngBuffer
+
+  return sharp(pngBuffer)
+    .rotate(-bestAngle, { background: { r: 255, g: 255, b: 255 } })
+    .png()
+    .toBuffer()
+}
+
+// Measure horizontal edge strength using Sobel Y operator.
+// Properly aligned text has strong horizontal edges; skewed text has weaker alignment.
+function measureHorizontalEdges(data: Buffer, width: number, height: number): number {
+  let total = 0
+  const stride = width * 1 // 1 channel (greyscale)
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const p = (dx: number, dy: number) => data[(y + dy) * stride + (x + dx)] ?? 0
+      // Sobel Y kernel: detects horizontal edges (text baselines)
+      // [ 1,  2,  1]
+      // [ 0,  0,  0]
+      // [-1, -2, -1]
+      const gy =
+        -1 * p(-1, -1) -
+        2 * p(0, -1) -
+        1 * p(1, -1) +
+        1 * p(-1, 1) +
+        2 * p(0, 1) +
+        1 * p(1, 1)
+      total += Math.abs(gy)
+    }
+  }
+  return total
+}
+
 async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
   const sharp = (await import('sharp')).default
   // pdfjs legacy build required for Node.js environments
@@ -15,7 +74,8 @@ async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum)
-    const viewport = page.getViewport({ scale: 2.5 }) // 2.5x for high resolution
+    // 4x scale for maximum clarity on small table numbers
+    const viewport = page.getViewport({ scale: 4.0 })
 
     const canvas = createCanvas(viewport.width, viewport.height)
     const context = canvas.getContext('2d')
@@ -28,11 +88,16 @@ async function pdfToHighContrastImages(buffer: Buffer): Promise<Buffer[]> {
 
     const pngBuffer = canvas.toBuffer('image/png')
 
-    // High-contrast B&W: greyscale → normalise → sharpen
-    const processed = await sharp(pngBuffer)
-      .greyscale()
-      .normalise()
-      .sharpen({ sigma: 1.5 })
+    // Step 1: Deskew — correct rotation for scanned docs
+    const deskewed = await deskewImage(sharp, pngBuffer)
+
+    // Step 2: Contrast boost + adaptive threshold → binary-like B&W
+    // Makes numbers pop from colored backgrounds, stamps, and watermarks
+    const processed = await sharp(deskewed)
+      .linear(1.5, -30) // Boost contrast: multiply by 1.5, shift darker
+      .normalise() // Histogram stretch for maximum contrast
+      .threshold(140) // Binary threshold — numbers pop from backgrounds
+      .median(3) // Remove small noise speckles (prevents false decimal points)
       .png()
       .toBuffer()
 
@@ -80,85 +145,83 @@ const EXTRACTION_PROMPT = `You are an expert at extracting structured data from 
 
 Extract ALL fields exactly as they appear in the document. Follow these rules:
 
-1. DATES: Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed.
-   - investment_start_date is the date when interest begins accruing. 
-   - CRITICAL RULE: The investment_start_date MUST match exactly with the 'period_from' of the FIRST row in the payout_schedule. 
-   - The payout schedule reflects the agreed-upon interest accrual. Even if funds were received on a different date (payment table), for the purposes of this system, the start of the first interest period IS the investment_start_date.
-   - NEVER use the agreement_date as investment_start_date unless it happens to be the same as the first period_from.
-   - Add a confidence_warning if you find a conflict between the stated 'investment commences on' date and the first row of the payout table.
+RULE 1 — PRINCIPAL AMOUNT (MOST CRITICAL — READ EACH DIGIT):
+This is the most important field. A single extra zero is a catastrophic 10x error.
+  - STEP A (WORDS): Find the principal amount written in WORDS (e.g., "Rupees Sixty Lakhs Only", "Sixty Lakhs"). This is your PRIMARY source of truth.
+  - STEP B (DIGITS): Find the principal amount in DIGITS. Read each digit INDIVIDUALLY. Pay special attention to Indian comma notation:
+    - 1,00,000 = 1 Lakh (5 digits after removing commas)
+    - 10,00,000 = 10 Lakhs (6 digits after removing commas)
+    - 1,00,00,000 = 1 Crore (7 digits after removing commas)
+    - 10,00,00,000 = 10 Crores (8 digits after removing commas)
+  - STEP C (CROSS-CHECK): Verify against the payout schedule. Annual interest = principal × roi/100. Does the gross_interest in payout rows match this calculation?
+  - CONFLICT RESOLUTION: If words say "Sixty Lakhs" but digits look like "6,00,00,000" (6 Crores), USE 6000000. Words are always more reliable than digits.
 
-2. PRINCIPAL AMOUNT (TRIPLE-VERIFICATION REQUIRED):
-   - This is the MOST CRITICAL field. You must use this search protocol:
-   - STEP A (Words): Locate the principal amount written in WORDS (e.g., "Sixty Lakhs"). This is your primary source of truth.
-   - STEP B (Digits): Locate the principal amount in DIGITS (e.g., "60,00,000").
-   - STEP C (Check): Count the digits. 
-     - 7 digits total (e.g., 60,00,000) = Lakhs.
-     - 8 or more digits total (e.g., 6,00,00,000) = Crores.
-   - CONFLICT RESOLUTION: If digits look like 6,00,00,000 but words say "Sixty Lakhs", YOU MUST USE 6000000. Words are more reliable.
-   - CROSS-CHECK: Verify this amount against the Payout Schedule table and any Receipt/Payment sections.
+RULE 2 — PAYOUT SCHEDULE (READ EACH CELL DIGIT-BY-DIGIT):
+Extract EVERY row from the interest payout table. For each cell, read every digit individually:
+  - period_from and period_to: the interest accrual period dates
+  - no_of_days: number of days in that period
+  - due_by: the "on or before" payment date
+  - gross_interest: interest amount before TDS — read each digit carefully, note comma positions
+  - tds_amount: tax deducted at source (typically 10% of gross_interest)
+  - net_interest: gross_interest minus tds_amount
+  - is_principal_repayment: true ONLY for the final row if it represents principal return
 
-3. AMOUNTS (Indian Notation Awareness):
-   Be extremely careful with Lakhs vs Crores:
-   - 1,00,000 = 1 Lakh (5 zeros)
-   - 10,00,000 = 10 Lakhs (6 zeros)
-   - 1,00,00,000 = 1 Crore (7 zeros)
-   A single extra zero is a catastrophic 10x error. Count the zeros one by one!
+  ROW COUNT: Count the rows in the document's payout table BEFORE returning JSON. Your payout_schedule array must contain exactly that many entries.
 
-4. PAYOUT SCHEDULE: Extract EVERY row from the interest payout table. Each row has:
-   - period_from and period_to (the interest accrual period)
-   - no_of_days (number of days in that period)
-   - due_by (the "on or before" date — this is when payment must be made)
-   - gross_interest (interest before TDS)
-   - tds_amount (tax deducted at source, typically 10%)
-   - net_interest (gross_interest minus tds_amount)
-   - is_principal_repayment: true ONLY for the final row if it represents principal return (see rule 10)
+  MATH SELF-CHECK: For every non-principal row:
+    - tds_amount must equal round(gross_interest × 0.10, 2)
+    - net_interest must equal round(gross_interest - tds_amount, 2)
+  If any row fails, correct it before returning.
 
-5. PAYOUT FREQUENCY:
-   - "monthly" if interest is paid every month
-   - "quarterly" if interest is paid every quarter
-   - "biannual" if interest is paid every 6 months (also: "bi-annual", "half-yearly", "semi-annual", "half yearly", "semi annual")
-   - "annual" if interest is paid annually (once per year)
-   - "cumulative" if interest is paid at maturity only (also: "compounded", "compound", "on maturity", "at maturity")
+  PERIOD COVERAGE: The rows must cover from investment_start_date to maturity_date with no gaps:
+    - Row 1 period_from = investment_start_date
+    - Last non-principal row period_to = maturity_date
+    - Each row's period_from = day after previous row's period_to
 
-5. INTEREST TYPE:
-   - "compound" if principal grows each period
-   - "simple" otherwise
+RULE 3 — INVESTMENT START DATE (CRITICAL):
+  - Find the date explicitly stated as "investment commences", "interest starts", "effective from", "date of deposit", or similar phrasing in the document body.
+  - If no explicit start date is stated, use the period_from from the FIRST row of the payout schedule table.
+  - IMPORTANT: Do NOT assume the agreement_date (signed date) is the investment start date unless the document explicitly says so.
+  - If the stated start date conflicts with the first payout row's period_from, add a confidence_warning and use the period_from from the first payout row.
 
-6. NOMINEES: Extract name and PAN of all nominees listed.
+RULE 4 — DATES:
+  Always return dates in ISO format (YYYY-MM-DD). The agreement_date is the date the agreement was signed.
 
-7. PAN AND AADHAAR: Look for "PAN No", "Aadhaar No", "Income Tax PAN", "UID No", "Permanent Account Number" or similar labels.
-   - SEARCH STRATEGY: If not found in the primary applicant details section, YOU MUST scan the signature pages and the witness/verification section at the end of the document. These details are often placed there.
-   - MULTI-APPLICANT RULE: If the agreement mentions multiple investors (e.g., "Person A and Person B"), you must try to find IDs for BOTH. Combine them if possible (e.g., "PAN1 / PAN2") or at least prioritize the first applicant.
-   - DO NOT SKIP: If you see a label for PAN or Aadhaar but the value is hand-written or blurry, attempt to read it carefully. If you absolutely cannot read it, add a confidence_warning.
+RULE 5 — PAYOUT FREQUENCY:
+  - "monthly" if interest is paid every month
+  - "quarterly" if interest is paid every quarter
+  - "biannual" if interest is paid every 6 months (also: "bi-annual", "half-yearly", "semi-annual", "half yearly", "semi annual")
+  - "annual" if interest is paid annually (once per year)
+  - "cumulative" if interest is paid at maturity only (also: "compounded", "compound", "on maturity", "at maturity")
 
-8. INVESTOR NAME: Extract the full name(s) of the investor(s). 
-   - If there are joint applicants, include BOTH names (e.g., "Amrit and Dwaraka Pandurangi").
-   - SEARCH PROTOCOL: If the first page refers to the investor generically (e.g., "The Party of the Second Part"), you MUST scan the signature blocks at the end of the document to find the actual names.
+RULE 6 — INTEREST TYPE:
+  - "compound" if the principal grows each period (interest is reinvested)
+  - "simple" otherwise (fixed interest each period)
 
-9. TDS FILING NAME: Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the first investor name.
+RULE 7 — NOMINEES:
+  Extract name and PAN of all nominees listed in the document.
 
-10. PRINCIPAL REPAYMENT ROW: The final row in the payment table often contains the principal return. Mark is_principal_repayment: true ONLY if:
-    - The row's gross_interest value equals or approximately equals the principal_amount, OR
-    - The row label/description contains words like "Principal", "Maturity Amount", or "Repayment"
-    Do NOT add extra rows beyond what appears in the document table. Do NOT mark a row as principal repayment if its amount matches a normal periodic interest payment.
+RULE 8 — PAN AND AADHAAR:
+  Look for "PAN No", "Aadhaar No", "Income Tax PAN", "UID No", "Permanent Account Number" or similar labels.
+  - SEARCH STRATEGY: If not found in the primary applicant section, scan the signature pages and witness/verification section at the end. These details are often placed there.
+  - MULTI-APPLICANT: If multiple investors, find IDs for BOTH. Combine as "PAN1 / PAN2" or prioritize the first applicant.
+  - If the value is hand-written or blurry, attempt to read it. If you cannot read it, add a confidence_warning.
 
-11. PAYMENTS:
+RULE 9 — INVESTOR NAME:
+  Extract the full name(s) of the investor(s). If joint applicants, include BOTH (e.g., "Amrit and Dwaraka Pandurangi").
+  - If the first page uses generic references ("Party of the Second Part"), scan the signature blocks at the end for actual names.
 
-12. ROW COUNT VERIFICATION: Before returning JSON, count the rows in the payout schedule table in the document. Your payout_schedule array must contain exactly that many entries — not more, not fewer. If your count does not match, re-read the table and correct it.
+RULE 10 — TDS FILING NAME:
+  Extract the name under which TDS is to be deducted/filed. This is typically the primary applicant's name. If the document explicitly states a TDS deductee name, use that. Otherwise default to the first investor name.
 
-13. MATH SELF-CHECK: For every payout row (non-principal rows only), verify:
-    - tds_amount = round(gross_interest × 0.10, 2)
-    - net_interest = round(gross_interest - tds_amount, 2)
-    If any row fails either check, correct the values before returning. Do not return rows with mismatched numbers.
+RULE 11 — PRINCIPAL REPAYMENT ROW:
+  Mark is_principal_repayment: true ONLY if:
+    - The row's gross_interest equals or approximately equals the principal_amount, OR
+    - The row label contains "Principal", "Maturity Amount", or "Repayment"
+  Do NOT add extra rows beyond what's in the document. Do NOT mark a row as principal if its amount matches normal periodic interest.
 
-14. PERIOD COVERAGE: Your payout rows must cover the complete period from investment_start_date to maturity_date with no gaps. Verify:
-    - Does period_from of row 1 equal investment_start_date?
-    - Does period_to of the last non-principal row equal maturity_date?
-    - Does period_from of each row equal the day after period_to of the previous row?
-    If any check fails, re-read the document and add the missing row(s).
-
-15. COMPOUND INTEREST TDS ROWS:
- For compound interest agreements (interest_type = "compound"), TDS must be filed each Indian financial year (1 April – 31 March). You must extract one TDS row per financial year that overlaps with the investment term, including partial first and last years. These rows have is_tds_only: true. If the document shows annual TDS deduction rows, extract all of them — do not stop at 3 rows if the term spans 4 financial years. Set is_tds_only: false for all regular interest payout rows.
+RULE 12 — COMPOUND INTEREST TDS ROWS:
+  For compound interest agreements, TDS must be filed each Indian financial year (1 April – 31 March). Extract one TDS row per financial year overlapping with the investment term, including partial first and last years. These rows have is_tds_only: true. Set is_tds_only: false for all regular interest payout rows.
 
 Return ONLY valid JSON matching this exact schema — no explanation, no markdown fences:
 {
@@ -191,12 +254,12 @@ export async function extractAgreementData(
   }
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     generationConfig: {
       maxOutputTokens: 65536,
       responseMimeType: 'application/json',
       // @ts-expect-error — thinkingConfig is supported but not yet in type definitions
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: { thinkingBudget: 2048 },
     }
   })
 
