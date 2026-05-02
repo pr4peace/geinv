@@ -33,7 +33,8 @@ async function fetchItems(status: string, salespersonId?: string): Promise<Enric
     .select(`
       *,
       agreement:agreements(id, investor_name, reference_id, salesperson:team_members!salesperson_id(id, name)),
-      sent_by_member:team_members!sent_by(name)
+      sent_by_member:team_members!sent_by(name),
+      payout_schedule!notification_queue_payout_schedule_id_fkey(gross_interest, tds_amount, net_interest)
     `)
     .eq('status', status)
     .order('due_date', { ascending: true })
@@ -51,7 +52,15 @@ async function fetchItems(status: string, salespersonId?: string): Promise<Enric
   }
 
   const { data } = await query
-  return (data ?? []) as EnrichedItem[]
+  return (data ?? []).map((item: Record<string, unknown>) => {
+    const { payout_schedule, ...rest } = item as { payout_schedule?: Array<{ gross_interest: number | null; tds_amount: number | null; net_interest: number | null }> | null } & Omit<EnrichedItem, 'gross_interest' | 'tds_amount' | 'net_interest'>
+    return {
+      ...rest,
+      gross_interest: payout_schedule?.[0]?.gross_interest ?? null,
+      tds_amount: payout_schedule?.[0]?.tds_amount ?? null,
+      net_interest: payout_schedule?.[0]?.net_interest ?? null,
+    } as EnrichedItem
+  })
 }
 
 async function fetchStats(): Promise<NotificationStats> {

@@ -26,23 +26,27 @@ type PresetKey =
   | 'monthly-summary'
   | 'quarterly-forecast'
   | 'yearly-review'
-  | `person:${string}`
   | 'custom'
+  | 'none'
 
-const PRESETS: { key: PresetKey; label: string; row: number }[] = [
-  { key: 'this-week', label: 'This Week', row: 1 },
-  { key: 'this-fortnight', label: 'This Fortnight', row: 1 },
-  { key: 'this-month', label: 'This Month', row: 1 },
-  { key: 'this-quarter', label: 'This Quarter', row: 1 },
-  { key: 'this-fy', label: 'This FY', row: 1 },
-  { key: 'red-flags', label: '🔴 Red Flags', row: 2 },
-  { key: 'monthly-summary', label: 'Monthly Summary', row: 2 },
-  { key: 'quarterly-forecast', label: 'Quarterly Forecast', row: 2 },
-  { key: 'yearly-review', label: 'Yearly Review', row: 2 },
+const DATE_PRESETS: { key: PresetKey; label: string }[] = [
+  { key: 'this-week', label: 'This Week' },
+  { key: 'this-fortnight', label: 'This Fortnight' },
+  { key: 'this-month', label: 'This Month' },
+  { key: 'this-quarter', label: 'This Quarter' },
+  { key: 'this-fy', label: 'This FY' },
+  { key: 'custom', label: 'Custom' },
+]
+
+const TYPE_FILTERS: { key: NotificationType; label: string; color: string }[] = [
+  { key: 'payout', label: 'Interest', color: 'bg-emerald-900/30 border-emerald-700 text-emerald-300' },
+  { key: 'tds_filing', label: 'TDS', color: 'bg-amber-900/30 border-amber-700 text-amber-300' },
+  { key: 'maturity', label: 'Maturity', color: 'bg-purple-900/30 border-purple-700 text-purple-300' },
+  { key: 'doc_return', label: 'Doc Return', color: 'bg-blue-900/30 border-blue-700 text-blue-300' },
 ]
 
 const TYPE_LABELS: Record<NotificationType, string> = {
-  payout: 'Payout',
+  payout: 'Interest',
   maturity: 'Maturity',
   tds_filing: 'TDS Filing',
   doc_return: 'Doc Return',
@@ -117,7 +121,9 @@ export default function QuickSendPanel({
   salespersons: { id: string; name: string }[]
   sending?: boolean
 }) {
-  const [activePreset, setActivePreset] = useState<PresetKey | null>(null)
+  const [datePreset, setDatePreset] = useState<PresetKey>('none')
+  const [selectedTypes, setSelectedTypes] = useState<Set<NotificationType>>(new Set())
+  const [selectedPersons, setSelectedPersons] = useState<Set<string>>(new Set())
   const [results, setResults] = useState<{
     items: EnrichedItem[]
     totals: { gross: number; tds: number; net: number }
@@ -130,71 +136,67 @@ export default function QuickSendPanel({
   const [grouping, setGrouping] = useState<'single' | 'per-person'>('single')
   const [customOpen, setCustomOpen] = useState(false)
   const [customDays, setCustomDays] = useState(7)
-  const [customType, setCustomType] = useState<NotificationType | 'all'>('all')
   const [confirmRecipientOverrides, setConfirmRecipientOverrides] = useState<Record<string, boolean>>({})
 
-  function handlePreset(key: PresetKey) {
-    setActivePreset(key)
-    setCustomOpen(false)
-    setShowConfirmModal(false)
-    setConfirmError(null)
-
-    if (key === 'custom') {
-      setCustomOpen(o => !o)
-      setResults(null)
-      return
-    }
-
-    applyPreset(key)
+  function toggleType(type: NotificationType) {
+    const next = new Set(selectedTypes)
+    if (next.has(type)) next.delete(type)
+    else next.add(type)
+    setSelectedTypes(next)
   }
 
-  function handlePerson(personId: string) {
-    setActivePreset(`person:${personId}`)
-    setCustomOpen(false)
-    setShowConfirmModal(false)
-    setConfirmError(null)
-    applyPersonFilter(personId)
+  function togglePerson(personId: string) {
+    const next = new Set(selectedPersons)
+    if (next.has(personId)) next.delete(personId)
+    else next.add(personId)
+    setSelectedPersons(next)
   }
 
-  function applyPreset(key: PresetKey) {
-    const window = getCalendarWindow(key)
-    if (!window) return
+  function applyFilters() {
+    const filtered = pending.filter(item => {
+      // Date filter
+      if (datePreset !== 'none') {
+        if (datePreset === 'custom' && customOpen) {
+          const now = new Date()
+          const to = new Date(Date.now() + customDays * 86400000).toISOString().split('T')[0]
+          const from = now.toISOString().split('T')[0]
+          if (!item.due_date || item.due_date < from || item.due_date > to) return false
+        } else {
+          const window = getCalendarWindow(datePreset)
+          if (!window) return false
+          if (!item.due_date || item.due_date < window.from || item.due_date > window.to) return false
+        }
+      }
 
-    let filtered = pending.filter(item => {
-      if (!item.due_date) return false
-      if (item.due_date < window!.from || item.due_date > window!.to) return false
-      if (window.types && !window.types.includes(item.notification_type)) return false
+      // Type filter (empty set = all types)
+      if (selectedTypes.size > 0 && !selectedTypes.has(item.notification_type)) return false
+
+      // Person filter (empty set = all persons)
+      if (selectedPersons.size > 0) {
+        const spId = item.agreement?.salesperson?.id
+        if (!spId || !selectedPersons.has(spId)) return false
+      }
+
       return true
     })
 
-    // Red flags: overdue or very urgent
-    if (key === 'red-flags') {
-      const todayStr = new Date().toISOString().split('T')[0]
-      const sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
-      filtered = pending.filter(item => {
-        if (!item.due_date) return false
-        if (item.notification_type === 'payout' && item.due_date <= todayStr) return true
-        if (item.notification_type === 'maturity' && item.due_date <= sevenDaysOut) return true
-        if (item.notification_type === 'tds_filing' && item.due_date <= sevenDaysOut) return true
-        if (item.notification_type === 'doc_return') return true
-        return false
-      })
-    }
-
-    // Auto-determine grouping based on results
-    const hasSalesperson = filtered.some(i => i.agreement?.salesperson?.name)
-    setGrouping(hasSalesperson ? 'per-person' : 'single')
-
+    setGrouping(filtered.some(i => i.agreement?.salesperson?.name) ? 'per-person' : 'single')
     computeTotals(filtered)
   }
 
-  function applyPersonFilter(personId: string) {
-    const filtered = pending.filter(item => {
-      if (item.agreement?.salesperson?.id === personId) return true
-      return false
-    })
-    setGrouping('per-person')
-    computeTotals(filtered)
+  function handlePreset(key: PresetKey) {
+    if (key === 'custom') {
+      setCustomOpen(o => !o)
+      return
+    }
+    setDatePreset(key)
+  }
+
+  function clearFilters() {
+    setDatePreset('none')
+    setSelectedTypes(new Set())
+    setSelectedPersons(new Set())
+    setResults(null)
   }
 
   function computeTotals(items: EnrichedItem[]) {
@@ -222,20 +224,8 @@ export default function QuickSendPanel({
   }
 
   function handleApplyCustom() {
-    const now = new Date()
-    const to = new Date(Date.now() + customDays * 86400000).toISOString().split('T')[0]
-    const from = now.toISOString().split('T')[0]
-
-    const filtered = pending.filter(item => {
-      if (!item.due_date) return false
-      if (item.due_date < from || item.due_date > to) return false
-      if (customType !== 'all' && item.notification_type !== customType) return false
-      return true
-    })
-
-    const hasSalesperson = filtered.some(i => i.agreement?.salesperson?.name)
-    setGrouping(hasSalesperson ? 'per-person' : 'single')
-    computeTotals(filtered)
+    setCustomOpen(false)
+    setDatePreset('custom')
   }
 
   async function handleReviewSend() {
@@ -278,9 +268,7 @@ export default function QuickSendPanel({
   function handleSendConfirmed() {
     setConfirmError(null)
     onSend(results!.items.map(i => i.id), grouping, confirmRecipientOverrides)
-    setShowConfirmModal(false)
-    setResults(null)
-    setActivePreset(null)
+    clearFilters()
     setBatches([])
   }
 
@@ -298,35 +286,34 @@ export default function QuickSendPanel({
     ).size
   }, [batches, confirmRecipientOverrides])
 
-  const presetLabels = PRESETS.reduce<Record<string, string>>((acc, p) => {
-    acc[p.key] = p.label
-    return acc
-  }, {})
+  const activeFilterCount = [
+    datePreset !== 'none',
+    selectedTypes.size > 0,
+    selectedPersons.size > 0,
+  ].filter(Boolean).length
 
-  // Person presets row
-  const personPresets = salespersons.map(sp => ({
-    key: `person:${sp.id}` as PresetKey,
-    label: sp.name,
-  }))
-
-  const activeLabel = activePreset
-    ? activePreset.startsWith('person:')
-      ? personPresets.find(p => p.key === activePreset)?.label ?? 'By Person'
-      : presetLabels[activePreset] ?? ''
-    : ''
+  const dateRangeText = datePreset !== 'none' && datePreset !== 'custom'
+    ? (() => {
+        const w = getCalendarWindow(datePreset)
+        if (!w) return ''
+        const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+        return `${fmt(w.from)} – ${fmt(w.to)}, ${new Date(w.to).getFullYear()}`
+      })()
+    : null
 
   return (
     <>
-      {/* Preset buttons */}
-      <div className="space-y-2">
-        {/* Row 1: Time presets */}
-        <div className="flex flex-wrap gap-2">
-          {PRESETS.filter(p => p.row === 1).map(p => (
+      {/* Cascading Filters */}
+      <div className="space-y-3">
+        {/* Row 1: Date range */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium mr-1">When</span>
+          {DATE_PRESETS.map(p => (
             <button
               key={p.key}
               onClick={() => handlePreset(p.key)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
-                activePreset === p.key
+                datePreset === p.key
                   ? 'bg-indigo-600 border-indigo-500 text-white'
                   : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
               }`}
@@ -336,51 +323,7 @@ export default function QuickSendPanel({
           ))}
         </div>
 
-        {/* Row 2: Automation presets */}
-        <div className="flex flex-wrap gap-2">
-          {PRESETS.filter(p => p.row === 2).map(p => (
-            <button
-              key={p.key}
-              onClick={() => handlePreset(p.key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
-                activePreset === p.key
-                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Row 3: Person presets + Custom */}
-        <div className="flex flex-wrap gap-2">
-          {personPresets.map(p => (
-            <button
-              key={p.key}
-              onClick={() => handlePerson(p.key.replace('person:', ''))}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
-                activePreset === p.key
-                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-          <button
-            onClick={() => handlePreset('custom')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
-              customOpen
-                ? 'bg-indigo-600 border-indigo-500 text-white'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            Custom ▾
-          </button>
-        </div>
-
-        {/* Custom filter (inline expand, mobile-friendly) */}
+        {/* Custom date expand */}
         {customOpen && (
           <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-3">
             <div className="flex flex-wrap gap-3">
@@ -396,26 +339,88 @@ export default function QuickSendPanel({
                   ))}
                 </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 uppercase tracking-wide">Type</label>
-                <select
-                  value={customType}
-                  onChange={e => setCustomType(e.target.value as NotificationType | 'all')}
-                  className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 w-full"
-                >
-                  <option value="all">All</option>
-                  <option value="payout">Payouts</option>
-                  <option value="maturity">Maturities</option>
-                  <option value="tds_filing">TDS Filing</option>
-                  <option value="doc_return">Doc Return</option>
-                </select>
-              </div>
             </div>
             <button
               onClick={handleApplyCustom}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               Apply
+            </button>
+          </div>
+        )}
+
+        {/* Row 2: Type filter */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium mr-1">Type</span>
+          {TYPE_FILTERS.map(tf => {
+            const isActive = selectedTypes.has(tf.key)
+            return (
+              <button
+                key={tf.key}
+                onClick={() => toggleType(tf.key)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
+                  isActive ? tf.color : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                {tf.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Row 3: Salesperson filter */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium mr-1">Who</span>
+          {salespersons.map(sp => {
+            const isActive = selectedPersons.has(sp.id)
+            return (
+              <button
+                key={sp.id}
+                onClick={() => togglePerson(sp.id)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
+                  isActive
+                    ? 'bg-violet-600 border-violet-500 text-white'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {sp.name}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Filter summary + Apply/Clear */}
+        {activeFilterCount > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2 flex items-center gap-2">
+              <span className="text-xs text-slate-400">
+                {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} active
+              </span>
+              {dateRangeText && (
+                <span className="text-xs text-indigo-400 font-medium">· {dateRangeText}</span>
+              )}
+              {selectedTypes.size > 0 && (
+                <span className="text-xs text-emerald-400 font-medium">
+                  · {Array.from(selectedTypes).map(t => TYPE_LABELS[t]).join(', ')}
+                </span>
+              )}
+              {selectedPersons.size > 0 && (
+                <span className="text-xs text-violet-400 font-medium">
+                  · {Array.from(selectedPersons).map(id => salespersons.find(s => s.id === id)?.name).join(', ')}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={applyFilters}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Apply
+            </button>
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              Clear
             </button>
           </div>
         )}
@@ -429,7 +434,7 @@ export default function QuickSendPanel({
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <h3 className="text-sm font-semibold text-slate-200">
-                  {activeLabel} — {results.items.length} item{results.items.length !== 1 ? 's' : ''}
+                  {dateRangeText ?? 'Filtered'} — {results.items.length} item{results.items.length !== 1 ? 's' : ''}
                 </h3>
                 {results.totals.net > 0 && (
                   <div className="flex gap-4 mt-1 text-xs text-slate-400">

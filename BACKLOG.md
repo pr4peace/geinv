@@ -84,6 +84,9 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 | **Notify selected / Notify all** | `POST /api/notifications/send` — takes selected item IDs + type, sends one batched email per category, logs to reminders table. Idempotency warning if notified in last 7 days. |
 | **Notification nav item** | Add "Notifications" to sidebar in `layout.tsx`. |
 | **Automated summaries untouched** | Weekly Monday + monthly 1st + quarterly forecast crons stay exactly as-is. |
+| **Quick Send with presets + confirmation modal** | ✅ main | Calendar-aware presets, amounts summary, mandatory recipient checkboxes, preview before send |
+| **Rescan: principal amount validation** | ✅ main | Flags 5x+ mismatches (extra/missing zero) as error before save |
+| **Rescan: RPC function fixed** | ✅ main | Migrations 021/022 — fixed type casts, jsonb[] payments, deployed to Supabase |
 
 ---
 
@@ -119,6 +122,7 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 | **FAQ / About the tool** | Internal page explaining the tool, how to use it, investment agreement glossary for the team. |
 | **Personal dashboards** | Role-scoped dashboard views — coordinator sees everything, salesperson sees only their agreements. Design-first. |
 | **Backfill TDS rows (Settings)** | Button in Settings to insert missing 31 Mar TDS rows for cumulative/compound agreements uploaded before the fix. API: POST /api/admin/backfill-tds-rows. |
+| **Batch Rescan tool (Settings)** | Multi-select agreements → scan 5 in parallel → consolidated review page with diff cards → Accept All / Skip / Bulk Apply. Saves time vs reviewing one-by-one. |
 
 ---
 

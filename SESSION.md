@@ -4,32 +4,32 @@
 - main
 
 ## Phase
-- implementing
+- releasing
 
 ## Active Batch
-- Batch C.3 — Rescan Improvements
+- Batch F — Notification Revamp + Batch C.3 Rescan Fixes
 
 ---
 
 ## Work Completed
-- **Batch C.3 — Rescan Improvements (Visual Diff):**
-  - Enhanced `RescanModal.tsx` with a comprehensive `PayoutScheduleDiff` component.
-  - Implemented side-by-side comparison of old vs. new payout rows with amber highlighting for differences.
-  - Added "Payout Schedule Comparison" section to the rescan review modal.
-- **Utility & Clean-up:**
-  - Added extended timeframe options (90, 180, 365 days) to `QuickSendPanel.tsx`.
-  - Updated `backfill-tds-rows` API authorization to allow `coordinator` and `accountant` roles.
-- **Critical Bug Fixes (prior turn):**
-  - Fixed **Rescan Data Loss**: Updated `apply_rescan_update` RPC to preserve `status` and `tds_filed` flags for existing payout rows.
-  - Fixed **Investor Merge Security**: Implemented `merge_investors` RPC with salesperson ownership checks to prevent unauthorized merging.
-  - Fixed **Stale Notification Queue**: Updated GET route to filter out payout reminders for items already marked as paid.
-  - Streamlined **Extraction Review**: Moved to "approve by default" model and integrated TDS row generation into the review UI.
-  - Version bump to **D.1** with updated "What's New" modal.
+- **Batch F — Notification Revamp:**
+  - QuickSendPanel with calendar-aware presets (this week/month/quarter/FY)
+  - Mandatory confirmation modal with recipient checkboxes (Valli, Liya, salespeople)
+  - Preview before send — subject + email body preview
+  - Amounts summary (gross, TDS, net) per batch
+  - KPI cards clickable to trigger presets
+  - Activity log replaces old Queue table
+  - `POST /api/notifications/preview` endpoint
+  - `POST /api/notifications/send` with grouping + recipient overrides
+  - Fixed ESLint errors across NotificationsClient + QuickSendPanel
+- **Batch C.3 — Rescan Fixes:**
+  - Migrations 021/022: `apply_rescan_update` RPC deployed to Supabase
+  - Fixed type mismatches: `agreement_status` → TEXT, removed invalid enum casts
+  - Fixed `payments` column for `jsonb[]` format
+  - Added `principal_mismatch` validation — flags 5x+ errors (extra/missing zero)
 
-## Decisions
-- Rescan now includes a full payout schedule diff view to prevent accidental overwrites of corrected data.
-- Authorization for administrative backfill tools expanded to include coordinators and accountants for operational flexibility.
-- Quick Send timeframes expanded to support quarterly and annual planning.
+## Pending
+- Aanandsudhan N due date discrepancy (2026-03-31 vs 2026-04-07) — user checking with Irene
 
 ## Next Agent Action
-- User: Review the new rescan diff UI and extended notification timeframes.
+- User to confirm next batch after reviewing notifications panel
