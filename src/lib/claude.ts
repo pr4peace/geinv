@@ -58,7 +58,7 @@ RULE 2 — PAYOUT SCHEDULE (READ EACH CELL DIGIT-BY-DIGIT):
 Extract EVERY row from the interest payout table. For each cell, read every digit individually:
   - period_from and period_to: the interest accrual period dates
   - no_of_days: number of days in that period
-  - due_by: the date the interest is PAYABLE TO the investor. Look for columns labeled "Payable to", "Payment date", "Due date", or "Interest date". If both a "Payable to" column and an "On or before" (TDS deadline) column exist, ALWAYS use "Payable to".
+  - due_by: CRITICAL — ALWAYS use the "Payable to" column exclusively. NEVER use "On or before", "TDS deadline", "Last date", "Due date of filing", or any tax-filing deadline column. These are TDS deadlines, NOT payout dates. If "Payable to" has multiple dates in a row, pick the EARLIER one.
   - gross_interest: interest amount before TDS — read each digit carefully, note comma positions
   - tds_amount: tax deducted at source (typically 10% of gross_interest)
   - net_interest: gross_interest minus tds_amount
