@@ -1097,7 +1097,7 @@ export default function ExtractionReview({
             Payout Schedule
             <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(extracted + auto-generated)</span>
           </h2>
-          <PayoutScheduleTable rows={form.payout_schedule} />
+          <PayoutScheduleTable payouts={form.payout_schedule} />
         </div>
       )}
     </div>

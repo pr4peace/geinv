@@ -787,7 +787,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
             Live Payout Schedule
             <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(computed from terms above)</span>
           </h2>
-          <PayoutScheduleTable rows={payoutSchedule} />
+          <PayoutScheduleTable payouts={payoutSchedule} />
         </div>
       )}
 

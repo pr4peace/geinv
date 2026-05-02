@@ -1,11 +1,10 @@
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { ArrowLeft, Bell, FileText, User, AlertTriangle, Shield, Activity, Mail } from 'lucide-react'
+import { ArrowLeft, FileText, User, AlertTriangle, Shield, Activity, Mail } from 'lucide-react'
 import type {
   Agreement,
   PayoutSchedule,
-  Reminder,
   TeamMember,
 } from '@/types/database'
 import DocLifecycleStepper from '@/components/agreements/DocLifecycleStepper'
@@ -13,7 +12,11 @@ import UploadSignedButton from '@/components/agreements/UploadSignedButton'
 import DeleteAgreementButton from '@/components/agreements/DeleteAgreementButton'
 import RescanModal from '@/components/agreements/RescanModal'
 import AuditLog from '@/components/agreements/AuditLog'
-import PayoutScheduleSection from '@/components/agreements/PayoutScheduleSection'
+import PayoutScheduleTable from '@/components/agreements/PayoutScheduleTable'
+import PendingPayouts from '@/components/agreements/PendingPayouts'
+import PendingTdsFilings from '@/components/agreements/PendingTdsFilings'
+import QuickActions from '@/components/agreements/QuickActions'
+import Timeline from '@/components/agreements/Timeline'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -21,7 +24,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 type AgreementDetail = Agreement & {
   salesperson: TeamMember | null
   payout_schedule: PayoutSchedule[]
-  reminders: Reminder[]
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -88,44 +90,6 @@ function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string })
   )
 }
 
-function reminderTypeLabel(type: string): string {
-  const map: Record<string, string> = {
-    payout: 'Payout',
-    maturity: 'Maturity',
-    tds_filing: 'TDS Filing',
-    doc_return: 'Doc Return',
-    monthly_summary: 'Monthly Summary',
-    quarterly_forecast: 'Quarterly Forecast',
-    payout_monthly_summary: 'Monthly Summary',
-  }
-  return map[type] ?? type
-}
-
-function NotificationSourceBadge({ source }: { source: string }) {
-  if (source === 'reminder') return null
-  return (
-    <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-900/40 text-indigo-400 border border-indigo-800/50">
-      QUEUE
-    </span>
-  )
-}
-
-function ReminderStatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    pending: 'bg-amber-900/40 text-amber-400',
-    sent: 'bg-green-900/40 text-green-400',
-    failed: 'bg-red-900/40 text-red-400',
-    dismissed: 'bg-slate-700 text-slate-400',
-  }
-  return (
-    <span
-      className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${map[status] ?? 'bg-slate-700 text-slate-300'}`}
-    >
-      {status}
-    </span>
-  )
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AgreementDetailPage({
@@ -175,44 +139,50 @@ export default async function AgreementDetailPage({
     .order('due_date', { ascending: true })
 
   const agreement = rawAgreement as unknown as AgreementDetail
-  const { payout_schedule, reminders, salesperson, investor } = agreement as AgreementDetail & { investor?: { id: string; name: string } }
+  const { payout_schedule, salesperson, investor } = agreement as AgreementDetail & { investor?: { id: string; name: string } }
   const salespersonName = salesperson?.name ?? agreement.salesperson_custom ?? '—'
   const nominees = Array.isArray(agreement.nominees) ? agreement.nominees : []
 
-  // ─── Unified notifications (reminders + notification_queue) ───
-  type UnifiedNotification = {
-    id: string
-    type: string
-    dueDate: string | null
-    scheduledAt: string
-    status: string
-    sentAt: string | null
-    subject: string | null
-    source: 'reminder' | 'notification_queue'
+  // ─── Compute totals ───
+  const interestRows = payout_schedule.filter(r => !r.is_tds_only && !r.is_principal_repayment)
+
+  let totalInterest = 0
+  let totalTds = 0
+  for (const row of interestRows) {
+    totalInterest += row.gross_interest ?? 0
+    totalTds += row.tds_amount ?? 0
   }
+  const netPayout = totalInterest - totalTds
 
-  const unifiedNotifications: UnifiedNotification[] = [
-    ...reminders.map(r => ({
-      id: r.id, type: r.reminder_type, dueDate: null, scheduledAt: r.scheduled_at,
-      status: r.status, sentAt: r.sent_at, subject: r.email_subject, source: 'reminder' as const,
-    })),
-    ...(notificationQueueEntries ?? []).map(n => ({
-      id: n.id, type: n.notification_type, dueDate: n.due_date, scheduledAt: n.created_at,
-      status: n.status, sentAt: n.sent_at, subject: n.suggested_subject, source: 'notification_queue' as const,
-    })),
-  ].sort((a, b) => (b.dueDate ?? b.scheduledAt).localeCompare(a.dueDate ?? a.scheduledAt))
-
-  // ─── TDS summary ───
+  // ─── TDS summary by FY ───
   const tdsByFY: Record<string, { gross: number; tds: number; net: number }> = {}
   for (const row of payout_schedule) {
     if (row.is_principal_repayment) continue
     const fy = getFY(row.due_by ?? row.period_to)
     if (!tdsByFY[fy]) tdsByFY[fy] = { gross: 0, tds: 0, net: 0 }
-    tdsByFY[fy].gross += row.gross_interest
-    tdsByFY[fy].tds += row.tds_amount
-    tdsByFY[fy].net += row.net_interest
+    tdsByFY[fy].gross += row.gross_interest ?? 0
+    tdsByFY[fy].tds += row.tds_amount ?? 0
+    tdsByFY[fy].net += row.net_interest ?? 0
   }
-  const fyTotals = Object.entries(tdsByFY).sort(([a], [b]) => a.localeCompare(b))
+
+  // ─── Timeline items (notification_queue only) ───
+  type TimelineItem = {
+    id: string
+    type: string
+    dueDate: string | null
+    status: string
+    sentAt: string | null
+    subject: string | null
+  }
+
+  const timelineItems: TimelineItem[] = (notificationQueueEntries ?? []).map(n => ({
+    id: n.id,
+    type: n.notification_type,
+    dueDate: n.due_date,
+    status: n.status,
+    sentAt: n.sent_at,
+    subject: n.suggested_subject,
+  }))
 
   // ─── Status ───
   const statusMap: Record<string, { label: string; cls: string }> = {
@@ -282,38 +252,65 @@ export default async function AgreementDetailPage({
         {/* SECTION 1: DATA — What the document says                          */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
         <div className="space-y-6">
-          <SectionLabel icon={<Shield className="w-4 h-4 text-slate-400" />} label="Data — Agreement Details" />
+          <SectionLabel icon={<Shield className="w-4 h-4 text-slate-400" />} label="Data" />
 
-          {/* Agreement fields */}
+          {/* Summary Card — cascading numbers */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-800/80 border border-slate-700/50 rounded-xl p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+              <div className="sm:col-span-1">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Principal</p>
+                <p className="text-lg font-bold text-slate-100 text-right">{fmtCurrency(agreement.principal_amount)}</p>
+              </div>
+              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Total Interest</p>
+                <p className="text-lg font-bold text-emerald-400 text-right">{fmtCurrency(totalInterest)}</p>
+              </div>
+              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Total TDS</p>
+                <p className="text-lg font-bold text-red-400 text-right">{fmtCurrency(totalTds)}</p>
+              </div>
+              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Net Payout</p>
+                <p className="text-lg font-bold text-slate-100 text-right">{fmtCurrency(netPayout)}</p>
+              </div>
+              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">ROI / Freq</p>
+                <p className="text-lg font-bold text-indigo-400 text-right">
+                  {agreement.roi_percentage != null ? `${agreement.roi_percentage}%` : '—'}
+                </p>
+                <p className="text-[10px] text-slate-500 text-right">{fmtFrequency(agreement.payout_frequency)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Agreement Details */}
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
               <Field label="Agreement Date" value={fmtDate(agreement.agreement_date)} />
-              <Field label="Investment Start Date" value={fmtDate(agreement.investment_start_date)} />
+              <Field label="Investment Start" value={fmtDate(agreement.investment_start_date)} />
               <Field label="Agreement Type" value={fmt(agreement.agreement_type)} />
-              <Field label="Principal Amount" value={fmtCurrency(agreement.principal_amount)} />
-              <Field label="ROI" value={agreement.roi_percentage != null ? `${agreement.roi_percentage}%` : '—'} />
-              <Field label="Payout Frequency" value={fmtFrequency(agreement.payout_frequency)} />
               <Field label="Interest Type" value={fmtInterestType(agreement.interest_type)} />
-              <Field label="Lock-in Years" value={agreement.lock_in_years != null ? `${agreement.lock_in_years} yrs` : '—'} />
+              <Field label="Lock-in" value={agreement.lock_in_years != null ? `${agreement.lock_in_years} yrs` : '—'} />
               <Field label="Maturity Date" value={fmtDate(agreement.maturity_date)} />
               <Field label="Salesperson" value={salespersonName} />
               <Field label="TDS Filing Name" value={fmt(agreement.tds_filing_name)} />
-              {(agreement.payments ?? []).length > 0 && (
-                <div className="sm:col-span-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Payments</p>
-                  <div className="space-y-1">
-                    {(agreement.payments ?? []).map((p, i) => (
-                      <div key={i} className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-slate-200">
-                        {p.date && <span>{fmtDate(p.date)}</span>}
-                        {p.mode && <span className="text-slate-400">{p.mode}</span>}
-                        {p.bank && <span className="text-slate-400">{p.bank}</span>}
-                        {p.amount != null && <span className="font-medium">{fmtCurrency(p.amount)}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {(agreement.payments ?? []).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-700/50">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Payment History</p>
+                <div className="space-y-1">
+                  {(agreement.payments ?? []).map((p, i) => (
+                    <div key={i} className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-slate-200">
+                      {p.date && <span>{fmtDate(p.date)}</span>}
+                      {p.mode && <span className="text-slate-400">{p.mode}</span>}
+                      {p.bank && <span className="text-slate-400">{p.bank}</span>}
+                      {p.amount != null && <span className="font-medium">{fmtCurrency(p.amount)}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Applicants */}
@@ -361,46 +358,54 @@ export default async function AgreementDetailPage({
             )}
           </div>
 
-          {/* Payout Schedule + TDS Summary */}
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            <PayoutScheduleSection
-              agreementId={agreement.id}
-              payouts={payout_schedule}
-              userRole={userRole}
-            />
+          {/* Payout Schedule Table (read-only) */}
+          <PayoutScheduleTable payouts={payout_schedule} />
+        </div>
 
-            {/* TDS Summary by FY */}
-            {fyTotals.length > 0 && (
-              <div className="mt-5 pt-5 border-t border-slate-700/50">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">TDS Summary by Financial Year</h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-700/50 text-xs text-slate-400">
-                        <th className="pb-2 text-left pr-6">Financial Year</th>
-                        <th className="pb-2 text-right pr-6">Gross Interest</th>
-                        <th className="pb-2 text-right pr-6">TDS</th>
-                        <th className="pb-2 text-right">Net</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fyTotals.map(([fy, totals]) => (
-                        <tr key={fy} className="border-b border-slate-700/30">
-                          <td className="py-2 pr-6 font-medium text-slate-200">{fy}</td>
-                          <td className="py-2 pr-6 text-right tabular-nums text-slate-300">{fmtCurrency(totals.gross)}</td>
-                          <td className="py-2 pr-6 text-right tabular-nums text-red-400">{fmtCurrency(totals.tds)}</td>
-                          <td className="py-2 text-right tabular-nums text-emerald-400 font-medium">{fmtCurrency(totals.net)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* SECTION 2: ACTIONS — What needs to be done                        */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div className="space-y-4">
+          <SectionLabel icon={<Activity className="w-4 h-4 text-slate-400" />} label="Actions" />
+
+          <QuickActions userRole={userRole} />
+
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <DocLifecycleStepper
+              agreementId={agreement.id}
+              docStatus={agreement.doc_status}
+              docSentToClientDate={agreement.doc_sent_to_client_date}
+              docReturnedDate={agreement.doc_returned_date}
+            />
           </div>
 
-          {/* Original Document */}
-          {agreement.document_url && (
+          <PendingPayouts
+            agreementId={agreement.id}
+            payouts={payout_schedule}
+            userRole={userRole}
+          />
+
+          <PendingTdsFilings
+            payouts={payout_schedule}
+            userRole={userRole}
+          />
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* SECTION 3: TIMELINE — Notifications & Reminders                   */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div className="space-y-4">
+          <SectionLabel icon={<Mail className="w-4 h-4 text-slate-400" />} label="Timeline" />
+
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <Timeline items={timelineItems} />
+          </div>
+        </div>
+
+        {/* ── Original Document ── */}
+        {agreement.document_url && (
+          <div className="space-y-4">
+            <SectionLabel icon={<FileText className="w-4 h-4 text-slate-400" />} label="Document" />
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
               {agreement.document_url.toLowerCase().includes('.pdf') || agreement.document_url.includes('content-type=application%2Fpdf') ? (
                 <iframe src={agreement.document_url} className="w-full" style={{ minHeight: '500px', height: '70vh' }} title="Agreement Document" />
@@ -412,81 +417,8 @@ export default async function AgreementDetailPage({
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* SECTION 2: ACTIONS — What needs to be done                        */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <SectionLabel icon={<Activity className="w-4 h-4 text-slate-400" />} label="Actions" />
-
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            <DocLifecycleStepper
-              agreementId={agreement.id}
-              docStatus={agreement.doc_status}
-              docSentToClientDate={agreement.doc_sent_to_client_date}
-              docReturnedDate={agreement.doc_returned_date}
-            />
           </div>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* SECTION 3: NOTIFICATIONS — What's been sent / pending             */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <SectionLabel icon={<Mail className="w-4 h-4 text-slate-400" />} label="Notifications & Reminders" />
-
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            {unifiedNotifications.length === 0 ? (
-              <p className="text-slate-500 text-sm italic">No notifications or reminders for this agreement.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-700/50 text-xs text-slate-400">
-                      <th className="pb-2 text-left pr-4 whitespace-nowrap">Type</th>
-                      <th className="pb-2 text-left pr-4 whitespace-nowrap">Due Date</th>
-                      <th className="pb-2 text-center pr-4 whitespace-nowrap">Status</th>
-                      <th className="pb-2 text-left pr-4 whitespace-nowrap">Sent At</th>
-                      <th className="pb-2 text-left whitespace-nowrap">Subject</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unifiedNotifications.map((n) => {
-                      const todayStr = new Date().toISOString().split('T')[0]
-                      const isOverdue = n.status === 'pending' && n.dueDate && n.dueDate < todayStr
-                      return (
-                        <tr key={n.id} className={`border-b border-slate-700/30 hover:bg-slate-700/10 ${isOverdue ? 'bg-red-900/5' : ''}`}>
-                          <td className="py-2.5 pr-4">
-                            <span className={`inline-flex items-center gap-1.5 ${isOverdue ? 'text-red-400 font-semibold' : 'text-slate-300'}`}>
-                              <Bell className="w-3 h-3 flex-shrink-0" />
-                              <span className="whitespace-nowrap">{reminderTypeLabel(n.type)}</span>
-                              <NotificationSourceBadge source={n.source} />
-                            </span>
-                          </td>
-                          <td className="py-2.5 pr-4 whitespace-nowrap">
-                            {n.dueDate ? (
-                              <span className={isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}>
-                                {fmtDate(n.dueDate)}
-                                {isOverdue && <span className="ml-1 text-[10px] font-bold uppercase text-red-400">(overdue)</span>}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">{fmtDate(n.scheduledAt)}</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 pr-4 text-center"><ReminderStatusBadge status={n.status} /></td>
-                          <td className="py-2.5 pr-4 whitespace-nowrap text-slate-400">{n.sentAt ? fmtDate(n.sentAt) : '—'}</td>
-                          <td className="py-2.5 text-slate-400 max-w-xs truncate">{n.subject ?? '—'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* ── Audit Log ── */}
         <AuditLog entries={(auditEntries ?? []) as Parameters<typeof AuditLog>[0]['entries']} />
