@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Set recipient (Valli)
-    const recipients = ['valli@goodearth.org.in']
+    const recipients = ['valli.sivakumar@goodearth.org.in']
 
     // 5. Build and Send
     const html = buildMonthlySummaryEmail(monthLabel, summaryData)

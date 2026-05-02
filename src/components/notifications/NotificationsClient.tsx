@@ -209,7 +209,7 @@ export default function NotificationsClient({
                 </div>
                 <div>
                   <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Sending To</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-0.5">Valli (valli@goodearth.org.in)</p>
+                  <p className="text-sm font-semibold text-slate-200 mt-0.5">Valli Sivakumar (valli.sivakumar@goodearth.org.in)</p>
                   <p className="text-xs text-slate-500 mt-1">This email contains a consolidated summary of {data.payouts.length + data.maturities.length} investment events.</p>
                 </div>
               </div>
