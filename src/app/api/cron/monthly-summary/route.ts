@@ -4,6 +4,7 @@ import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { buildMonthlySummaryEmail, type MonthlySummaryData } from '@/lib/reminders'
 import { sendEmail } from '@/lib/email'
 
+export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 interface PayoutWithAgreement {
