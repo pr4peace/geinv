@@ -439,6 +439,23 @@ export default function SettingsPage() {
               <BackfillTdsButton />
             </div>
           </div>
+
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="flex flex-col h-full justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-100">Batch Rescan Agreements</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Select up to 20 agreements, scan all in parallel, review diffs, and apply changes in bulk.
+                </p>
+              </div>
+              <a
+                href="/settings/batch-rescan"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Open Batch Rescan →
+              </a>
+            </div>
+          </div>
         </div>
       </section>
     </div>

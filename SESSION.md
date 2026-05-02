@@ -7,29 +7,29 @@
 - releasing
 
 ## Active Batch
-- Batch F — Notification Revamp + Batch C.3 Rescan Fixes
+- Batch Rescan Improvements
 
 ---
 
 ## Work Completed
-- **Batch F — Notification Revamp:**
-  - QuickSendPanel with calendar-aware presets (this week/month/quarter/FY)
-  - Mandatory confirmation modal with recipient checkboxes (Valli, Liya, salespeople)
-  - Preview before send — subject + email body preview
-  - Amounts summary (gross, TDS, net) per batch
-  - KPI cards clickable to trigger presets
-  - Activity log replaces old Queue table
-  - `POST /api/notifications/preview` endpoint
-  - `POST /api/notifications/send` with grouping + recipient overrides
-  - Fixed ESLint errors across NotificationsClient + QuickSendPanel
-- **Batch C.3 — Rescan Fixes:**
-  - Migrations 021/022: `apply_rescan_update` RPC deployed to Supabase
-  - Fixed type mismatches: `agreement_status` → TEXT, removed invalid enum casts
-  - Fixed `payments` column for `jsonb[]` format
-  - Added `principal_mismatch` validation — flags 5x+ errors (extra/missing zero)
+- **Batch Rescan Tool (Settings → /settings/batch-rescan):**
+  - Multi-select agreement list with search + doc_status filter
+  - "Scan All Selected" fires `/api/admin/batch-rescan` (5 concurrent extractions, max 20)
+  - Consolidated diff cards with expand/collapse showing field-level changes
+  - Per-card actions: Accept, Skip, Apply Now
+  - Bulk "Apply N Accepted" button at top
+  - Progress bar during scanning
+  - Error cards for failed extractions
+  - Summary counts (accepted/skipped/applied/total)
+  - Link added to Settings page
+- **Notification Filters:**
+  - Cascading filters: When / Type / Who with color-coded chips
+  - Date presets: All, Next 7/14/30 days, This Month/Quarter/FY, Custom
+  - Fixed net amounts — correct FK join for `payout_schedule` data
+  - Byju added as salesperson
 
 ## Pending
 - Aanandsudhan N due date discrepancy (2026-03-31 vs 2026-04-07) — user checking with Irene
 
 ## Next Agent Action
-- User to confirm next batch after reviewing notifications panel
+- User to review Batch Rescan and notification filters
