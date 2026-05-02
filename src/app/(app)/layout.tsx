@@ -4,14 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard,
   FileText,
-  Calendar,
-  BarChart3,
-  FileBarChart,
   Settings,
   Leaf,
-  Users,
   Bell,
   ChevronLeft,
   ChevronRight,
@@ -25,19 +20,14 @@ import WhatsNewModal from '@/components/WhatsNewModal'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/agreements', label: 'Agreements', icon: FileText },
-  { href: '/investors', label: 'Investors', icon: Users },
-  { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/quarterly-review', label: 'Quarterly Review', icon: BarChart3, disabled: true },
-  { href: '/quarterly-reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 interface SearchResult {
   id: string
-  type: 'agreement' | 'investor'
+  type: 'agreement'
   title: string
   subtitle: string
 }
@@ -137,8 +127,7 @@ export default function AppLayout({
   const handleResultClick = (result: SearchResult) => {
     setShowSearchResults(false)
     setSearchQuery('')
-    const path = result.type === 'agreement' ? `/agreements/${result.id}` : `/investors/${result.id}`
-    router.push(path)
+    router.push(`/agreements/${result.id}`)
   }
 
   const handleSignOut = async () => {
@@ -206,7 +195,7 @@ export default function AppLayout({
                   <input
                     type="text"
                     className="w-full bg-slate-800/50 border border-slate-700 text-slate-100 text-xs rounded-xl py-2.5 pl-10 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 transition-all placeholder:text-slate-600"
-                    placeholder="Search agreements, investors..."
+                    placeholder="Search agreements..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery.trim().length >= 2 && setShowSearchResults(true)}
@@ -237,10 +226,8 @@ export default function AppLayout({
                         onClick={() => handleResultClick(result)}
                         className="w-full text-left px-4 py-3 hover:bg-slate-700/50 flex items-center gap-3 transition-colors group border-b border-slate-700/30 last:border-0"
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          result.type === 'agreement' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-emerald-500/10 text-emerald-400'
-                        }`}>
-                          {result.type === 'agreement' ? <FileText className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-indigo-500/10 text-indigo-400">
+                          <FileText className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{result.title}</p>
@@ -261,19 +248,10 @@ export default function AppLayout({
 
           {/* Nav */}
           <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto custom-scrollbar">
-            {navItems.map(({ href, label, icon: Icon, disabled }) => {
-              const isActive = !disabled && (pathname === href || pathname.startsWith(href + '/'))
+            {navItems.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href || pathname.startsWith(href + '/')
               return (
                 <div key={href} className="relative group">
-                  {disabled ? (
-                    <div
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium opacity-35 cursor-not-allowed select-none ${isCollapsed ? 'justify-center px-0' : ''}`}
-                      title="Coming soon"
-                    >
-                      <Icon className="w-5 h-5 flex-shrink-0" />
-                      {!isCollapsed && <span>{label}</span>}
-                    </div>
-                  ) : (
                   <Link
                     href={href}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -285,7 +263,6 @@ export default function AppLayout({
                     <Icon className={`w-5 h-5 flex-shrink-0 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                     {!isCollapsed && <span>{label}</span>}
                   </Link>
-                  )}
                   {/* Tooltip for collapsed state */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-3 px-3 py-2 bg-slate-800 text-white text-xs font-semibold rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-2xl border border-slate-700 ring-1 ring-white/5">

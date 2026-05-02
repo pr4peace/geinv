@@ -7,6 +7,7 @@ import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
 import PayoutScheduleTable from './PayoutScheduleTable'
 import { validateExtraction } from '@/lib/extraction-validator'
 import type { ExtractionFlag } from '@/lib/extraction-validator'
+import { calculatePayoutSchedule } from '@/lib/payout-calculator'
 
 interface TeamMember {
   id: string
@@ -262,13 +263,39 @@ export default function ExtractionReview({
     payout_schedule: form.payout_schedule
   }))
 
-  // Re-validate and generate TDS rows when key fields change
+  // Re-validate and auto-generate schedule when core fields change
   useEffect(() => {
-    const isCumulative = form.payout_frequency === 'cumulative' || form.interest_type === 'compound'
-    const updatedSchedule = [...form.payout_schedule]
+    let updatedSchedule = [...form.payout_schedule]
+    let changed = false
 
+    // Auto-generate full schedule if it's empty and we have enough data
+    if (
+      updatedSchedule.length === 0 &&
+      form.principal_amount &&
+      form.roi_percentage &&
+      form.investment_start_date &&
+      form.maturity_date
+    ) {
+      const generated = calculatePayoutSchedule({
+        principal: Number(form.principal_amount),
+        roiPercentage: Number(form.roi_percentage),
+        payoutFrequency: form.payout_frequency,
+        interestType: form.interest_type,
+        startDate: form.investment_start_date,
+        maturityDate: form.maturity_date,
+      })
+      updatedSchedule = generated.map(row => ({
+        ...row,
+        // Map PayoutRow to ExtractedPayoutRow (remove status)
+        is_principal_repayment: row.is_principal_repayment,
+      })) as ExtractedPayoutRow[]
+      changed = true
+    }
+
+    // For cumulative/compound, ensure TDS-only rows are present if not already in the generated list
+    const isCumulative = form.payout_frequency === 'cumulative' || form.interest_type === 'compound'
     if (isCumulative && form.investment_start_date && form.maturity_date) {
-      // Dynamic import to avoid SSR require issues
+      // Dynamic import for the secondary TDS utility
       import('@/lib/tds-calculator').then(({ generateTdsOnlyRows }) => {
         const tdsRows = generateTdsOnlyRows({
           startDate: form.investment_start_date,
@@ -276,22 +303,25 @@ export default function ExtractionReview({
           principal: Number(form.principal_amount) || 0,
           roi: Number(form.roi_percentage) || 0,
           interestType: form.interest_type,
-          agreementId: '', // Not needed for review
+          agreementId: '',
         })
 
-        // Merge TDS rows into schedule if not already present
-        let changed = false
+        let tdsChanged = false
         for (const tds of tdsRows) {
           if (!updatedSchedule.some(r => r.is_tds_only && r.period_to === tds.period_to)) {
             updatedSchedule.push({ ...tds, is_principal_repayment: false })
-            changed = true
+            tdsChanged = true
           }
         }
-        if (changed) {
+        if (tdsChanged) {
           updatedSchedule.sort((a, b) => a.due_by.localeCompare(b.due_by))
           setForm(f => ({ ...f, payout_schedule: updatedSchedule }))
         }
       })
+    }
+
+    if (changed) {
+      setForm(f => ({ ...f, payout_schedule: updatedSchedule }))
     }
 
     setFlags(validateExtraction({
@@ -303,7 +333,6 @@ export default function ExtractionReview({
       roi_percentage: Number(form.roi_percentage) || 0,
       payout_schedule: updatedSchedule
     }))
-    // We omit form.payout_schedule here to avoid infinite loop since we update it inside
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.agreement_date, form.investment_start_date, form.maturity_date, form.principal_amount, form.roi_percentage, form.payout_frequency, form.interest_type, extracted])
 

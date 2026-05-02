@@ -1,250 +1,178 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import type { NotificationQueue, NotificationType } from '@/types/database'
-import { UndoToast } from '@/components/UndoToast'
-import QuickSendPanel from '@/components/notifications/QuickSendPanel'
+import { Bell, Mail, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 
-type EnrichedItem = NotificationQueue & {
-  agreement?: {
-    id: string
+interface MonthlySummaryData {
+  payouts: Array<{
     investor_name: string
     reference_id: string
-    salesperson?: { id?: string; name: string } | null
-  } | null
-  sent_by_member?: { name: string } | null
-  gross_interest?: number | null
-  tds_amount?: number | null
-  net_interest?: number | null
-}
-
-type NotificationStats = {
-  payouts: number
-  maturities: number
-  tdsFilings: number
-  docsOverdue: number
-  payoutAmounts: { gross: number; tds: number; net: number }
-  maturityAmounts: { gross: number; tds: number; net: number }
-  tdsAmounts: { gross: number; tds: number; net: number }
-}
-
-function fmtCurrency(n: number) {
-  if (n === 0) return '₹0'
-  if (n >= 10000000) return `₹${(n / 10000000).toFixed(1).replace('.0', '')}Cr`
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1).replace('.0', '')}L`
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`
-  return `₹${n.toLocaleString('en-IN')}`
-}
-
-function KPISection({ stats, onPresetClick }: { stats: NotificationStats; onPresetClick: (preset: string) => void }) {
-  const cards = [
-    { label: 'Payouts', count: stats.payouts, amount: stats.payoutAmounts.net, preset: 'this-week', color: 'indigo' },
-    { label: 'Maturities', count: stats.maturities, amount: stats.maturityAmounts.net, preset: 'this-month', color: 'amber' },
-    { label: 'TDS Filing', count: stats.tdsFilings, amount: stats.tdsAmounts.net, preset: 'this-fortnight', color: 'violet' },
-    { label: 'Docs Overdue', count: stats.docsOverdue, amount: null, preset: 'red-flags', color: 'orange' },
-  ]
-
-  const colorMap: Record<string, string> = {
-    indigo: 'bg-indigo-900/20 border-indigo-800/40 text-indigo-400',
-    amber: 'bg-amber-900/20 border-amber-800/40 text-amber-400',
-    violet: 'bg-violet-900/20 border-violet-800/40 text-violet-400',
-    orange: 'bg-orange-900/20 border-orange-800/40 text-orange-400',
-  }
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {cards.map(card => (
-        <button
-          key={card.label}
-          onClick={() => onPresetClick(card.preset)}
-          className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all hover:scale-[1.02] ${
-            card.count > 0
-              ? colorMap[card.color]
-              : 'bg-slate-900 border-slate-800 text-slate-600'
-          }`}
-        >
-          <span className="text-xs font-medium opacity-70">{card.label}</span>
-          <span className="text-2xl font-bold">{card.count}</span>
-          {card.amount != null && card.amount > 0 && (
-            <span className="text-[11px] font-mono opacity-60">{fmtCurrency(card.amount)}</span>
-          )}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-const TYPE_LABELS: Record<NotificationType, string> = {
-  payout: 'Payout',
-  maturity: 'Maturity',
-  tds_filing: 'TDS Filing',
-  doc_return: 'Doc Return',
-  monthly_summary: 'Monthly Summary',
-  quarterly_forecast: 'Quarterly Forecast',
-}
-
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function ActivityLog({ history }: { history: EnrichedItem[] }) {
-  if (history.length === 0) {
-    return <p className="text-slate-500 text-sm py-8 text-center italic">No sent notifications yet.</p>
-  }
-
-  // Group by sent date
-  const byDate: Record<string, EnrichedItem[]> = {}
-  for (const item of history) {
-    const dateKey = item.sent_at ? fmtDate(item.sent_at) : 'Unknown'
-    if (!byDate[dateKey]) byDate[dateKey] = []
-    byDate[dateKey].push(item)
-  }
-
-  return (
-    <div className="space-y-3">
-      {Object.entries(byDate).map(([date, items]) => {
-        const types = Array.from(new Set(items.map(i => i.notification_type)))
-        const totalNet = 0
-        const sentBy = Array.from(new Set(items.map(i => i.sent_by_member?.name).filter((n): n is string => Boolean(n)))).join(', ')
-
-        return (
-          <div key={date} className="flex items-start gap-3 text-sm">
-            <span className="text-xs text-slate-500 font-mono whitespace-nowrap pt-0.5">{date}</span>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-slate-300">
-                Sent {items.length} {TYPE_LABELS[types[0]] ?? 'notification'}{items.length !== 1 ? 's' : ''}
-              </span>
-              {totalNet > 0 && (
-                <span className="text-xs font-mono text-slate-400">{fmtCurrency(totalNet)}</span>
-              )}
-              <span className="text-xs text-slate-500">→ {sentBy || '—'}</span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+    due_by: string
+    gross_interest: number
+    tds_amount: number
+    net_interest: number
+    is_tds_only: boolean
+  }>
+  maturities: Array<{
+    investor_name: string
+    reference_id: string
+    maturity_date: string
+    principal_amount: number
+  }>
 }
 
 export default function NotificationsClient({
-  pending, history, userRole, stats, salespersons,
+  monthLabel,
+  data,
 }: {
-  pending: EnrichedItem[]
-  history: EnrichedItem[]
-  userRole: string
-  stats: NotificationStats
-  salespersons: { id: string; name: string }[]
+  monthLabel: string
+  data: MonthlySummaryData
 }) {
-  const router = useRouter()
-  const [refreshing, setRefreshing] = useState(false)
   const [sending, setSending] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null)
-  const isCoordinator = userRole !== 'salesperson'
 
-  async function handleRefresh() {
-    setRefreshing(true)
-    try {
-      const res = await fetch('/api/jobs/run-all', { method: 'POST' })
-      if (!res.ok) throw new Error('Refresh failed')
-      router.refresh()
-    } catch {
-      setError('Failed to refresh queue')
-    } finally {
-      setRefreshing(false)
-    }
-  }
+  const interestPayouts = data.payouts.filter(p => !p.is_tds_only)
+  const tdsFilings = data.payouts.filter(p => p.is_tds_only)
+  const maturities = data.maturities
 
-  async function handleSend(ids: string[], grouping: 'single' | 'per-person', recipientOverrides: Record<string, boolean>) {
+  async function handleSendEmail() {
     setSending(true)
     setError(null)
+    setSuccess(false)
     try {
-      const res = await fetch('/api/notifications/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, grouping, recipients: recipientOverrides }),
-      })
-      const data = await res.json()
-      if (!res.ok) setError(data.error ?? 'Send failed')
-      else if (data.failed > 0) setError(`${data.failed} failed: ${data.errors?.join(', ')}`)
-      else {
-        setUndoToast({
-          message: `Sent ${data.sent} notification${data.sent !== 1 ? 's' : ''} successfully`,
-          onUndo: () => setUndoToast(null),
-        })
+      const res = await fetch('/api/cron/monthly-summary')
+      if (res.ok) {
+        setSuccess(true)
+      } else {
+        const d = await res.json()
+        setError(d.error || 'Failed to send email')
       }
-      router.refresh()
     } catch {
-      setError('Send failed')
+      setError('Network error')
     } finally {
       setSending(false)
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function handlePresetFromKPI(_preset: string) {
-    // Scroll to QuickSend
-    setTimeout(() => {
-      document.getElementById('quick-send-section')?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
-  }
-
   return (
-    <div className="p-6 space-y-6 min-h-screen bg-slate-950">
-      {/* Header */}
+    <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Notifications</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Pick a preset, review, confirm — nothing sends without your approval</p>
+          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-3">
+            <Bell className="w-6 h-6 text-indigo-400" />
+            Monthly Notifications
+          </h1>
+          <p className="text-slate-400 mt-1">Summary for {monthLabel}</p>
         </div>
-        {isCoordinator && (
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors disabled:opacity-50"
-          >
-            <span>{refreshing ? 'Refreshing…' : '↻ Refresh Queue'}</span>
-          </button>
-        )}
+        <button
+          onClick={handleSendEmail}
+          disabled={sending}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-900/20"
+        >
+          {sending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Mail className="w-4 h-4" />
+          )}
+          {sending ? 'Sending...' : 'Send Monthly Summary Email'}
+        </button>
       </div>
 
-      {/* KPI Cards → clickable preset triggers */}
-      <KPISection stats={stats} onPresetClick={handlePresetFromKPI} />
+      {success && (
+        <div className="bg-emerald-900/20 border border-emerald-800/50 rounded-xl p-4 flex items-center gap-3 text-emerald-400">
+          <CheckCircle2 className="w-5 h-5" />
+          <span className="text-sm">Summary email sent successfully to the accounts team!</span>
+        </div>
+      )}
 
       {error && (
-        <div className="bg-red-900/30 border border-red-800 rounded-xl px-4 py-3 text-sm text-red-400 flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-4">✕</button>
+        <div className="bg-red-900/20 border border-red-800/50 rounded-xl p-4 flex items-center gap-3 text-red-400">
+          <AlertCircle className="w-5 h-5" />
+          <span className="text-sm">{error}</span>
         </div>
       )}
 
-      {/* Quick Send Panel */}
-      {isCoordinator && (
-        <div id="quick-send-section" className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <QuickSendPanel
-            pending={pending}
-            onSend={handleSend}
-            sending={sending}
-            salespersons={salespersons}
-          />
+      {/* Interest Payouts */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/30">
+          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Interest Payouts ({interestPayouts.length})</h2>
         </div>
-      )}
-
-      {/* Activity Log */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-slate-200 mb-4">Recent Activity</h3>
-        <ActivityLog history={history} />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="text-slate-500 border-b border-slate-800">
+                <th className="px-6 py-3 font-medium">Investor</th>
+                <th className="px-6 py-3 font-medium">Due By</th>
+                <th className="px-6 py-3 text-right font-medium">Net Interest</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {interestPayouts.map((p, i) => (
+                <tr key={i} className="hover:bg-slate-800/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-semibold text-slate-200">{p.investor_name}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{p.reference_id}</div>
+                  </td>
+                  <td className="px-6 py-4 text-slate-400">{p.due_by}</td>
+                  <td className="px-6 py-4 text-right text-emerald-400 font-mono font-bold">
+                    ₹{p.net_interest.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              ))}
+              {interestPayouts.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-slate-500 italic">No interest payouts pending this month.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {undoToast && (
-        <UndoToast
-          message={undoToast.message}
-          onUndo={undoToast.onUndo}
-          onDismiss={() => setUndoToast(null)}
-        />
-      )}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Maturities */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/30">
+            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Maturities ({maturities.length})</h2>
+          </div>
+          <div className="p-0">
+            {maturities.map((m, i) => (
+              <div key={i} className="px-6 py-4 flex items-center justify-between border-b border-slate-800 last:border-0 hover:bg-slate-800/30">
+                <div>
+                  <div className="font-semibold text-slate-200 text-sm">{m.investor_name}</div>
+                  <div className="text-[10px] text-slate-500">{m.maturity_date}</div>
+                </div>
+                <div className="text-amber-500 font-bold font-mono text-sm">₹{m.principal_amount.toLocaleString('en-IN')}</div>
+              </div>
+            ))}
+            {maturities.length === 0 && (
+              <p className="px-6 py-8 text-center text-slate-500 italic text-sm">No maturities this month.</p>
+            )}
+          </div>
+        </div>
+
+        {/* TDS Filings */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/30">
+            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">TDS Filings ({tdsFilings.length})</h2>
+          </div>
+          <div className="p-0">
+            {tdsFilings.map((p, i) => (
+              <div key={i} className="px-6 py-4 flex items-center justify-between border-b border-slate-800 last:border-0 hover:bg-slate-800/30">
+                <div>
+                  <div className="font-semibold text-slate-200 text-sm">{p.investor_name}</div>
+                  <div className="text-[10px] text-slate-500">{p.due_by}</div>
+                </div>
+                <div className="text-sky-500 font-bold font-mono text-sm">₹{p.tds_amount.toLocaleString('en-IN')}</div>
+              </div>
+            ))}
+            {tdsFilings.length === 0 && (
+              <p className="px-6 py-8 text-center text-slate-500 italic text-sm">No TDS filings due this month.</p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

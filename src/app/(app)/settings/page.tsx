@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { TeamMember, TeamMemberRole } from '@/types/database'
-import BackfillTdsButton from '@/components/settings/BackfillTdsButton'
-import SyncMaturedButton from '@/components/settings/SyncMaturedButton'
 
 const ROLES: { value: TeamMemberRole; label: string }[] = [
   { value: 'coordinator', label: 'Coordinator' },
@@ -16,7 +14,6 @@ function roleLabel(role: TeamMemberRole): string {
   return ROLES.find((r) => r.value === role)?.label ?? role
 }
 
-// ─── Toggle Switch ──────────────────────────────────────────────────────────
 function Toggle({
   checked,
   onChange,
@@ -46,7 +43,6 @@ function Toggle({
   )
 }
 
-// ─── Section Header ─────────────────────────────────────────────────────────
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-4">
@@ -56,22 +52,18 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   )
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  // ── Team state ──────────────────────────────────────────────────────────
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loadingTeam, setLoadingTeam] = useState(true)
   const [teamError, setTeamError] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
-  // ── Add member form ──────────────────────────────────────────────────────
   const [formName, setFormName] = useState('')
   const [formEmail, setFormEmail] = useState('')
   const [formRole, setFormRole] = useState<TeamMemberRole>('salesperson')
   const [formError, setFormError] = useState<string | null>(null)
   const [formSubmitting, setFormSubmitting] = useState(false)
 
-  // ── Fetch team ───────────────────────────────────────────────────────────
   const fetchTeam = useCallback(async () => {
     setLoadingTeam(true)
     setTeamError(null)
@@ -91,10 +83,8 @@ export default function SettingsPage() {
     fetchTeam()
   }, [fetchTeam])
 
-  // ── Toggle active ────────────────────────────────────────────────────────
   async function handleToggleActive(member: TeamMember) {
     const id = member.id
-    // Optimistic update
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, is_active: !m.is_active } : m)))
     setTogglingId(id)
     try {
@@ -104,13 +94,11 @@ export default function SettingsPage() {
         body: JSON.stringify({ is_active: !member.is_active }),
       })
       if (!res.ok) {
-        // Revert
         setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, is_active: !m.is_active } : m)))
         const body = await res.json().catch(() => ({}))
         setTeamError(body.error ?? 'Failed to update member status')
       }
     } catch {
-      // Revert
       setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, is_active: !m.is_active } : m)))
       setTeamError('Network error updating member status')
     } finally {
@@ -118,7 +106,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Add member ───────────────────────────────────────────────────────────
   async function handleAddMember(e: React.FormEvent) {
     e.preventDefault()
     setFormError(null)
@@ -148,23 +135,20 @@ export default function SettingsPage() {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-8 min-h-screen bg-slate-950">
-      {/* Page header */}
+    <div className="p-6 space-y-8 min-h-screen bg-slate-950 max-w-5xl mx-auto">
       <div>
         <h1 className="text-xl font-bold text-slate-100">Settings</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Manage team, reminders, and email configuration</p>
+        <p className="text-xs text-slate-500 mt-0.5">Manage team members and notification recipients</p>
       </div>
 
-      {/* ─── Section 1: Team Members ─────────────────────────────────────── */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      {/* Team Members */}
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
         <SectionHeader
           title="Team Members"
           subtitle="Manage who receives notifications and appears in salesperson dropdowns"
         />
 
-        {/* Table */}
         {loadingTeam ? (
           <div className="py-8 text-center text-slate-500 text-sm">Loading team…</div>
         ) : teamError ? (
@@ -176,18 +160,10 @@ export default function SettingsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-800/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Active
-                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Active</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
@@ -216,7 +192,6 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Add Member Form */}
         <div className="mt-6 pt-5 border-t border-slate-800">
           <h3 className="text-sm font-medium text-slate-300 mb-3">Add Member</h3>
           <form onSubmit={handleAddMember} className="flex flex-wrap gap-3 items-end">
@@ -227,7 +202,7 @@ export default function SettingsPage() {
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Full name"
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 w-44"
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-44"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -237,7 +212,7 @@ export default function SettingsPage() {
                 value={formEmail}
                 onChange={(e) => setFormEmail(e.target.value)}
                 placeholder="email@example.com"
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 w-52"
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-52"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -245,217 +220,37 @@ export default function SettingsPage() {
               <select
                 value={formRole}
                 onChange={(e) => setFormRole(e.target.value as TeamMemberRole)}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 {ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
+                  <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
             </div>
             <button
               type="submit"
               disabled={formSubmitting}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
             >
               {formSubmitting ? 'Adding…' : 'Add Member'}
             </button>
           </form>
-          {formError && (
-            <p className="mt-2 text-xs text-red-400">{formError}</p>
-          )}
+          {formError && <p className="mt-2 text-xs text-red-400">{formError}</p>}
         </div>
       </section>
 
-      {/* ─── Section 2: Reminder Configuration ──────────────────────────── */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      {/* Notifications Info */}
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
         <SectionHeader
-          title="Reminder Configuration"
-          subtitle="Default lead days for automated reminders (configured in code)"
+          title="Notification Summary"
+          subtitle="Consolidated monthly emails are sent to coordinators"
         />
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Payout reminders */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-sm font-medium text-slate-100">Payout Reminders</span>
-            </div>
-            <p className="text-xs text-slate-500 mb-2">Sent before the payout due date</p>
-            <div className="flex gap-2 flex-wrap">
-              {[14, 7].map((d) => (
-                <span
-                  key={d}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-900/40 text-amber-300 border border-amber-800/50"
-                >
-                  {d} days
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Maturity reminders */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-sm font-medium text-slate-100">Maturity Reminders</span>
-            </div>
-            <p className="text-xs text-slate-500 mb-2">Sent before the agreement matures</p>
-            <div className="flex gap-2 flex-wrap">
-              {[90, 30, 14, 7].map((d) => (
-                <span
-                  key={d}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/40 text-emerald-300 border border-emerald-800/50"
-                >
-                  {d} days
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Document return reminders */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-sky-400" />
-              <span className="text-sm font-medium text-slate-100">Document Return</span>
-            </div>
-            <p className="text-xs text-slate-500 mb-2">
-              First reminder 14 days after sending; then every 7 days (up to 5 reminders)
-            </p>
-            <div className="flex gap-2 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-900/40 text-sky-300 border border-sky-800/50">
-                First: +14 days
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-900/40 text-sky-300 border border-sky-800/50">
-                Then: every 7 days
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-700 text-slate-400 border border-slate-600">
-                Max 5
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Section 3: Email Preview ────────────────────────────────────── */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <SectionHeader
-          title="Email Types"
-          subtitle="Overview of automated emails sent by the system"
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Payout Reminder */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-sm font-medium text-slate-100">Payout Reminder</span>
-              <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-900/40 text-amber-300 border border-amber-800/50">
-                Automated
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Sent to <span className="text-slate-300">Irene</span> and the assigned salesperson
-              14 and 7 days before a payout is due.
-            </p>
-          </div>
-
-          {/* Accounts Notification */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-sm font-medium text-slate-100">Accounts Notification</span>
-              <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-900/40 text-indigo-300 border border-indigo-800/50">
-                Manual trigger
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Sent to <span className="text-slate-300">Valli</span> when Irene clicks &ldquo;Notify
-              Accounts&rdquo; on a payout row to authorise payment.
-            </p>
-          </div>
-
-          {/* Quarterly Forecast */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-sm font-medium text-slate-100">Quarterly Forecast</span>
-              <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-900/40 text-indigo-300 border border-indigo-800/50">
-                Manual trigger
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Sent to <span className="text-slate-300">Valli &amp; Liya</span> via the &ldquo;Send
-              to Accounts&rdquo; button on the dashboard with the quarterly payout forecast.
-            </p>
-          </div>
-
-          {/* Document Return Reminder */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-sm font-medium text-slate-100">Document Return Reminder</span>
-              <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-900/40 text-amber-300 border border-amber-800/50">
-                Automated
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Sent to <span className="text-slate-300">Irene</span> and the assigned salesperson
-              when a signed agreement has not been returned — starting 14 days after sending,
-              then every 7 days (up to 5 reminders).
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-4 text-xs text-slate-600">
-          Email preview and template editing is a Phase 2 feature.
-        </p>
-      </section>
-
-      {/* ─── Section 4: Maintenance ──────────────────────────────────────── */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <SectionHeader
-          title="Maintenance"
-          subtitle="One-time repair tools and administrative tasks"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex flex-col h-full justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-100">Sync Matured Status</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Finds active agreements with past maturity dates and updates them to &apos;Matured&apos; status.
-                </p>
-              </div>
-              <SyncMaturedButton />
-            </div>
-          </div>
-
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex flex-col h-full justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-100">Backfill TDS Filing Rows</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Generates missing 31st March TDS rows for cumulative/compound agreements.
-                </p>
-              </div>
-              <BackfillTdsButton />
-            </div>
-          </div>
-
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-            <div className="flex flex-col h-full justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-100">Batch Rescan Agreements</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Select up to 20 agreements, scan all in parallel, review diffs, and apply changes in bulk.
-                </p>
-              </div>
-              <a
-                href="/settings/batch-rescan"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                Open Batch Rescan →
-              </a>
-            </div>
-          </div>
+        <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-4">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            On the 1st of every month, a consolidated summary of all <strong>interest payouts</strong>, 
+            <strong>maturities</strong>, and <strong>TDS filings</strong> due for that month is sent to all 
+            active <strong>Coordinators</strong>.
+          </p>
         </div>
       </section>
     </div>

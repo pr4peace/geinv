@@ -78,16 +78,14 @@ export async function middleware(request: NextRequest) {
 
       // Gate restricted routes to coordinator/admin only
       const restrictedRoutes = [
-      '/settings',
-      '/agreements/new',
-      '/agreements/import',
-      '/quarterly-reports',
-      '/quarterly-review',
-    ]
+        '/settings',
+        '/agreements/new',
+        '/agreements/import',
+      ]
       const isRestricted = restrictedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
       if (isRestricted && member.role !== 'coordinator' && member.role !== 'admin') {
-        return createResponse('redirect', '/dashboard')
+        return createResponse('redirect', '/agreements')
       }
 
       // Pass role and team ID downstream via request headers

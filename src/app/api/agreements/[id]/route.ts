@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import {
-  generateDocReturnReminders,
-  type ReminderInput,
-} from '@/lib/reminders'
 
 export async function GET(
   request: NextRequest,
@@ -119,61 +115,6 @@ export async function PATCH(
         old_values: oldValues,
         new_values: newValues,
       })
-    }
-
-    // If doc_status changed to 'sent_to_client' and doc_sent_to_client_date is set,
-    // generate doc_return reminders
-    const docStatusChanged =
-      body.doc_status === 'sent_to_client' &&
-      existing.doc_status !== 'sent_to_client'
-
-    const sentDate = body.doc_sent_to_client_date ?? updated.doc_sent_to_client_date
-
-    if (docStatusChanged && sentDate) {
-      // Fetch internal email and salesperson email
-      const { data: internalMembers } = await supabase
-        .from('team_members')
-        .select('email')
-        .eq('role', 'coordinator')
-        .eq('is_active', true)
-        .limit(1)
-
-      const internalEmail = internalMembers?.[0]?.email ?? 'coordinator@goodearth.org.in'
-
-      let salespersonEmail: string | null = null
-      if (updated.salesperson_id) {
-        const { data: sp } = await supabase
-          .from('team_members')
-          .select('email')
-          .eq('id', updated.salesperson_id)
-          .single()
-        salespersonEmail = sp?.email ?? null
-      }
-
-      const docReturnReminders: ReminderInput[] = generateDocReturnReminders(
-        updated,
-        internalEmail,
-        salespersonEmail
-      )
-
-      if (docReturnReminders.length > 0) {
-        const reminderRows = docReturnReminders.map((r) => ({
-          agreement_id: r.agreement_id,
-          payout_schedule_id: r.payout_schedule_id ?? null,
-          reminder_type: r.reminder_type,
-          lead_days: r.lead_days,
-          scheduled_at: r.scheduled_at.toISOString(),
-          status: 'pending',
-          email_to: r.email_to,
-          email_subject: r.email_subject,
-          email_body: r.email_body,
-        }))
-
-        const { error: reminderError } = await supabase.from('reminders').insert(reminderRows)
-        if (reminderError) {
-          console.error('Failed to insert doc return reminders:', reminderError.message)
-        }
-      }
     }
 
     return NextResponse.json(updated)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import AgreementsTable from '@/components/dashboard/AgreementsTable'
+import AgreementsTable from '@/components/agreements/AgreementsTable'
 import TrashAgreements from '@/components/agreements/TrashAgreements'
 import type { Agreement, AgreementStatus } from '@/types/database'
 

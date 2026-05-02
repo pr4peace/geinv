@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReferenceId } from '@/lib/reference-id'
-import {
-  generatePayoutReminders,
-  generateMaturityReminders,
-  generateDocReturnReminders,
-  type ReminderInput,
-} from '@/lib/reminders'
 import type { ExtractedPayoutRow } from '@/lib/claude'
 import { findOrCreateInvestor } from '@/lib/investors'
-
 import { generateTdsOnlyRows } from '@/lib/tds-calculator'
-import { queueNotificationsNow } from '@/lib/notification-queue'
 
 export async function GET(request: NextRequest) {
   try {
@@ -297,89 +289,6 @@ export async function POST(request: NextRequest) {
         .lt('due_by', todayStr)
         .eq('is_tds_only', false)
     }
-
-    // Fetch the payout_schedule rows with ids for reminder generation
-    const { data: payoutRows, error: fetchPayoutError } = await supabase
-      .from('payout_schedule')
-      .select('*')
-      .eq('agreement_id', agreement.id)
-      .order('due_by', { ascending: true })
-
-    if (fetchPayoutError) {
-      await supabase.from('agreements').delete().eq('id', agreement.id)
-      return NextResponse.json({ error: `Failed to fetch payout schedule for reminders: ${fetchPayoutError.message}` }, { status: 500 })
-    }
-
-    // Fetch internal email (coordinator) for reminders
-    const { data: internalMembers } = await supabase
-      .from('team_members')
-      .select('email')
-      .eq('role', 'coordinator')
-      .eq('is_active', true)
-      .limit(1)
-
-    const internalEmail = internalMembers?.[0]?.email ?? 'coordinator@goodearth.org.in'
-
-    // Fetch salesperson email if assigned
-    let salespersonEmail: string | null = null
-    if (finalAgreement.salesperson_id) {
-      const { data: sp } = await supabase
-        .from('team_members')
-        .select('email')
-        .eq('id', finalAgreement.salesperson_id)
-        .single()
-      salespersonEmail = sp?.email ?? null
-    }
-
-    // Build reminder list
-    const reminderInputs: ReminderInput[] = []
-
-    for (const payoutRow of payoutRows ?? []) {
-      const payoutReminders = generatePayoutReminders(
-        finalAgreement,
-        payoutRow,
-        internalEmail,
-        salespersonEmail
-      )
-      reminderInputs.push(...payoutReminders)
-    }
-
-    const maturityReminders = generateMaturityReminders(finalAgreement, internalEmail, salespersonEmail)
-    reminderInputs.push(...maturityReminders)
-
-    // Doc return reminders if doc_sent_to_client_date is set
-    if (finalAgreement.doc_sent_to_client_date) {
-      const docReturnReminders = generateDocReturnReminders(finalAgreement, internalEmail, salespersonEmail)
-      reminderInputs.push(...docReturnReminders)
-    }
-
-    // Insert reminders
-    if (reminderInputs.length > 0) {
-      const reminderRows = reminderInputs.map((r) => ({
-        agreement_id: r.agreement_id,
-        payout_schedule_id: r.payout_schedule_id ?? null,
-        reminder_type: r.reminder_type,
-        lead_days: r.lead_days,
-        scheduled_at: r.scheduled_at.toISOString(),
-        status: 'pending',
-        email_to: r.email_to,
-        email_subject: r.email_subject,
-        email_body: r.email_body,
-      }))
-
-      const { error: reminderError } = await supabase.from('reminders').insert(reminderRows)
-      if (reminderError) {
-        // Cleanup: Delete agreement and payouts if reminders fail
-        await supabase.from('payout_schedule').delete().eq('agreement_id', agreement.id)
-        await supabase.from('agreements').delete().eq('id', agreement.id)
-        return NextResponse.json({ error: `Failed to insert reminders: ${reminderError.message}` }, { status: 500 })
-      }
-    }
-
-    // Fire-and-forget: queue notifications for the new agreement immediately
-    queueNotificationsNow(supabase).catch(err =>
-      console.error('queueNotificationsNow after agreement creation failed:', err)
-    )
 
     return NextResponse.json(finalAgreement, { status: 201 })
   } catch (err) {
