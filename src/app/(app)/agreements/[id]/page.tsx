@@ -144,13 +144,19 @@ export default async function AgreementDetailPage({
   const nominees = Array.isArray(agreement.nominees) ? agreement.nominees : []
 
   // ─── Compute totals ───
-  const interestRows = payout_schedule.filter(r => !r.is_tds_only && !r.is_principal_repayment)
+  const interestRows = payout_schedule.filter(r => !r.is_tds_only)
 
   let totalInterest = 0
   let totalTds = 0
   for (const row of interestRows) {
-    totalInterest += row.gross_interest ?? 0
-    totalTds += row.tds_amount ?? 0
+    if (row.is_principal_repayment) {
+      const interestComponent = (row.gross_interest ?? 0) - (agreement.principal_amount ?? 0)
+      totalInterest += Math.max(0, interestComponent)
+      totalTds += row.tds_amount ?? 0
+    } else {
+      totalInterest += row.gross_interest ?? 0
+      totalTds += row.tds_amount ?? 0
+    }
   }
   const netPayout = totalInterest - totalTds
 

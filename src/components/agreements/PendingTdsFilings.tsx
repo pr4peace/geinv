@@ -93,6 +93,15 @@ export default function PendingTdsFilings({ payouts, userRole }: Props) {
               )
             })}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-violet-700/40 bg-violet-900/20">
+              <td className="py-2 px-3 text-xs text-violet-300/70 font-semibold">Total Pending</td>
+              <td className="py-2 px-3 text-right text-xs font-bold text-violet-200">
+                {fmtCurrency(unfiledTds.reduce((sum, r) => sum + (r.tds_amount ?? 0), 0))}
+              </td>
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

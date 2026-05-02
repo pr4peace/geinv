@@ -215,7 +215,7 @@ export default function QuickSendPanel({
     const byPerson: Record<string, { gross: number; tds: number; net: number }> = {}
 
     for (const item of items) {
-      if (item.notification_type === 'payout' || item.notification_type === 'tds_filing') {
+      if (item.notification_type === 'payout' || item.notification_type === 'tds_filing' || item.notification_type === 'maturity') {
         const g = item.gross_interest ?? 0
         const t = item.tds_amount ?? 0
         const n = item.net_interest ?? 0
@@ -498,7 +498,7 @@ export default function QuickSendPanel({
                       {fmtDate(item.due_date)}
                     </td>
                     <td className="py-2.5 px-4 text-right font-mono text-xs text-slate-200">
-                      {item.notification_type === 'payout' || item.notification_type === 'tds_filing'
+                      {item.notification_type === 'payout' || item.notification_type === 'tds_filing' || item.notification_type === 'maturity'
                         ? fmtCurrency(item.net_interest ?? 0)
                         : '—'}
                     </td>

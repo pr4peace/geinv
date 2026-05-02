@@ -121,6 +121,15 @@ export default function PendingPayouts({ agreementId, payouts, userRole }: Props
               )
             })}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-slate-600/50 bg-slate-800/60">
+              <td className="py-2 px-3 text-xs text-slate-400 font-semibold">Total</td>
+              <td className="py-2 px-3 text-right text-xs font-bold text-emerald-300">
+                {fmtCurrency(pendingPayouts.reduce((sum, r) => sum + (r.net_interest ?? 0), 0))}
+              </td>
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
         </table>
       </div>
 

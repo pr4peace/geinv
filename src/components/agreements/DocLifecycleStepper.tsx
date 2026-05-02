@@ -86,7 +86,8 @@ export default function DocLifecycleStepper({
       {/* Stepper */}
       <div className="flex items-start gap-0">
         {STAGES.map((stage, idx) => {
-          const isCompleted = idx < currentIdx
+          const isLastStep = idx === STAGES.length - 1
+          const isCompleted = idx < currentIdx || (isLastStep && idx === currentIdx)
           const isCurrent = idx === currentIdx
 
           return (
