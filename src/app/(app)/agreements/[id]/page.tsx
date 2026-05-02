@@ -15,7 +15,6 @@ import AuditLog from '@/components/agreements/AuditLog'
 import PayoutScheduleTable from '@/components/agreements/PayoutScheduleTable'
 import PendingPayouts from '@/components/agreements/PendingPayouts'
 import PendingTdsFilings from '@/components/agreements/PendingTdsFilings'
-import QuickActions from '@/components/agreements/QuickActions'
 import Timeline from '@/components/agreements/Timeline'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -373,8 +372,6 @@ export default async function AgreementDetailPage({
         {/* ═══════════════════════════════════════════════════════════════════ */}
         <div className="space-y-4">
           <SectionLabel icon={<Activity className="w-4 h-4 text-slate-400" />} label="Actions" />
-
-          <QuickActions userRole={userRole} />
 
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
             <DocLifecycleStepper

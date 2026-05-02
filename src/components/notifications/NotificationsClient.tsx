@@ -147,7 +147,7 @@ export default function NotificationsClient({
   async function handleRefresh() {
     setRefreshing(true)
     try {
-      const res = await fetch('/api/reminders/process', { method: 'POST' })
+      const res = await fetch('/api/jobs/run-all', { method: 'POST' })
       if (!res.ok) throw new Error('Refresh failed')
       router.refresh()
     } catch {
