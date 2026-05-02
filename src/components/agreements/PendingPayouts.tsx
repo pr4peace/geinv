@@ -9,6 +9,7 @@ interface Props {
   agreementId: string
   payouts: PayoutSchedule[]
   userRole: string
+  principalAmount?: number
 }
 
 function fmtDate(dateStr: string | null | undefined): string {
@@ -23,7 +24,7 @@ function fmtCurrency(value: number | null | undefined): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value)
 }
 
-export default function PendingPayouts({ agreementId, payouts, userRole }: Props) {
+export default function PendingPayouts({ agreementId, payouts, userRole, principalAmount }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const isCoordinator = userRole !== 'salesperson'
@@ -96,13 +97,26 @@ export default function PendingPayouts({ agreementId, payouts, userRole }: Props
           <tbody className="divide-y divide-slate-700/40">
             {pendingPayouts.map((row) => {
               const isPast = row.due_by < todayStr
+              const isMaturity = row.is_principal_repayment
+              const gross = row.gross_interest ?? 0
+              const tds = row.tds_amount ?? 0
+              const interestEarned = isMaturity && principalAmount && gross > principalAmount * 1.01
+                ? gross - principalAmount
+                : null
               return (
-                <tr key={row.id} className={`hover:bg-slate-800/30 transition-colors ${isPast ? 'bg-red-900/5 border-l-2 border-l-red-500' : ''}`}>
+                <tr key={row.id} className={`hover:bg-slate-800/30 transition-colors ${isPast ? 'bg-red-900/5 border-l-2 border-l-red-500' : isMaturity ? 'bg-amber-900/5 border-l-2 border-l-amber-600' : ''}`}>
                   <td className="py-2.5 px-3 text-xs whitespace-nowrap">
-                    <span className={isPast ? 'text-red-400 font-medium' : 'text-slate-300'}>
+                    <span className={isPast ? 'text-red-400 font-medium' : isMaturity ? 'text-amber-300' : 'text-slate-300'}>
                       {fmtDate(row.due_by)}
                       {isPast && <span className="ml-1 text-[10px] font-bold uppercase">(overdue)</span>}
+                      {isMaturity && <span className="ml-1 text-[10px] font-bold uppercase text-amber-500">(maturity)</span>}
                     </span>
+                    {interestEarned !== null && (
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Interest {fmtCurrency(interestEarned)} + Principal {fmtCurrency(principalAmount)}
+                        {tds > 0 && <> − TDS {fmtCurrency(tds)}</>}
+                      </p>
+                    )}
                   </td>
                   <td className="py-2.5 px-3 text-right font-mono text-xs text-emerald-400 tabular-nums">{fmtCurrency(row.net_interest)}</td>
                   <td className="py-2.5 px-3 text-center">

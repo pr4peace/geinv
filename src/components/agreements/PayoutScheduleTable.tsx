@@ -16,6 +16,7 @@ interface PayoutRowBase {
 
 interface Props {
   payouts: PayoutRowBase[]
+  principalAmount?: number
 }
 
 function fmtCurrency(v: number | null | undefined) {
@@ -30,7 +31,7 @@ function fmtDate(d: string | null | undefined) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`
 }
 
-export default function PayoutScheduleTable({ payouts }: Props) {
+export default function PayoutScheduleTable({ payouts, principalAmount }: Props) {
   const interestRows = payouts.filter(r => !r.is_tds_only && !r.is_principal_repayment)
   const tdsRows = payouts.filter(r => r.is_tds_only)
   const principalRows = payouts.filter(r => r.is_principal_repayment)
@@ -150,42 +151,51 @@ export default function PayoutScheduleTable({ payouts }: Props) {
         </div>
       )}
 
-      {/* ── Principal Repayment ── */}
+      {/* ── Maturity Payout ── */}
       {principalRows.length > 0 && (
         <div>
           <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-            Principal Repayment
+            Maturity Payout
           </h4>
-          <div className="overflow-x-auto rounded-lg border border-amber-800/30">
-            <table className="min-w-full text-sm text-slate-300">
-              <thead>
-                <tr className="bg-amber-900/10 text-xs text-amber-300/70">
-                  <th className="py-2 px-3 text-left font-semibold">Scheduled Date</th>
-                  <th className="py-2 px-3 text-right font-semibold">Amount</th>
-                  {principalRows.some(r => r.status !== undefined) && (
-                    <th className="py-2 px-3 text-center font-semibold">Status</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {principalRows.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-amber-900/5 transition-colors">
-                    <td className="py-2.5 px-3 text-xs">{fmtDate(row.due_by)}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-xs font-bold text-amber-200 tabular-nums">{fmtCurrency(row.gross_interest)}</td>
-                    {principalRows.some(r => r.status !== undefined) && (
-                      <td className="py-2.5 px-3 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-                          row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
-                          row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
-                          'bg-slate-700 text-slate-300'
-                        }`}>{row.status}</span>
-                      </td>
+          {principalRows.map((row, idx) => {
+            const gross = row.gross_interest ?? 0
+            const tds = row.tds_amount ?? 0
+            const interestEarned = principalAmount && gross > principalAmount * 1.01
+              ? gross - principalAmount
+              : null
+            const showStatus = row.status !== undefined
+            return (
+              <div key={idx} className="rounded-lg border border-amber-800/30 overflow-hidden">
+                <div className="bg-amber-900/10 px-4 py-3 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400">Scheduled for {fmtDate(row.due_by)}</p>
+                    <p className="text-lg font-bold text-amber-200">{fmtCurrency(gross - tds)}</p>
+                    {interestEarned !== null && (
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Interest earned: {fmtCurrency(interestEarned)}
+                        {tds > 0 && <> · TDS: {fmtCurrency(tds)}</>}
+                        {' '}· Principal returned: {fmtCurrency(principalAmount!)}
+                      </p>
                     )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                  {showStatus && (
+                    <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold capitalize flex-shrink-0 ${
+                      row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
+                      row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
+                      'bg-slate-700 text-slate-300'
+                    }`}>{row.status}</span>
+                  )}
+                </div>
+                {interestEarned !== null && (
+                  <div className="bg-amber-900/5 border-t border-amber-800/20 px-4 py-2 grid grid-cols-3 gap-2 text-xs">
+                    <div><span className="text-slate-500">Interest</span><br /><span className="font-mono text-slate-200">{fmtCurrency(interestEarned)}</span></div>
+                    <div><span className="text-slate-500">TDS</span><br /><span className="font-mono text-red-400/80">{fmtCurrency(tds)}</span></div>
+                    <div><span className="text-slate-500">Net Interest</span><br /><span className="font-mono text-emerald-400">{fmtCurrency(interestEarned - tds)}</span></div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

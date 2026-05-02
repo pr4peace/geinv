@@ -364,7 +364,7 @@ export default async function AgreementDetailPage({
           </div>
 
           {/* Payout Schedule Table (read-only) */}
-          <PayoutScheduleTable payouts={payout_schedule} />
+          <PayoutScheduleTable payouts={payout_schedule} principalAmount={agreement.principal_amount ?? undefined} />
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -386,6 +386,7 @@ export default async function AgreementDetailPage({
             agreementId={agreement.id}
             payouts={payout_schedule}
             userRole={userRole}
+            principalAmount={agreement.principal_amount ?? undefined}
           />
 
           <PendingTdsFilings

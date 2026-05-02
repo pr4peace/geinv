@@ -551,7 +551,7 @@ async function extractPdfTextLayer(buffer: Buffer): Promise<PdfTextLayer | null>
 
       // Group text items by Y coordinate (±3px tolerance = same line)
       const lineMap = new Map<number, string[]>()
-      for (const item of textContent.items as any[]) {
+      for (const item of textContent.items as Array<{ str: string; transform: number[] }>) {
         if (!item.str?.trim()) continue
         const y = Math.round(item.transform[5] / 3) * 3
         if (!lineMap.has(y)) lineMap.set(y, [])
