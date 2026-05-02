@@ -3,12 +3,14 @@
 interface PayoutRowBase {
   period_from?: string | null
   period_to?: string | null
+  no_of_days?: number | null
   due_by: string
   gross_interest: number | null
   tds_amount: number | null
   net_interest: number | null
   is_tds_only?: boolean
   is_principal_repayment?: boolean
+  tds_filed?: boolean
   status?: string
 }
 
@@ -16,129 +18,176 @@ interface Props {
   payouts: PayoutRowBase[]
 }
 
-function fmtDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '—'
-  try {
-    return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  } catch { return dateStr }
+function fmtCurrency(v: number | null | undefined) {
+  if (v == null) return '—'
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(v)
 }
 
-function fmtCurrency(value: number | null | undefined): string {
-  if (value == null) return '—'
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value)
-}
-
-function getFY(dateStr: string): string {
-  const d = new Date(dateStr)
-  const m = d.getMonth()
-  const y = d.getFullYear()
-  if (m >= 3) return `FY ${y}-${String(y + 1).slice(2)}`
-  return `FY ${y - 1}-${String(y).slice(2)}`
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '—'
+  const parts = d.split('-')
+  if (parts.length !== 3) return d
+  return `${parts[2]}/${parts[1]}/${parts[0]}`
 }
 
 export default function PayoutScheduleTable({ payouts }: Props) {
-  const sorted = payouts.slice().sort((a, b) => a.due_by.localeCompare(b.due_by))
+  const interestRows = payouts.filter(r => !r.is_tds_only && !r.is_principal_repayment)
+  const tdsRows = payouts.filter(r => r.is_tds_only)
+  const principalRows = payouts.filter(r => r.is_principal_repayment)
 
-  const fyGroups: Record<string, typeof sorted> = {}
-  for (const row of sorted) {
-    const fy = getFY(row.due_by ?? row.period_to ?? '')
-    if (!fyGroups[fy]) fyGroups[fy] = []
-    fyGroups[fy].push(row)
-  }
-  const fyOrder = Object.keys(fyGroups).sort()
-
-  const grandTotal = { gross: 0, tds: 0, net: 0 }
-  for (const row of sorted) {
-    if (!row.is_tds_only) {
-      grandTotal.gross += row.gross_interest ?? 0
-      grandTotal.tds += row.tds_amount ?? 0
-      grandTotal.net += row.net_interest ?? 0
-    }
+  const interestTotal = {
+    gross: interestRows.reduce((s, r) => s + (r.gross_interest ?? 0), 0),
+    tds: interestRows.reduce((s, r) => s + (r.tds_amount ?? 0), 0),
+    net: interestRows.reduce((s, r) => s + (r.net_interest ?? 0), 0),
   }
 
-  if (payouts.length === 0) {
-    return <p className="text-slate-500 text-sm italic">No payout schedule available.</p>
-  }
+  const showStatus = interestRows.some(r => r.status !== undefined)
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-700">
-      <table className="min-w-full text-sm text-slate-300">
-        <thead>
-          <tr className="bg-slate-800/60 text-xs text-slate-400">
-            <th className="py-2 px-3 text-left font-semibold">#</th>
-            <th className="py-2 px-3 text-left font-semibold">Period</th>
-            <th className="py-2 px-3 text-left font-semibold">Due By</th>
-            <th className="py-2 px-3 text-right font-semibold">Gross</th>
-            <th className="py-2 px-3 text-right font-semibold">TDS</th>
-            <th className="py-2 px-3 text-right font-semibold">Net</th>
-            <th className="py-2 px-3 text-center font-semibold">Status</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-700/40">
-          {fyOrder.map((fy) => {
-            const rows = fyGroups[fy]
-            const fyTotals = { gross: 0, tds: 0, net: 0 }
-            for (const r of rows) {
-              if (!r.is_tds_only) {
-                fyTotals.gross += r.gross_interest ?? 0
-                fyTotals.tds += r.tds_amount ?? 0
-                fyTotals.net += r.net_interest ?? 0
-              }
-            }
+    <div className="space-y-5">
 
-            return (
-              <>
-                {rows.map((row, idx) => (
+      {/* ── Interest Payouts ── */}
+      {interestRows.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+            Interest Payouts ({interestRows.length})
+          </h4>
+          <div className="overflow-x-auto rounded-lg border border-slate-700">
+            <table className="min-w-full text-sm text-slate-300">
+              <thead>
+                <tr className="bg-slate-800/60 text-xs text-slate-400">
+                  <th className="py-2 px-3 text-left font-semibold">#</th>
+                  <th className="py-2 px-3 text-left font-semibold">Period</th>
+                  <th className="py-2 px-3 text-right font-semibold">Days</th>
+                  <th className="py-2 px-3 text-left font-semibold">Due By</th>
+                  <th className="py-2 px-3 text-right font-semibold">Gross</th>
+                  <th className="py-2 px-3 text-right font-semibold">TDS</th>
+                  <th className="py-2 px-3 text-right font-semibold">Net</th>
+                  {showStatus && <th className="py-2 px-3 text-center font-semibold">Status</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/40">
+                {interestRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-2 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
                     <td className="py-2 px-3 text-xs whitespace-nowrap">
-                      {row.is_tds_only ? (
-                        <span className="text-violet-400/80">TDS Filing</span>
-                      ) : row.is_principal_repayment ? (
-                        <span className="text-amber-400/80">Principal Repayment</span>
-                      ) : (
-                        `${fmtDate(row.period_from)} – ${fmtDate(row.period_to)}`
-                      )}
+                      {fmtDate(row.period_from)} – {fmtDate(row.period_to)}
+                    </td>
+                    <td className="py-2 px-3 text-right text-xs text-slate-500">
+                      {row.no_of_days ?? '—'}
                     </td>
                     <td className="py-2 px-3 text-xs whitespace-nowrap">{fmtDate(row.due_by)}</td>
                     <td className="py-2 px-3 text-right font-mono text-xs tabular-nums">{fmtCurrency(row.gross_interest)}</td>
                     <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
                     <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-emerald-400">{fmtCurrency(row.net_interest)}</td>
-                    <td className="py-2 px-3 text-center">
-                      {row.status ? (
+                    {showStatus && (
+                      <td className="py-2 px-3 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${
                           row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
                           row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
                           row.status === 'notified' ? 'bg-amber-900/40 text-amber-400' :
                           'bg-slate-700 text-slate-300'
                         }`}>{row.status}</span>
-                      ) : (
-                        <span className="text-xs text-slate-500">—</span>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 ))}
-                <tr className="bg-slate-800/20 border-t border-slate-700/60">
-                  <td colSpan={3} className="py-1.5 px-3 text-xs font-bold text-slate-400">{fy} Subtotal</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-xs font-semibold text-slate-200 tabular-nums">{fmtCurrency(fyTotals.gross)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-xs font-semibold text-red-400 tabular-nums">{fmtCurrency(fyTotals.tds)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-xs font-semibold text-emerald-400 tabular-nums">{fmtCurrency(fyTotals.net)}</td>
-                  <td></td>
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-800/40 border-t-2 border-slate-600">
+                  <td colSpan={4} className="py-2 px-3 text-xs font-bold text-slate-100 uppercase tracking-wide">Total</td>
+                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-slate-100 tabular-nums">{fmtCurrency(interestTotal.gross)}</td>
+                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-red-400 tabular-nums">{fmtCurrency(interestTotal.tds)}</td>
+                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-emerald-400 tabular-nums">{fmtCurrency(interestTotal.net)}</td>
+                  {showStatus && <td />}
                 </tr>
-              </>
-            )
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="bg-slate-800/40 border-t-2 border-slate-600">
-            <td colSpan={3} className="py-2 px-3 text-xs font-bold text-slate-100 uppercase tracking-wide">Grand Total</td>
-            <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-slate-100 tabular-nums">{fmtCurrency(grandTotal.gross)}</td>
-            <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-red-400 tabular-nums">{fmtCurrency(grandTotal.tds)}</td>
-            <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-emerald-400 tabular-nums">{fmtCurrency(grandTotal.net)}</td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── TDS Filing Requirements ── */}
+      {tdsRows.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+            TDS Filing Requirements ({tdsRows.length})
+          </h4>
+          <div className="overflow-x-auto rounded-lg border border-violet-800/30">
+            <table className="min-w-full text-sm text-slate-300">
+              <thead>
+                <tr className="bg-violet-900/20 text-xs text-violet-300/70">
+                  <th className="py-2 px-3 text-left font-semibold">#</th>
+                  <th className="py-2 px-3 text-left font-semibold">FY End</th>
+                  <th className="py-2 px-3 text-right font-semibold">Accrued Interest</th>
+                  <th className="py-2 px-3 text-right font-semibold">TDS Amount</th>
+                  {tdsRows.some(r => r.status !== undefined) && (
+                    <th className="py-2 px-3 text-center font-semibold">Status</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-violet-800/20">
+                {tdsRows.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-violet-900/5 transition-colors">
+                    <td className="py-2 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
+                    <td className="py-2 px-3 text-xs">{fmtDate(row.due_by)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums">{fmtCurrency(row.gross_interest)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
+                    {tdsRows.some(r => r.status !== undefined) && (
+                      <td className="py-2 px-3 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          row.tds_filed ? 'bg-green-900/40 text-green-400' : 'bg-red-900/30 text-red-400'
+                        }`}>
+                          {row.tds_filed ? 'Filed' : 'Not Filed'}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Principal Repayment ── */}
+      {principalRows.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+            Principal Repayment
+          </h4>
+          <div className="overflow-x-auto rounded-lg border border-amber-800/30">
+            <table className="min-w-full text-sm text-slate-300">
+              <thead>
+                <tr className="bg-amber-900/10 text-xs text-amber-300/70">
+                  <th className="py-2 px-3 text-left font-semibold">Scheduled Date</th>
+                  <th className="py-2 px-3 text-right font-semibold">Amount</th>
+                  {principalRows.some(r => r.status !== undefined) && (
+                    <th className="py-2 px-3 text-center font-semibold">Status</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {principalRows.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-amber-900/5 transition-colors">
+                    <td className="py-2.5 px-3 text-xs">{fmtDate(row.due_by)}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-xs font-bold text-amber-200 tabular-nums">{fmtCurrency(row.gross_interest)}</td>
+                    {principalRows.some(r => r.status !== undefined) && (
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${
+                          row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
+                          row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
+                          'bg-slate-700 text-slate-300'
+                        }`}>{row.status}</span>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
