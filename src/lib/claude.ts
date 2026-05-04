@@ -55,7 +55,7 @@ Indian agreements ALWAYS state the principal in BOTH words and digits. Use both 
 - Return as a plain integer, no commas, no ₹ symbol.
 
 ━━━ CRITICAL FIELD 2: PAYMENT DATES (payout_schedule) ━━━
-The document will have a table of scheduled interest payments. You MUST extract EVERY SINGLE ROW — do not stop early, do not skip rows, do not truncate. Count the rows in the document and verify your output has the same count.
+The document will have a table of scheduled interest payments. You MUST extract EVERY SINGLE ROW from ALL pages — the table often spans 2-3 pages. Do not stop at a page boundary. Scan every page of the document for continuation of the table. Count the rows you see and verify your JSON output has the same count.
 The table columns are typically labelled "Payable From" and "Payable To":
 - period_from: the "Payable From" date
 - period_to: the "Payable To" date

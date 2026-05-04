@@ -182,33 +182,33 @@ export function validateExtraction(extracted: ExtractedAgreement): ExtractionFla
   rows.forEach((row, i) => {
     if (row.is_principal_repayment) return
 
-    // tds_mismatch
+    // tds_mismatch — info only, document values are authoritative
     const expectedTds = round2(row.gross_interest * 0.1)
     if (Math.abs(row.tds_amount - expectedTds) > TOLERANCE) {
       flags.push({
         id: `flag-${flagIndex++}`,
         type: 'tds_mismatch',
-        severity: row.is_tds_only ? 'info' : 'warning',
+        severity: 'info',
         rowIndex: i,
-        message: `Row ${i + 1}: TDS amount (₹${row.tds_amount}) differs from calculated 10% (₹${expectedTds})`,
+        message: `Row ${i + 1}: TDS (₹${row.tds_amount}) differs from 10% of gross (₹${expectedTds}). Document value will be used.`,
         expected: `₹${expectedTds.toLocaleString('en-IN')}`,
         found: `₹${row.tds_amount.toLocaleString('en-IN')}`,
-        resolution: 'pending',
+        resolution: 'accepted',
       })
     }
 
-    // net_mismatch
+    // net_mismatch — info only, document values are authoritative
     const expectedNet = round2(row.gross_interest - row.tds_amount)
     if (Math.abs(row.net_interest - expectedNet) > TOLERANCE) {
       flags.push({
         id: `flag-${flagIndex++}`,
         type: 'net_mismatch',
-        severity: 'warning',
+        severity: 'info',
         rowIndex: i,
-        message: `Row ${i + 1}: Net interest (₹${row.net_interest}) doesn't match Gross - TDS (₹${expectedNet})`,
+        message: `Row ${i + 1}: Net interest (₹${row.net_interest}) differs from Gross - TDS (₹${expectedNet}). Document value will be used.`,
         expected: `₹${expectedNet.toLocaleString('en-IN')}`,
         found: `₹${row.net_interest.toLocaleString('en-IN')}`,
-        resolution: 'pending',
+        resolution: 'accepted',
       })
     }
 
