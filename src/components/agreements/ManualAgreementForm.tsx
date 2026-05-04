@@ -497,16 +497,6 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">TDS Filing Name</label>
-              <input
-                type="text"
-                value={form.tds_filing_name}
-                onChange={e => update('tds_filing_name', e.target.value)}
-                className={inputBaseClass}
-              />
-            </div>
-
             {/* Nominees */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">

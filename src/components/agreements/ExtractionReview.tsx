@@ -292,33 +292,6 @@ export default function ExtractionReview({
       changed = true
     }
 
-    // For cumulative/compound, ensure TDS-only rows are present if not already in the generated list
-    const isCumulative = form.payout_frequency === 'cumulative' || form.interest_type === 'compound'
-    if (isCumulative && form.investment_start_date && form.maturity_date) {
-      // Dynamic import for the secondary TDS utility
-      import('@/lib/tds-calculator').then(({ generateTdsOnlyRows }) => {
-        const tdsRows = generateTdsOnlyRows({
-          startDate: form.investment_start_date,
-          maturityDate: form.maturity_date,
-          principal: Number(form.principal_amount) || 0,
-          roi: Number(form.roi_percentage) || 0,
-          interestType: form.interest_type,
-          agreementId: '',
-        })
-
-        let tdsChanged = false
-        for (const tds of tdsRows) {
-          if (!updatedSchedule.some(r => r.is_tds_only && r.period_to === tds.period_to)) {
-            updatedSchedule.push({ ...tds, is_principal_repayment: false })
-            tdsChanged = true
-          }
-        }
-        if (tdsChanged) {
-          updatedSchedule.sort((a, b) => a.due_by.localeCompare(b.due_by))
-          setForm(f => ({ ...f, payout_schedule: updatedSchedule }))
-        }
-      })
-    }
 
     if (changed) {
       setForm(f => ({ ...f, payout_schedule: updatedSchedule }))
@@ -739,16 +712,6 @@ export default function ExtractionReview({
                 value={form.investor_address}
                 onChange={e => update('investor_address', e.target.value)}
                 className={fieldClass('investor_address', 'w-full resize-none')}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">TDS Filing Name</label>
-              <input
-                type="text"
-                value={form.tds_filing_name}
-                onChange={e => update('tds_filing_name', e.target.value)}
-                className={fieldClass('tds_filing_name', 'w-full')}
               />
             </div>
 
