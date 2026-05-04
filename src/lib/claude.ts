@@ -53,9 +53,11 @@ Indian number system:
 - Return as a plain integer, no commas. "One Crore" → 10000000. Never add a zero.
 
 ━━━ CRITICAL FIELD 2: PAYMENT DATES (payout_schedule) ━━━
-The document will have a table or list of scheduled interest payments. Extract every row:
-- period_from, period_to: the interest period start and end dates
-- due_by: the date the payment is due to the investor
+The document will have a table of scheduled interest payments. Extract every row.
+The table columns are typically labelled "Payable From" and "Payable To":
+- period_from: the "Payable From" date
+- period_to: the "Payable To" date
+- due_by: MUST equal period_to exactly — the "Payable To" date IS the notification/due date. Do NOT use any "On or before" text; ignore it entirely.
 - gross_interest: interest before TDS
 - tds_amount: TDS deducted (always 10% of gross)
 - net_interest: gross minus TDS
