@@ -213,7 +213,7 @@ async function extractWithClaude(
 
   const response = await anthropic.messages.create({
     model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: 'You are a precise document extraction specialist. Return ONLY valid JSON.',
     messages: [{ role: 'user', content: userContent }],
   })

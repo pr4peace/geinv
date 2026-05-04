@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { extractAgreementData } from '@/lib/claude'
 
-export const maxDuration = 60 // seconds — Gemini can be slow on large PDFs
+export const maxDuration = 120
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
