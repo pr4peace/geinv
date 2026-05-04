@@ -55,7 +55,7 @@ Indian agreements ALWAYS state the principal in BOTH words and digits. Use both 
 - Return as a plain integer, no commas, no ₹ symbol.
 
 ━━━ CRITICAL FIELD 2: PAYMENT DATES (payout_schedule) ━━━
-The document will have a table of scheduled interest payments. Extract every row.
+The document will have a table of scheduled interest payments. You MUST extract EVERY SINGLE ROW — do not stop early, do not skip rows, do not truncate. Count the rows in the document and verify your output has the same count.
 The table columns are typically labelled "Payable From" and "Payable To":
 - period_from: the "Payable From" date
 - period_to: the "Payable To" date
@@ -212,9 +212,9 @@ async function extractWithClaude(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 8192,
-    system: 'You are a precise document extraction specialist. Return ONLY valid JSON.',
+    model: 'claude-sonnet-4-6',
+    max_tokens: 16000,
+    system: 'You are a precise document extraction specialist. Return ONLY valid JSON. Never truncate arrays — include every row from the document.',
     messages: [{ role: 'user', content: userContent }],
   })
 
