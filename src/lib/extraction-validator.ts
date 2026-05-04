@@ -30,7 +30,7 @@ export interface ExtractionFlag {
   acceptanceNote?: string
 }
 
-const TOLERANCE = 0.1
+const TOLERANCE = 1.0
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
 const AADHAAR_REGEX = /^[0-9]{12}$/

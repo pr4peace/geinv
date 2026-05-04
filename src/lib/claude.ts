@@ -48,9 +48,11 @@ Indian number system:
   1 Crore   = 1,00,00,000   (8 digits)
   10 Crores = 10,00,00,000  (9 digits)
 
-- Read the amount in WORDS first (e.g. "Rupees One Crore Only") — this is the source of truth.
-- Count digits in the number to verify. "1,00,00,000" = 8 digits = ONE crore.
-- Return as a plain integer, no commas. "One Crore" → 10000000. Never add a zero.
+Indian agreements ALWAYS state the principal in BOTH words and digits. Use both to cross-verify:
+- STEP 1 — WORDS: Find the words (e.g. "Rupees One Crore Only"). Convert to a number: "One Crore" = 10000000.
+- STEP 2 — DIGITS: Count the digits in the numeral. "1,00,00,000" has 8 digits → 1 crore = 10000000. ✓ Matches words.
+- STEP 3 — If words and digits disagree, TRUST THE WORDS. Never add or remove a zero.
+- Return as a plain integer, no commas, no ₹ symbol.
 
 ━━━ CRITICAL FIELD 2: PAYMENT DATES (payout_schedule) ━━━
 The document will have a table of scheduled interest payments. Extract every row.
