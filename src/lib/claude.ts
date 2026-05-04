@@ -193,11 +193,12 @@ async function extractWithClaude(
     messages: [{ role: 'user', content: userContent }],
   })
 
-  const text = response.content
+  const raw = response.content
     .filter(block => block.type === 'text')
     .map(block => (block as { type: 'text'; text: string }).text)
     .join('\n')
 
+  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
   return sanitizeExtracted(JSON.parse(text))
 }
 
@@ -232,5 +233,7 @@ async function extractWithGemini(
   }
 
   const result = await model.generateContent(parts)
-  return sanitizeExtracted(JSON.parse(result.response.text()))
+  const raw = result.response.text()
+  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+  return sanitizeExtracted(JSON.parse(text))
 }

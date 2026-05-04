@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ extracted, file_url: fileUrl, temp_path: tempPath })
   } catch (err) {
+    console.error('[extract] error:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 }
