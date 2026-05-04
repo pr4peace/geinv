@@ -117,19 +117,21 @@ const SCHEDULE_PROMPT = `You are extracting the payout schedule table from an In
 
 Your ONLY job: find and extract EVERY ROW of the interest payment schedule table. Nothing else.
 
-The table spans multiple pages — scan ALL pages before you start outputting. Count the total rows first.
-Columns: "Payable From", "Payable To", gross interest, TDS (10%), net interest.
+STEP 1 — Before outputting anything, scan ALL pages of the document and mentally note every row in the table. The table often continues across multiple pages. Find the LAST row in the document (it will have the latest date).
+
+STEP 2 — Output ONLY a JSON array with ALL rows. No text before or after. No wrapper object.
+
+Columns in the table: "Payable From", "Payable To", gross interest, TDS, net interest.
 
 Rules:
-- period_from = "Payable From" date
-- period_to = "Payable To" date
-- due_by = same as period_to (ignore any "On or before" text)
-- no_of_days = number of days in the period (integer)
-- gross_interest, tds_amount, net_interest = numbers from the table exactly as printed
+- period_from = "Payable From" date (YYYY-MM-DD)
+- period_to = "Payable To" date (YYYY-MM-DD)
+- due_by = same as period_to exactly
+- no_of_days = integer number of days in the period
+- gross_interest, tds_amount, net_interest = copy numbers exactly as printed in the table
 - is_principal_repayment = true only for the final principal repayment row
 - is_tds_only = false for all normal rows
 
-Return ONLY a JSON array — no wrapper object, just the array:
 [{"period_from":"YYYY-MM-DD","period_to":"YYYY-MM-DD","no_of_days":0,"due_by":"YYYY-MM-DD","gross_interest":0,"tds_amount":0,"net_interest":0,"is_principal_repayment":false,"is_tds_only":false}]`
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, label = 'operation'): Promise<T> {

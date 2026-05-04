@@ -258,8 +258,10 @@ function PayoutScheduleDiff({
         </table>
       </div>
       {currentRows.length !== extractedRows.length && (
-        <p className="text-[10px] text-amber-500 italic">
-          ⚠️ Row count mismatch: Current has {currentRows.length} rows, Extracted has {extractedRows.length} rows.
+        <p className={`text-[10px] italic ${extractedRows.length < currentRows.length ? 'text-red-400 font-semibold' : 'text-amber-500'}`}>
+          {extractedRows.length < currentRows.length
+            ? `⚠️ Extracted has fewer rows (${extractedRows.length}) than current (${currentRows.length}). Applying will DELETE the ${currentRows.length - extractedRows.length} missing rows. Re-scan again or proceed carefully.`
+            : `⚠️ Row count mismatch: Current has ${currentRows.length} rows, Extracted has ${extractedRows.length} rows.`}
         </p>
       )}
     </div>
