@@ -39,47 +39,51 @@ export interface ExtractedAgreement {
   confidence?: Record<string, number>
 }
 
-const EXTRACTION_PROMPT = `You are an expert at extracting structured data from Indian Investment Agreement documents.
+const EXTRACTION_PROMPT = `You are extracting data from an Indian Investment Agreement. Focus on getting these 5 things exactly right — everything else is secondary.
 
-Extract the core terms of the agreement. Follow these rules strictly:
+━━━ CRITICAL FIELD 1: PRINCIPAL AMOUNT ━━━
+Indian number system:
+  1 Lakh    = 1,00,000      (6 digits)
+  10 Lakhs  = 10,00,000     (7 digits)
+  1 Crore   = 1,00,00,000   (8 digits)
+  10 Crores = 10,00,00,000  (9 digits)
 
-RULE 1 — PRINCIPAL AMOUNT (MOST CRITICAL):
-Indian number system — memorise these exactly:
-  1 Lakh     = 1,00,000       (6 digits, 2 commas)
-  10 Lakhs   = 10,00,000      (7 digits, 2 commas)
-  50 Lakhs   = 50,00,000      (7 digits, 2 commas)
-  1 Crore    = 1,00,00,000    (8 digits, 3 commas)
-  2 Crores   = 2,00,00,000    (8 digits, 3 commas)
-  10 Crores  = 10,00,00,000   (9 digits, 3 commas)
+- Read the amount in WORDS first (e.g. "Rupees One Crore Only") — this is the source of truth.
+- Count digits in the number to verify. "1,00,00,000" = 8 digits = ONE crore.
+- Return as a plain integer, no commas. "One Crore" → 10000000. Never add a zero.
 
-- STEP A (WORDS FIRST): Find the amount in WORDS (e.g., "Rupees One Crore Only"). This is your ABSOLUTE source of truth.
-- STEP B (DIGITS): Count the digits and commas in the number. "1,00,00,000" has 8 digits = ONE crore, NOT ten crores.
-- NEVER add or remove a zero. "One Crore" must return 10000000, not 100000000.
-- If words say "One Crore" but digits show "1,00,000" — trust the WORDS, return 10000000.
-- Return the final value as a plain integer (no commas, no currency symbol).
+━━━ CRITICAL FIELD 2: PAYMENT DATES (payout_schedule) ━━━
+The document will have a table or list of scheduled interest payments. Extract every row:
+- period_from, period_to: the interest period start and end dates
+- due_by: the date the payment is due to the investor
+- gross_interest: interest before TDS
+- tds_amount: TDS deducted (always 10% of gross)
+- net_interest: gross minus TDS
+- is_principal_repayment: true only for the final principal repayment row
+- is_tds_only: true if this row is a standalone TDS payment row
 
-RULE 2 — NO GUESSING:
-If you have ANY doubt about a critical field (Principal, ROI, or Dates) set the value to null and add a detailed explanation in confidence_warnings. It is better to leave it empty for manual entry than to assume a wrong value.
+━━━ CRITICAL FIELD 3: MATURITY DATE ━━━
+Look for: "Maturity Date", "Date of Maturity", "due for repayment on", "lock-in ends".
+Convert from DD/MM/YYYY or DD-MM-YYYY → YYYY-MM-DD. Do NOT return null if it appears in the document.
 
-RULE 3 — DATES (CRITICAL — do not skip):
-Indian agreements use DD/MM/YYYY or DD-MM-YYYY. Convert ALL dates to ISO format YYYY-MM-DD.
-Look for these labels to find each date:
-- agreement_date: "This Agreement is made on", "Date:", "Dated this", "Agreement Date"
-- investment_start_date: "Date of Deposit", "Commencement Date", "Effective Date", "date of receipt", "investment date" — the date interest starts accruing
-- maturity_date: "Maturity Date", "Date of Maturity", "due for repayment on", "lock-in period ends"
-If a date field is present in the document, you MUST extract it. Do NOT return null for a date that appears in the document.
+━━━ CRITICAL FIELD 4: PAYOUT FREQUENCY ━━━
+One of: "monthly", "quarterly", "biannual" (every 6 months), "annual", "cumulative" (paid at maturity).
+Look for: "interest payable", "paid every", "compounded at maturity".
 
-RULE 4 — PAYOUT FREQUENCY:
-- "monthly", "quarterly", "biannual" (6 months), "annual", or "cumulative" (at maturity).
+━━━ CRITICAL FIELD 5: INVESTMENT START DATE ━━━
+Look for: "Date of Deposit", "Commencement Date", "Effective Date", "date of receipt".
+This is when interest starts accruing. Convert to YYYY-MM-DD.
 
-RULE 5 — INVESTOR DETAILS:
-- Extract full name, PAN, Aadhaar, and address. Check the signature pages if not on the first page.
-
-RULE 6 — NOMINEES:
-- Extract name and PAN of all listed nominees.
-
-RULE 7 — PAYMENTS:
-- Extract all payment tranches (date, mode, bank, amount).
+━━━ OTHER FIELDS ━━━
+Extract if clearly present, otherwise null:
+- agreement_date: date the agreement was signed ("This Agreement is made on", "Dated")
+- investor_name, investor_pan, investor_aadhaar, investor_address
+- roi_percentage: the annual interest rate (e.g. 12.5)
+- interest_type: "simple" or "compound"
+- lock_in_years: number of years
+- nominees: [{name, pan}]
+- payments: any actual payment tranches already made [{date, mode, bank, amount}]
+- tds_filing_name: name used for TDS filing if different from investor name
 
 Return ONLY valid JSON matching this schema. Set "payout_schedule" to an empty array [] as the system will auto-generate it.
 
