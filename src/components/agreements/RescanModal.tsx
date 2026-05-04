@@ -44,6 +44,7 @@ function FlagsPanel({
   const [accepting, setAccepting] = useState<string | null>(null)
 
   const pending = flags.filter(f => f.resolution === 'pending')
+  const blocking = pending.filter(f => f.severity === 'error')
   const resolved = flags.filter(f => f.resolution !== 'pending')
 
   if (flags.length === 0) return null
@@ -51,9 +52,11 @@ function FlagsPanel({
   return (
     <div className="mb-6 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-red-400 flex items-center gap-2">
+        <h3 className={`text-sm font-semibold flex items-center gap-2 ${blocking.length > 0 ? 'text-red-400' : 'text-amber-400'}`}>
           <AlertTriangle className="w-4 h-4" />
-          {pending.length} issue{pending.length !== 1 ? 's' : ''} found — resolve all before saving
+          {blocking.length > 0
+            ? `${blocking.length} error${blocking.length !== 1 ? 's' : ''} must be resolved before saving`
+            : `${pending.length} warning${pending.length !== 1 ? 's' : ''} — review and proceed`}
         </h3>
         <span className="text-xs text-slate-500">{resolved.length} of {flags.length} resolved</span>
       </div>
@@ -273,7 +276,7 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
-  const unresolvedCount = useMemo(() => flags.filter(f => f.resolution === 'pending').length, [flags])
+  const unresolvedCount = useMemo(() => flags.filter(f => f.resolution === 'pending' && f.severity === 'error').length, [flags])
 
   if (userRole === 'salesperson') return null
 
@@ -507,10 +510,10 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
                   disabled={saving || unresolvedCount > 0}
                   className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
                 >
-                  {saving 
-                    ? 'Applying...' 
-                    : unresolvedCount > 0 
-                    ? `${unresolvedCount} Issues to Resolve` 
+                  {saving
+                    ? 'Applying...'
+                    : unresolvedCount > 0
+                    ? `${unresolvedCount} Error${unresolvedCount !== 1 ? 's' : ''} to Resolve`
                     : 'Apply Changes'}
                 </button>
               )}

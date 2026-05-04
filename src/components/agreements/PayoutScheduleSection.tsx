@@ -33,7 +33,6 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
 
   const sorted = payouts.slice().sort((a, b) => a.due_by.localeCompare(b.due_by))
   const interestRows = sorted.filter(r => !r.is_principal_repayment && !r.is_tds_only)
-  const tdsRows = sorted.filter(r => r.is_tds_only).sort((a, b) => a.due_by.localeCompare(b.due_by))
   const principalRows = sorted.filter(r => r.is_principal_repayment)
 
   const todayStr = new Date().toISOString().split('T')[0]
@@ -76,20 +75,6 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
         setError(err.error ?? 'Failed to revert payout')
       } else {
         setUndoToast({ message: 'Payout reverted to pending', onUndo: () => markAsPaid(payoutId) })
-        router.refresh()
-      }
-    } finally { setLoading(null) }
-  }
-
-  async function markTdsFiled(payoutId: string) {
-    setLoading(payoutId)
-    setError(null)
-    try {
-      const res = await fetch(`/api/payout-schedule/${payoutId}/mark-tds-filed`, { method: 'POST' })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        setError(err.error ?? 'Failed to mark TDS as filed')
-      } else {
         router.refresh()
       }
     } finally { setLoading(null) }
@@ -209,55 +194,6 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
                   {isCoordinator && <td></td>}
                 </tr>
               </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── TDS Filing Requirements ── */}
-      {tdsRows.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-            TDS Filing Requirements ({tdsRows.length})
-          </h4>
-          <div className="overflow-x-auto rounded-lg border border-violet-800/30">
-            <table className="min-w-full text-sm text-slate-300">
-              <thead>
-                <tr className="bg-violet-900/20 text-xs text-violet-300/70">
-                  <th className="py-2 px-3 text-left font-semibold">#</th>
-                  <th className="py-2 px-3 text-left font-semibold">FY End</th>
-                  <th className="py-2 px-3 text-right font-semibold">Accrued Interest</th>
-                  <th className="py-2 px-3 text-right font-semibold">TDS Amount</th>
-                  <th className="py-2 px-3 text-center font-semibold">Status</th>
-                  {isCoordinator && <th className="py-2 px-3 text-center font-semibold">Action</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-violet-800/20">
-                {tdsRows.map((row, idx) => (
-                  <tr key={row.id} className="hover:bg-violet-900/5 transition-colors">
-                    <td className="py-2.5 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
-                    <td className="py-2.5 px-3 text-xs">{fmtDate(row.due_by)}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-xs">{fmtCurrency(row.gross_interest)}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-xs text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${row.tds_filed ? 'bg-green-900/40 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
-                        {row.tds_filed ? 'Filed' : 'Not Filed'}
-                      </span>
-                    </td>
-                    {isCoordinator && (
-                      <td className="py-2.5 px-3 text-center">
-                        {!row.tds_filed ? (
-                          <button onClick={() => markTdsFiled(row.id)} disabled={loading === row.id} className="text-[10px] px-2 py-0.5 rounded bg-violet-900/40 text-violet-300 hover:bg-violet-800/40 disabled:opacity-50 transition-colors border border-violet-800/50">
-                            {loading === row.id ? '…' : 'Mark Filed'}
-                          </button>
-                        ) : (
-                          <span className="text-[10px] text-slate-600">—</span>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
             </table>
           </div>
         </div>
