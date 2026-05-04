@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { extractAgreementData } from '@/lib/claude'
 import { validateExtraction } from '@/lib/extraction-validator'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 export async function POST(
   request: NextRequest,
