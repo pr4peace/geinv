@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReferenceId } from '@/lib/reference-id'
 import type { ExtractedPayoutRow } from '@/lib/claude'
 import { findOrCreateInvestor } from '@/lib/investors'
-import { generateTdsOnlyRows } from '@/lib/tds-calculator'
 
 export async function GET(request: NextRequest) {
   try {
@@ -253,23 +252,6 @@ export async function POST(request: NextRequest) {
           .filter((row) => row.period_from && row.period_to && row.due_by)
       : []
 
-    // Generate TDS-only rows for cumulative/compound — one per 31 March in the term.
-    // This runs regardless of whether extracted rows exist (compounded docs often have none).
-    const isCumulative = frequency === 'cumulative' || agreementFields.interest_type === 'compound'
-    const hasTdsOnly = rows.some(r => r.is_tds_only)
-
-    if (isCumulative && !hasTdsOnly && startDateStr && maturityDateStr) {
-      const tdsOnlyRows = generateTdsOnlyRows({
-        agreementId: agreement.id,
-        startDate: startDateStr,
-        maturityDate: maturityDateStr,
-        principal: Number(agreementFields.principal_amount) || 0,
-        roi: Number(agreementFields.roi_percentage) || 0,
-        interestType: (agreementFields.interest_type as 'simple' | 'compound') || 'simple',
-      })
-
-      rows.push(...tdsOnlyRows.map(r => ({ ...r, agreement_id: agreement.id })))
-    }
 
     if (rows.length > 0) {
       const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)
