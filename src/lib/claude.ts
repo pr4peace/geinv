@@ -89,7 +89,7 @@ Extract if clearly present, otherwise null:
 - payments: any actual payment tranches already made [{date, mode, bank, amount}]
 - tds_filing_name: name used for TDS filing if different from investor name
 
-Return ONLY valid JSON matching this schema. Populate payout_schedule with every row extracted from the document's payment schedule table.
+Return ONLY valid JSON. Set payout_schedule to [].
 
 {
   "agreement_date": "YYYY-MM-DD",
@@ -101,17 +101,36 @@ Return ONLY valid JSON matching this schema. Populate payout_schedule with every
   "investor_address": "string or null",
   "nominees": [],
   "tds_filing_name": "string or null",
-  "principal_amount": 0 or null,
-  "roi_percentage": 0 or null,
+  "principal_amount": 0,
+  "roi_percentage": 0,
   "payout_frequency": "monthly|quarterly|biannual|annual|cumulative",
   "interest_type": "simple|compound",
-  "lock_in_years": 0 or null,
-  "maturity_date": "YYYY-MM-DD or null",
-  "payments": [{"date": "YYYY-MM-DD or null", "mode": "string or null", "bank": "string or null", "amount": 0}],
-  "payout_schedule": [{"period_from": "YYYY-MM-DD", "period_to": "YYYY-MM-DD", "no_of_days": 0, "due_by": "YYYY-MM-DD", "gross_interest": 0, "tds_amount": 0, "net_interest": 0, "is_principal_repayment": false, "is_tds_only": false}],
+  "lock_in_years": 0,
+  "maturity_date": "YYYY-MM-DD",
+  "payments": [],
+  "payout_schedule": [],
   "confidence_warnings": [],
-  "confidence": {"agreement_date": 1.0, "investment_start_date": 1.0, "principal_amount": 1.0, ...}
+  "confidence": {}
 }`
+
+const SCHEDULE_PROMPT = `You are extracting the payout schedule table from an Indian Investment Agreement.
+
+Your ONLY job: find and extract EVERY ROW of the interest payment schedule table. Nothing else.
+
+The table spans multiple pages — scan ALL pages before you start outputting. Count the total rows first.
+Columns: "Payable From", "Payable To", gross interest, TDS (10%), net interest.
+
+Rules:
+- period_from = "Payable From" date
+- period_to = "Payable To" date
+- due_by = same as period_to (ignore any "On or before" text)
+- no_of_days = number of days in the period (integer)
+- gross_interest, tds_amount, net_interest = numbers from the table exactly as printed
+- is_principal_repayment = true only for the final principal repayment row
+- is_tds_only = false for all normal rows
+
+Return ONLY a JSON array — no wrapper object, just the array:
+[{"period_from":"YYYY-MM-DD","period_to":"YYYY-MM-DD","no_of_days":0,"due_by":"YYYY-MM-DD","gross_interest":0,"tds_amount":0,"net_interest":0,"is_principal_repayment":false,"is_tds_only":false}]`
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, label = 'operation'): Promise<T> {
   let lastErr: unknown
@@ -191,40 +210,40 @@ async function extractWithClaude(
   fileBuffer: Buffer,
   mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ): Promise<ExtractedAgreement> {
-  let userContent: Anthropic.MessageParam['content']
+  const docContent = mimeType === 'application/pdf'
+    ? [{
+        type: 'document' as const,
+        source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: fileBuffer.toString('base64') },
+      }]
+    : await (async () => {
+        const mammoth = await import('mammoth')
+        const { value } = await mammoth.extractRawText({ buffer: fileBuffer })
+        return [{ type: 'text' as const, text: `Document text:\n\n${value}` }]
+      })()
 
-  if (mimeType === 'application/pdf') {
-    userContent = [
-      {
-        type: 'document',
-        source: {
-          type: 'base64',
-          media_type: 'application/pdf',
-          data: fileBuffer.toString('base64'),
-        },
-      },
-      { type: 'text', text: EXTRACTION_PROMPT },
-    ]
-  } else {
-    const mammoth = await import('mammoth')
-    const extracted = await mammoth.extractRawText({ buffer: fileBuffer })
-    userContent = `${EXTRACTION_PROMPT}\n\nDocument text:\n\n${extracted.value}`
-  }
+  const system = 'You are a precise document extraction specialist. Return ONLY valid JSON, no markdown.'
 
-  const response = await anthropic.messages.create({
+  // Pass 1 — metadata (fast, small output)
+  const metaResponse = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
+    system,
+    messages: [{ role: 'user', content: [...docContent, { type: 'text' as const, text: EXTRACTION_PROMPT }] }],
+  })
+  const metaRaw = metaResponse.content.filter(b => b.type === 'text').map(b => (b as { type: 'text'; text: string }).text).join('\n')
+  const meta = sanitizeExtracted(JSON.parse(metaRaw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()))
+
+  // Pass 2 — payout schedule only (full focus, all tokens)
+  const schedResponse = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 16000,
-    system: 'You are a precise document extraction specialist. Return ONLY valid JSON. Never truncate arrays — include every row from the document.',
-    messages: [{ role: 'user', content: userContent }],
+    system,
+    messages: [{ role: 'user', content: [...docContent, { type: 'text' as const, text: SCHEDULE_PROMPT }] }],
   })
+  const schedRaw = schedResponse.content.filter(b => b.type === 'text').map(b => (b as { type: 'text'; text: string }).text).join('\n')
+  const schedule = JSON.parse(schedRaw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim())
 
-  const raw = response.content
-    .filter(block => block.type === 'text')
-    .map(block => (block as { type: 'text'; text: string }).text)
-    .join('\n')
-
-  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
-  return sanitizeExtracted(JSON.parse(text))
+  return { ...meta, payout_schedule: Array.isArray(schedule) ? schedule : [] }
 }
 
 async function extractWithGemini(
