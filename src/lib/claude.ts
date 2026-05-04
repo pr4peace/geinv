@@ -143,28 +143,13 @@ export async function extractAgreementData(
   fileBuffer: Buffer,
   mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ): Promise<ExtractedAgreement> {
-  let lastError: unknown
-
-  if (process.env.ANTHROPIC_API_KEY) {
-    try {
-      return await withRetry(() => extractWithClaude(fileBuffer, mimeType), 2, 'Claude extraction')
-    } catch (claudeErr) {
-      console.error('Claude extraction failed:', claudeErr)
-      lastError = claudeErr
-    }
+  try {
+    return await withRetry(() => extractWithClaude(fileBuffer, mimeType), 2, 'Claude extraction')
+  } catch (err) {
+    console.error('Claude extraction failed:', err)
+    const detail = err instanceof Error ? err.message : String(err)
+    throw new Error(`Extraction failed: ${detail}`)
   }
-
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      return await withRetry(() => extractWithGemini(fileBuffer, mimeType), 2, 'Gemini extraction')
-    } catch (geminiErr) {
-      console.error('Gemini extraction failed:', geminiErr)
-      lastError = geminiErr
-    }
-  }
-
-  const detail = lastError instanceof Error ? lastError.message : String(lastError ?? 'no API keys configured')
-  throw new Error(`Extraction failed: ${detail}`)
 }
 
 async function extractWithClaude(
