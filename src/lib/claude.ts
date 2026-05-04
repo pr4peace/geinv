@@ -85,7 +85,7 @@ Extract if clearly present, otherwise null:
 - payments: any actual payment tranches already made [{date, mode, bank, amount}]
 - tds_filing_name: name used for TDS filing if different from investor name
 
-Return ONLY valid JSON matching this schema. Set "payout_schedule" to an empty array [] as the system will auto-generate it.
+Return ONLY valid JSON matching this schema. Populate payout_schedule with every row extracted from the document's payment schedule table.
 
 {
   "agreement_date": "YYYY-MM-DD",
@@ -104,7 +104,7 @@ Return ONLY valid JSON matching this schema. Set "payout_schedule" to an empty a
   "lock_in_years": 0 or null,
   "maturity_date": "YYYY-MM-DD or null",
   "payments": [{"date": "YYYY-MM-DD or null", "mode": "string or null", "bank": "string or null", "amount": 0}],
-  "payout_schedule": [],
+  "payout_schedule": [{"period_from": "YYYY-MM-DD", "period_to": "YYYY-MM-DD", "no_of_days": 0, "due_by": "YYYY-MM-DD", "gross_interest": 0, "tds_amount": 0, "net_interest": 0, "is_principal_repayment": false, "is_tds_only": false}],
   "confidence_warnings": [],
   "confidence": {"agreement_date": 1.0, "investment_start_date": 1.0, "principal_amount": 1.0, ...}
 }`
