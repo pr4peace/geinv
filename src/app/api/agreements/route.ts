@@ -249,6 +249,8 @@ export async function POST(request: NextRequest) {
             agreement_id: agreement.id,
             period_from: row.period_from ?? row.due_by ?? null,
             period_to: row.period_to ?? row.due_by ?? null,
+            tds_filed: false,
+            status: 'pending',
           }))
           .filter((row) => row.period_from && row.period_to && row.due_by)
       : []
