@@ -119,8 +119,7 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
               <thead>
                 <tr className="bg-violet-900/20 text-xs text-violet-300/70">
                   <th className="py-2 px-3 text-left font-semibold">#</th>
-                  <th className="py-2 px-3 text-left font-semibold">FY End</th>
-                  <th className="py-2 px-3 text-right font-semibold">Accrued Interest</th>
+                  <th className="py-2 px-3 text-left font-semibold">Filing Deadline</th>
                   <th className="py-2 px-3 text-right font-semibold">TDS Amount</th>
                   {tdsRows.some(r => r.status !== undefined) && (
                     <th className="py-2 px-3 text-center font-semibold">Status</th>
@@ -132,7 +131,6 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
                   <tr key={idx} className="hover:bg-violet-900/5 transition-colors">
                     <td className="py-2 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
                     <td className="py-2 px-3 text-xs">{fmtDate(row.due_by)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums">{fmtCurrency(row.gross_interest)}</td>
                     <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
                     {tdsRows.some(r => r.status !== undefined) && (
                       <td className="py-2 px-3 text-center">
