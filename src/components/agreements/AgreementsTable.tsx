@@ -304,7 +304,7 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
                 <td className="py-2.5 pr-4">
                   <div className="flex items-center gap-2">
                     <Link href={`/agreements/${a.id}`} className="font-medium text-slate-100 hover:text-indigo-400 transition-colors">
-                      {a.investor_name}
+                      {a.investor_name}{a.investor2_name ? ` & ${a.investor2_name}` : ''}
                     </Link>
                     {a.is_draft && (
                       <span className="text-xs text-amber-400 bg-amber-900/30 px-1.5 py-0.5 rounded font-medium">Draft</span>

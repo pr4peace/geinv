@@ -253,6 +253,25 @@ export async function POST(request: NextRequest) {
           .filter((row) => row.period_from && row.period_to && row.due_by)
       : []
 
+    // Auto-add principal repayment row if none was submitted
+    const hasPrincipalRow = rows.some(r => r.is_principal_repayment)
+    if (!hasPrincipalRow && !isDraft && maturityDateStr && agreementFields.principal_amount) {
+      rows.push({
+        agreement_id: agreement.id,
+        period_from: maturityDateStr,
+        period_to: maturityDateStr,
+        due_by: maturityDateStr,
+        no_of_days: null,
+        gross_interest: Number(agreementFields.principal_amount),
+        tds_amount: 0,
+        net_interest: Number(agreementFields.principal_amount),
+        is_principal_repayment: true,
+        is_tds_only: false,
+        tds_filed: false,
+        status: 'pending',
+      } as ExtractedPayoutRow & { agreement_id: string; tds_filed: boolean; status: string })
+    }
+
 
     if (rows.length > 0) {
       const { error: payoutError } = await supabase.from('payout_schedule').insert(rows)

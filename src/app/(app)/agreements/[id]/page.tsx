@@ -395,6 +395,7 @@ export default async function AgreementDetailPage({
             agreementId={agreement.id}
             payouts={payout_schedule}
             principalAmount={agreement.principal_amount ?? undefined}
+            maturityDate={agreement.maturity_date}
             userRole={userRole}
           />
         </div>

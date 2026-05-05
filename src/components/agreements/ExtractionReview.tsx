@@ -1148,6 +1148,20 @@ export default function ExtractionReview({
           <PayoutScheduleTable
             payouts={[
               ...form.payout_schedule,
+              // Synthetic maturity row if extraction didn't produce one
+              ...(form.payout_schedule.some(r => r.is_principal_repayment) || !form.maturity_date || !form.principal_amount ? [] : [{
+                period_from: form.maturity_date,
+                period_to: form.maturity_date,
+                due_by: form.maturity_date,
+                no_of_days: null as number | null,
+                gross_interest: Number(form.principal_amount) || 0,
+                tds_amount: 0,
+                net_interest: Number(form.principal_amount) || 0,
+                is_principal_repayment: true,
+                is_tds_only: false,
+                tds_filed: false,
+              }]),
+              // TDS filing rows derived from interest payouts
               ...form.payout_schedule
                 .filter(r => !r.is_tds_only && !r.is_principal_repayment && (r.tds_amount ?? 0) > 0 && r.due_by)
                 .map(r => {

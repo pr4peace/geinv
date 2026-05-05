@@ -9,6 +9,7 @@ interface Props {
   agreementId: string
   payouts: PayoutSchedule[]
   principalAmount?: number
+  maturityDate?: string
   userRole: string
 }
 
@@ -24,14 +25,34 @@ function fmtCurrency(value: number | null | undefined): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value)
 }
 
-export default function MaturityPayoutCard({ agreementId, payouts, principalAmount, userRole }: Props) {
+export default function MaturityPayoutCard({ agreementId, payouts, principalAmount, maturityDate, userRole }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const isCoordinator = userRole !== 'salesperson'
 
   const todayStr = new Date().toISOString().split('T')[0]
   const row = payouts.find(r => r.is_principal_repayment)
-  if (!row) return null
+
+  // Show a read-only card from agreement-level data when no payout row exists yet
+  if (!row) {
+    if (!maturityDate || !principalAmount) return null
+    const isOverdue = maturityDate < todayStr
+    return (
+      <div className={`bg-slate-800/50 border rounded-xl p-5 ${isOverdue ? 'border-red-700/50' : 'border-amber-700/40'}`}>
+        <div className="flex items-center gap-2 mb-4">
+          <Landmark className="w-4 h-4 text-amber-400" />
+          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Maturity Payout</h3>
+        </div>
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-xs text-slate-500 mb-1">Scheduled for {fmtDate(maturityDate)}{isOverdue && <span className="ml-1 text-red-400 font-bold uppercase text-[10px]">(overdue)</span>}</p>
+            <p className="text-2xl font-bold text-amber-200">{fmtCurrency(principalAmount)}</p>
+          </div>
+          <p className="text-xs text-slate-500">Principal <span className="text-slate-300 font-mono">{fmtCurrency(principalAmount)}</span></p>
+        </div>
+      </div>
+    )
+  }
 
   const rawGross = row.gross_interest ?? 0
   const gross = rawGross === 0 && principalAmount ? principalAmount : rawGross

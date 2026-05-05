@@ -71,6 +71,26 @@ export async function POST(
       return NextResponse.json({ error: rpcError.message }, { status: 500 })
     }
 
+    // Auto-add principal repayment row if RPC didn't produce one
+    const hasPrincipalRow = (extracted.payout_schedule ?? []).some((r: ExtractedPayoutRow) => r.is_principal_repayment)
+    if (!hasPrincipalRow && extracted.maturity_date && extracted.principal_amount) {
+      const { error: maturityError } = await supabase.from('payout_schedule').insert({
+        agreement_id: id,
+        period_from: extracted.maturity_date,
+        period_to: extracted.maturity_date,
+        due_by: extracted.maturity_date,
+        no_of_days: null,
+        gross_interest: extracted.principal_amount,
+        tds_amount: 0,
+        net_interest: extracted.principal_amount,
+        is_principal_repayment: true,
+        is_tds_only: false,
+        tds_filed: false,
+        status: 'pending',
+      })
+      if (maturityError) console.error('Failed to insert principal repayment row after rescan:', maturityError.message)
+    }
+
     const { data: payoutRows } = await supabase
       .from('payout_schedule')
       .select('due_by, tds_amount')

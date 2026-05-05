@@ -35,7 +35,7 @@ async function getDeletedAgreements(): Promise<Agreement[]> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('agreements')
-    .select('id, reference_id, investor_name, agreement_date, principal_amount, status, deleted_at')
+    .select('id, reference_id, investor_name, investor2_name, agreement_date, principal_amount, status, deleted_at')
     .not('deleted_at', 'is', null)
     .order('deleted_at', { ascending: false })
   return (data ?? []) as Agreement[]
