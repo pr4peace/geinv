@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReferenceId } from '@/lib/reference-id'
 import type { ExtractedPayoutRow } from '@/lib/claude'
 import { findOrCreateInvestor } from '@/lib/investors'
-import { getTdsFilingDeadline } from '@/lib/payout-calculator'
+import { getTdsFilingDeadline, calculatePayoutSchedule } from '@/lib/payout-calculator'
 
 export async function GET(request: NextRequest) {
   try {
@@ -254,6 +254,27 @@ export async function POST(request: NextRequest) {
           }))
           .filter((row) => row.period_from && row.period_to && row.due_by)
       : []
+
+    // For cumulative/compound with no submitted schedule, auto-generate the full schedule
+    const hasInterestRow = rows.some(r => !r.is_tds_only && !r.is_principal_repayment)
+    if (!isDraft && isCumulativeType && !hasInterestRow && startDateStr && maturityDateStr && agreementFields.principal_amount && agreementFields.roi_percentage) {
+      const generated = calculatePayoutSchedule({
+        principal: Number(agreementFields.principal_amount),
+        roiPercentage: Number(agreementFields.roi_percentage),
+        payoutFrequency: 'cumulative',
+        interestType: (agreementFields.interest_type as string) === 'compound' ? 'compound' : 'simple',
+        startDate: startDateStr,
+        maturityDate: maturityDateStr,
+      })
+      for (const row of generated) {
+        rows.push({
+          ...row,
+          agreement_id: agreement.id,
+          tds_filed: false,
+          status: 'pending',
+        } as ExtractedPayoutRow & { agreement_id: string; tds_filed: boolean; status: string })
+      }
+    }
 
     // Auto-add principal repayment row if none was submitted
     const hasPrincipalRow = rows.some(r => r.is_principal_repayment)
