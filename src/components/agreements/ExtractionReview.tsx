@@ -7,7 +7,7 @@ import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
 import PayoutScheduleTable from './PayoutScheduleTable'
 import { validateExtraction } from '@/lib/extraction-validator'
 import type { ExtractionFlag } from '@/lib/extraction-validator'
-import { calculatePayoutSchedule } from '@/lib/payout-calculator'
+import { calculatePayoutSchedule, getTdsFilingDeadline } from '@/lib/payout-calculator'
 
 interface TeamMember {
   id: string
@@ -65,6 +65,10 @@ interface FormState {
   investor_pan: string
   investor_aadhaar: string
   investor_address: string
+  investor2_name: string
+  investor2_pan: string
+  investor2_aadhaar: string
+  investor2_address: string
   tds_filing_name: string
   nominees: NomineeRow[]
   principal_amount: string
@@ -231,6 +235,10 @@ export default function ExtractionReview({
       investor_pan: extracted.investor_pan ?? '',
       investor_aadhaar: extracted.investor_aadhaar ?? '',
       investor_address: extracted.investor_address ?? '',
+      investor2_name: extracted.investor2_name ?? '',
+      investor2_pan: extracted.investor2_pan ?? '',
+      investor2_aadhaar: extracted.investor2_aadhaar ?? '',
+      investor2_address: extracted.investor2_address ?? '',
       tds_filing_name: extracted.tds_filing_name ?? extracted.investor_name ?? '',
       nominees: (extracted.nominees ?? []).map(n => ({
         name: n.name ?? '',
@@ -464,6 +472,10 @@ export default function ExtractionReview({
         investor_pan: form.investor_pan || null,
         investor_aadhaar: form.investor_aadhaar || null,
         investor_address: form.investor_address || null,
+        investor2_name: form.investor2_name || null,
+        investor2_pan: form.investor2_pan || null,
+        investor2_aadhaar: form.investor2_aadhaar || null,
+        investor2_address: form.investor2_address || null,
         tds_filing_name: form.tds_filing_name || null,
         nominees,
         principal_amount: principalVal,
@@ -713,6 +725,50 @@ export default function ExtractionReview({
                 onChange={e => update('investor_address', e.target.value)}
                 className={fieldClass('investor_address', 'w-full resize-none')}
               />
+            </div>
+
+            {/* Second Investor (joint agreements) */}
+            <div className="border-t border-slate-700/50 pt-4 space-y-3">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Second Investor (if joint)</p>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">Name</label>
+                <input
+                  type="text"
+                  value={form.investor2_name}
+                  onChange={e => update('investor2_name', e.target.value)}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  placeholder="e.g. Ms. Gayathri Muralidharan"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">PAN</label>
+                  <input
+                    type="text"
+                    value={form.investor2_pan}
+                    onChange={e => update('investor2_pan', e.target.value)}
+                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Aadhaar</label>
+                  <input
+                    type="text"
+                    value={form.investor2_aadhaar}
+                    onChange={e => update('investor2_aadhaar', e.target.value)}
+                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">Address</label>
+                <textarea
+                  rows={2}
+                  value={form.investor2_address}
+                  onChange={e => update('investor2_address', e.target.value)}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"
+                />
+              </div>
             </div>
 
             {/* Nominees */}
@@ -1089,7 +1145,29 @@ export default function ExtractionReview({
             Payout Schedule
             <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(extracted + auto-generated)</span>
           </h2>
-          <PayoutScheduleTable payouts={form.payout_schedule} principalAmount={Number(form.principal_amount) || undefined} />
+          <PayoutScheduleTable
+            payouts={[
+              ...form.payout_schedule,
+              ...form.payout_schedule
+                .filter(r => !r.is_tds_only && !r.is_principal_repayment && (r.tds_amount ?? 0) > 0 && r.due_by)
+                .map(r => {
+                  const d = getTdsFilingDeadline(r.due_by)
+                  return {
+                    period_from: d.period_from,
+                    period_to: d.period_to,
+                    due_by: d.due_by,
+                    no_of_days: null as number | null,
+                    gross_interest: 0,
+                    tds_amount: r.tds_amount,
+                    net_interest: 0,
+                    is_principal_repayment: false,
+                    is_tds_only: true,
+                    tds_filed: false,
+                  }
+                }),
+            ]}
+            principalAmount={Number(form.principal_amount) || undefined}
+          />
         </div>
       )}
     </div>

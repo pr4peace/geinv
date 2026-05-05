@@ -24,6 +24,10 @@ export interface ExtractedAgreement {
   investor_pan: string | null
   investor_aadhaar: string | null
   investor_address: string | null
+  investor2_name: string | null
+  investor2_pan: string | null
+  investor2_aadhaar: string | null
+  investor2_address: string | null
   nominees: Array<{ name: string; pan: string }>
   tds_filing_name: string | null
   principal_amount: number
@@ -81,7 +85,9 @@ This is when interest starts accruing. Convert to YYYY-MM-DD.
 ━━━ OTHER FIELDS ━━━
 Extract if clearly present, otherwise null:
 - agreement_date: date the agreement was signed ("This Agreement is made on", "Dated")
-- investor_name, investor_pan, investor_aadhaar, investor_address
+- investor_name: full name(s) as written (e.g. "Mr. X and Ms. Y" for joint)
+- investor_pan, investor_aadhaar, investor_address: PRIMARY investor's details
+- investor2_name, investor2_pan, investor2_aadhaar, investor2_address: SECOND investor's details if this is a joint agreement (two named parties); null if single investor
 - roi_percentage: the annual interest rate (e.g. 12.5)
 - interest_type: "simple" or "compound"
 - lock_in_years: number of years
@@ -99,6 +105,10 @@ Return ONLY valid JSON. Set payout_schedule to [].
   "investor_pan": "string or null",
   "investor_aadhaar": "string or null",
   "investor_address": "string or null",
+  "investor2_name": "string or null",
+  "investor2_pan": "string or null",
+  "investor2_aadhaar": "string or null",
+  "investor2_address": "string or null",
   "nominees": [],
   "tds_filing_name": "string or null",
   "principal_amount": 0,

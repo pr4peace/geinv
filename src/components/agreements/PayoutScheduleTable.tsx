@@ -158,7 +158,8 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
             Maturity Payout
           </h4>
           {principalRows.map((row, idx) => {
-            const gross = row.gross_interest ?? 0
+            const rawGross = row.gross_interest ?? 0
+            const gross = rawGross === 0 && principalAmount ? principalAmount : rawGross
             const tds = row.tds_amount ?? 0
             const interestEarned = principalAmount && gross > principalAmount * 1.01
               ? gross - principalAmount
