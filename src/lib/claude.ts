@@ -85,9 +85,9 @@ This is when interest starts accruing. Convert to YYYY-MM-DD.
 ━━━ OTHER FIELDS ━━━
 Extract if clearly present, otherwise null:
 - agreement_date: date the agreement was signed ("This Agreement is made on", "Dated")
-- investor_name: full name(s) as written (e.g. "Mr. X and Ms. Y" for joint)
+- investor_name: PRIMARY investor's name only (first named party, e.g. "Mr. Muralidharan Sundaram")
 - investor_pan, investor_aadhaar, investor_address: PRIMARY investor's details
-- investor2_name, investor2_pan, investor2_aadhaar, investor2_address: SECOND investor's details if this is a joint agreement (two named parties); null if single investor
+- investor2_name, investor2_pan, investor2_aadhaar, investor2_address: SECOND investor's name and details if this is a joint agreement; null if single investor
 - roi_percentage: the annual interest rate (e.g. 12.5)
 - interest_type: "simple" or "compound"
 - lock_in_years: number of years
