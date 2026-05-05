@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
+import { getTdsFilingDeadline } from '@/lib/payout-calculator'
 
 export async function POST(
   request: NextRequest,
@@ -68,6 +69,40 @@ export async function POST(
 
     if (rpcError) {
       return NextResponse.json({ error: rpcError.message }, { status: 500 })
+    }
+
+    const { data: payoutRows } = await supabase
+      .from('payout_schedule')
+      .select('due_by, tds_amount')
+      .eq('agreement_id', id)
+      .eq('is_tds_only', false)
+      .eq('is_principal_repayment', false)
+
+    if (payoutRows && payoutRows.length > 0) {
+      const tdsFilingRows = payoutRows
+        .filter(r => (r.tds_amount ?? 0) > 0 && r.due_by)
+        .map(r => {
+          const deadline = getTdsFilingDeadline(r.due_by)
+          return {
+            agreement_id: id,
+            period_from: deadline.period_from,
+            period_to: deadline.period_to,
+            due_by: deadline.due_by,
+            no_of_days: null,
+            gross_interest: 0,
+            tds_amount: r.tds_amount,
+            net_interest: 0,
+            is_principal_repayment: false,
+            is_tds_only: true,
+            tds_filed: false,
+            status: 'pending',
+          }
+        })
+
+      if (tdsFilingRows.length > 0) {
+        const { error: tdsError } = await supabase.from('payout_schedule').insert(tdsFilingRows)
+        if (tdsError) console.error('Failed to insert TDS filing rows after rescan:', tdsError.message)
+      }
     }
 
     return NextResponse.json({ success: true, rowsInserted: extracted.payout_schedule?.length ?? 0 })

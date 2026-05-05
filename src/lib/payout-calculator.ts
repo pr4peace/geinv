@@ -38,6 +38,22 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
+export function getTdsFilingDeadline(dueDateStr: string): { due_by: string; period_from: string; period_to: string } {
+  const d = new Date(dueDateStr)
+  const month = d.getMonth() + 1
+  const year = d.getFullYear()
+
+  if (month >= 4 && month <= 6) {
+    return { period_from: `${year}-04-01`, period_to: `${year}-06-30`, due_by: `${year}-07-31` }
+  } else if (month >= 7 && month <= 9) {
+    return { period_from: `${year}-07-01`, period_to: `${year}-09-30`, due_by: `${year}-10-31` }
+  } else if (month >= 10 && month <= 12) {
+    return { period_from: `${year}-10-01`, period_to: `${year}-12-31`, due_by: `${year + 1}-01-31` }
+  } else {
+    return { period_from: `${year}-01-01`, period_to: `${year}-03-31`, due_by: `${year}-05-31` }
+  }
+}
+
 export function calculatePayoutSchedule({
   principal,
   roiPercentage,

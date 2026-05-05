@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReferenceId } from '@/lib/reference-id'
 import type { ExtractedPayoutRow } from '@/lib/claude'
 import { findOrCreateInvestor } from '@/lib/investors'
+import { getTdsFilingDeadline } from '@/lib/payout-calculator'
 
 export async function GET(request: NextRequest) {
   try {
@@ -258,6 +259,31 @@ export async function POST(request: NextRequest) {
       if (payoutError) {
         await supabase.from('agreements').delete().eq('id', agreement.id)
         return NextResponse.json({ error: `Failed to insert payout schedule: ${payoutError.message}` }, { status: 500 })
+      }
+
+      const tdsFilingRows = rows
+        .filter(r => !r.is_tds_only && !r.is_principal_repayment && (r.tds_amount ?? 0) > 0 && r.due_by)
+        .map(r => {
+          const deadline = getTdsFilingDeadline(r.due_by)
+          return {
+            agreement_id: agreement.id,
+            period_from: deadline.period_from,
+            period_to: deadline.period_to,
+            due_by: deadline.due_by,
+            no_of_days: null,
+            gross_interest: 0,
+            tds_amount: r.tds_amount,
+            net_interest: 0,
+            is_principal_repayment: false,
+            is_tds_only: true,
+            tds_filed: false,
+            status: 'pending',
+          }
+        })
+
+      if (tdsFilingRows.length > 0) {
+        const { error: tdsError } = await supabase.from('payout_schedule').insert(tdsFilingRows)
+        if (tdsError) console.error('Failed to insert TDS filing rows:', tdsError.message)
       }
     }
 
