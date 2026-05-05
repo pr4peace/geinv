@@ -12,9 +12,9 @@ import UploadSignedButton from '@/components/agreements/UploadSignedButton'
 import DeleteAgreementButton from '@/components/agreements/DeleteAgreementButton'
 import RescanModal from '@/components/agreements/RescanModal'
 import AuditLog from '@/components/agreements/AuditLog'
-import PayoutScheduleTable from '@/components/agreements/PayoutScheduleTable'
 import PendingPayouts from '@/components/agreements/PendingPayouts'
 import PendingTdsFilings from '@/components/agreements/PendingTdsFilings'
+import MaturityPayoutCard from '@/components/agreements/MaturityPayoutCard'
 import Timeline from '@/components/agreements/Timeline'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -363,8 +363,6 @@ export default async function AgreementDetailPage({
             )}
           </div>
 
-          {/* Payout Schedule Table (read-only) */}
-          <PayoutScheduleTable payouts={payout_schedule} principalAmount={agreement.principal_amount ?? undefined} />
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -386,11 +384,17 @@ export default async function AgreementDetailPage({
             agreementId={agreement.id}
             payouts={payout_schedule}
             userRole={userRole}
-            principalAmount={agreement.principal_amount ?? undefined}
           />
 
           <PendingTdsFilings
             payouts={payout_schedule}
+            userRole={userRole}
+          />
+
+          <MaturityPayoutCard
+            agreementId={agreement.id}
+            payouts={payout_schedule}
+            principalAmount={agreement.principal_amount ?? undefined}
             userRole={userRole}
           />
         </div>
