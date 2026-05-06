@@ -99,6 +99,52 @@ The existing `/notifications` page is already close. Two changes:
 
 ---
 
+## Backlog: "Mark All Historical as Paid" Button (next session)
+
+### Problem
+When re-uploading historical agreements, past rows need to be marked as settled.
+Currently `mark_historical_paid` in `POST /api/agreements` only marks interest payout rows
+(`is_tds_only=false`) as `status='paid'`. It misses:
+- TDS filing rows — should set `tds_filed=true` where `due_by < today`
+- Maturity/principal repayment row — should set `status='paid'` where `due_by < today` (i.e. agreement already matured)
+
+### What to build
+**1. Fix `POST /api/agreements` `mark_historical_paid` path** (`src/app/api/agreements/route.ts`)
+After the existing interest-payout update, add:
+```ts
+// Mark past TDS filing rows as filed
+await supabase.from('payout_schedule')
+  .update({ tds_filed: true })
+  .eq('agreement_id', agreement.id)
+  .eq('is_tds_only', true)
+  .lt('due_by', todayStr)
+
+// Mark maturity row as paid if agreement has already matured
+await supabase.from('payout_schedule')
+  .update({ status: 'paid', paid_date: todayStr })
+  .eq('agreement_id', agreement.id)
+  .eq('is_principal_repayment', true)
+  .lt('due_by', todayStr)
+```
+
+**2. Add "Mark All Historical as Paid" button on agreement detail page**
+- Show only when the agreement has any `pending` payout rows with `due_by < today`
+- Single button: calls a new `POST /api/agreements/[id]/mark-historical-paid`
+- That route runs the same three updates above for the given agreement
+- On success, reload the page
+
+### UI placement
+**Option A — Checkbox on ExtractionReview** (preferred): before saving a new agreement, a checkbox
+"Mark all past payouts as paid (historical agreement)" — checked by default when maturity_date < today.
+Maps to the existing `mark_historical_paid` flag sent in the POST body.
+
+**Option B — Button on agreement detail page**: "Mark All Historical as Paid" shown only when
+there are pending rows with `due_by < today`. Calls `POST /api/agreements/[id]/mark-historical-paid`.
+
+Both options should trigger all three updates (interest + TDS + maturity).
+
+---
+
 ## Backlog: DB Schema Review (next session)
 
 Currently `payout_schedule` holds three types of rows differentiated by flags:
