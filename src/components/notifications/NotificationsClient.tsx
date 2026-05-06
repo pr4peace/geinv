@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Bell, Mail, AlertCircle, CheckCircle2, Loader2, X, Eye, Users } from 'lucide-react'
 
 interface MonthlySummaryData {
@@ -23,13 +24,24 @@ interface MonthlySummaryData {
   }>
 }
 
+const WINDOW_OPTIONS = [
+  { value: 'month', label: 'This Month' },
+  { value: '30days', label: 'Next 30 Days' },
+  { value: 'quarter', label: 'Next Quarter' },
+]
+
 export default function NotificationsClient({
   monthLabel,
   data,
+  window: selectedWindow = 'month',
+  accountants = [],
 }: {
   monthLabel: string
   data: MonthlySummaryData
+  window?: string
+  accountants?: { name: string; email: string }[]
 }) {
+  const router = useRouter()
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +56,7 @@ export default function NotificationsClient({
     setError(null)
     setSuccess(false)
     try {
-      const res = await fetch('/api/cron/monthly-summary')
+      const res = await fetch(`/api/cron/monthly-summary?window=${selectedWindow}`)
       if (res.ok) {
         setSuccess(true)
         setShowPreview(false)
@@ -65,17 +77,34 @@ export default function NotificationsClient({
         <div>
           <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-3">
             <Bell className="w-6 h-6 text-indigo-400" />
-            Monthly Notifications
+            Notification Reports
           </h1>
-          <p className="text-slate-400 mt-1">Summary for {monthLabel} (includes overdues)</p>
+          <p className="text-slate-400 mt-1">{monthLabel} — includes overdues</p>
         </div>
         <button
           onClick={() => setShowPreview(true)}
           className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-900/20"
         >
           <Mail className="w-4 h-4" />
-          Send Monthly Summary
+          Send Report to Accounts
         </button>
+      </div>
+
+      {/* Window selector */}
+      <div className="flex items-center gap-2">
+        {WINDOW_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => router.replace(`/notifications?window=${opt.value}`)}
+            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+              selectedWindow === opt.value
+                ? 'bg-indigo-600 border-indigo-500 text-white'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {success && (
@@ -209,8 +238,14 @@ export default function NotificationsClient({
                 </div>
                 <div>
                   <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Sending To</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-0.5">Valli Sivakumar (valli.sivakumar@goodearth.org.in)</p>
-                  <p className="text-xs text-slate-500 mt-1">This email contains a consolidated summary of {data.payouts.length + data.maturities.length} investment events.</p>
+                  {accountants.length > 0 ? (
+                    accountants.map(a => (
+                      <p key={a.email} className="text-sm font-semibold text-slate-200 mt-0.5">{a.name} ({a.email})</p>
+                    ))
+                  ) : (
+                    <p className="text-sm text-red-400 mt-0.5">No active accountants found in team settings.</p>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">Consolidated report for {monthLabel} — {data.payouts.length + data.maturities.length} investment events.</p>
                 </div>
               </div>
 

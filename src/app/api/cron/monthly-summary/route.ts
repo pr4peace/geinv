@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { startOfMonth, endOfMonth, format } from 'date-fns'
+import { startOfMonth, endOfMonth, addDays, endOfQuarter, format, getQuarter } from 'date-fns'
 import { buildMonthlySummaryEmail, type MonthlySummaryData } from '@/lib/reminders'
 import { sendEmail } from '@/lib/email'
 
@@ -19,6 +19,32 @@ interface PayoutWithAgreement {
   }
 }
 
+function computeWindow(window: string, today: Date): { endDate: string; windowLabel: string; monthLabel: string } {
+  const monthLabel = format(today, 'MMMM yyyy')
+  if (window === '30days') {
+    return {
+      endDate: format(addDays(today, 30), 'yyyy-MM-dd'),
+      windowLabel: 'Next 30 Days',
+      monthLabel,
+    }
+  }
+  if (window === 'quarter') {
+    const q = getQuarter(today)
+    const year = today.getFullYear()
+    return {
+      endDate: format(endOfQuarter(today), 'yyyy-MM-dd'),
+      windowLabel: `Next Quarter (Q${q} ${year})`,
+      monthLabel,
+    }
+  }
+  // default: month
+  return {
+    endDate: format(endOfMonth(today), 'yyyy-MM-dd'),
+    windowLabel: `This Month (${monthLabel})`,
+    monthLabel,
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Basic auth check for Vercel Cron
@@ -32,9 +58,10 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient()
     const today = new Date()
+    const { searchParams } = new URL(request.url)
+    const windowParam = searchParams.get('window') ?? 'month'
+    const { endDate: monthEnd, windowLabel, monthLabel } = computeWindow(windowParam, today)
     const monthStart = format(startOfMonth(today), 'yyyy-MM-dd')
-    const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd')
-    const monthLabel = format(today, 'MMMM yyyy')
 
     // 1. Fetch Payouts (Current Month + Overdue)
     const { data: payoutsData, error: payoutsErr } = await supabase
@@ -84,24 +111,34 @@ export async function GET(request: NextRequest) {
     }
 
     if (summaryData.payouts.length === 0 && summaryData.maturities.length === 0) {
-      return NextResponse.json({ message: 'No events this month. No email sent.' })
+      return NextResponse.json({ message: 'No events in selected window. No email sent.' })
     }
 
-    // 4. Set recipient (Valli)
-    const recipients = ['valli.sivakumar@goodearth.org.in']
+    // 4. Fetch active accountants as recipients
+    const { data: accountantsData } = await supabase
+      .from('team_members')
+      .select('email')
+      .eq('role', 'accountant')
+      .eq('is_active', true)
+    const recipients = (accountantsData ?? []).map((a: { email: string }) => a.email).filter(Boolean)
+    if (recipients.length === 0) {
+      return NextResponse.json({ error: 'No active accountants found in team members' }, { status: 400 })
+    }
 
     // 5. Build and Send
-    const html = buildMonthlySummaryEmail(monthLabel, summaryData)
+    const html = buildMonthlySummaryEmail(monthLabel, summaryData, windowLabel)
     const result = await sendEmail({
       to: recipients,
-      subject: `Investment Payout Summary — ${monthLabel}`,
+      subject: `Investment Report — ${windowLabel}`,
       html,
     })
 
     return NextResponse.json({
-      message: 'Monthly summary sent',
+      message: 'Report sent',
+      window: windowParam,
       payouts: summaryData.payouts.length,
       maturities: summaryData.maturities.length,
+      recipients,
       email_id: result.id,
     })
   } catch (err) {

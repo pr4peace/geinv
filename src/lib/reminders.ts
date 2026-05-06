@@ -20,12 +20,12 @@ export interface MonthlySummaryData {
   }>
 }
 
-export function buildMonthlySummaryEmail(monthLabel: string, data: MonthlySummaryData): string {
+export function buildMonthlySummaryEmail(monthLabel: string, data: MonthlySummaryData, windowLabel?: string): string {
   const interestPayouts = data.payouts.filter(p => !p.is_tds_only)
   const tdsFilings = data.payouts.filter(p => p.is_tds_only)
   const maturities = data.maturities
 
-  let body = `<h2>Monthly Investment Summary — ${esc(monthLabel)}</h2>`
+  let body = `<h2>Investment Report — ${esc(windowLabel ?? monthLabel)}</h2>`
 
   const renderPayoutRow = (p: MonthlySummaryData['payouts'][0]) => `
     <tr style="${p.is_overdue ? 'color:#b91c1c;background:#fef2f2' : ''}">

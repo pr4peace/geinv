@@ -49,10 +49,51 @@
 ---
 
 ## Next Feature: Notification Reports (coordinator → accounts)
-- Simple report emails triggered manually from the coordinator
-- Three report types: Interest Payouts due, TDS Filings due, Maturity Payouts due
-- Recipient: accounts team only (no salesperson)
-- Brainstorm approach before building
+
+### Design (approved)
+The existing `/notifications` page is already close. Two changes:
+1. **Selectable time window** — pill selector with 3 presets (URL param `?window=month|30days|quarter`)
+2. **Dynamic recipients** — fetch active accountants from `team_members` table instead of hardcoded email
+
+### Files to change
+
+**`src/app/(app)/notifications/page.tsx`**
+- Accept `searchParams: { window?: string }` prop (default `'month'`)
+- Compute `endDate`: month→`endOfMonth(today)`, 30days→`addDays(today,30)`, quarter→`endOfQuarter(today)` (all from date-fns, already in project)
+- Fetch accountants: `supabase.from('team_members').select('name, email').eq('role','accountant').eq('is_active',true)`
+- Pass `window` and `accountants: {name,email}[]` as props to `NotificationsClient`
+
+**`src/components/notifications/NotificationsClient.tsx`**
+- Add `window: string` and `accountants: {name:string; email:string}[]` to props
+- Add pill button row: **This Month** / **Next 30 Days** / **Next Quarter** — active pill in indigo
+  - On click: `router.replace('/notifications?window=...')` using `useRouter` from `next/navigation`
+- Preview modal "Sending To": iterate `accountants` prop instead of hardcoded Valli text
+- Rename button: **Send Report to Accounts**
+- `handleSendEmail`: `fetch('/api/cron/monthly-summary?window=' + window)`
+
+**`src/app/api/cron/monthly-summary/route.ts`**
+- Read `?window` search param (default `'month'`); compute `endDate` same as page
+- Replace hardcoded recipients with:
+  ```ts
+  const { data: accountants } = await supabase.from('team_members')
+    .select('email').eq('role','accountant').eq('is_active',true)
+  const recipients = (accountants ?? []).map(a => a.email).filter(Boolean)
+  if (!recipients.length) return NextResponse.json({ error: 'No active accountants found' }, { status: 400 })
+  ```
+- Window labels: `'month'`→`"This Month (May 2026)"`, `'30days'`→`"Next 30 Days"`, `'quarter'`→`"Next Quarter (Q2 2026)"`
+- Subject: `Investment Report — ${windowLabel}`
+- Pass `windowLabel` to `buildMonthlySummaryEmail`
+
+**`src/lib/reminders.ts` — `buildMonthlySummaryEmail`**
+- Add optional second param `windowLabel?: string`
+- Use it in the email `<h2>` header instead of the old month string
+
+### Verification
+1. `/notifications` default → "This Month" pill active, same data as before
+2. Click "Next 30 Days" → URL updates, page reloads, table shows rolling 30-day window
+3. "Send Report to Accounts" → preview modal lists accountants from team_members
+4. Confirm & Send → email received with subject reflecting the window
 
 ## Next Agent Action
-- Brainstorm notification report design with user, then implement
+- Gemini implements the four file changes above
+- No DB migrations required — uses existing tables
