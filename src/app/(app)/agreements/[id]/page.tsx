@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { ArrowLeft, FileText, User, AlertTriangle, Shield, Activity, Mail } from 'lucide-react'
+import { ArrowLeft, FileText, User, Shield, Activity, Mail } from 'lucide-react'
 import type {
   Agreement,
   PayoutSchedule,
@@ -10,7 +10,6 @@ import type {
 import DocLifecycleStepper from '@/components/agreements/DocLifecycleStepper'
 import UploadSignedButton from '@/components/agreements/UploadSignedButton'
 import DeleteAgreementButton from '@/components/agreements/DeleteAgreementButton'
-import RescanModal from '@/components/agreements/RescanModal'
 import AuditLog from '@/components/agreements/AuditLog'
 import PendingPayouts from '@/components/agreements/PendingPayouts'
 import PendingTdsFilings from '@/components/agreements/PendingTdsFilings'
@@ -232,7 +231,7 @@ export default async function AgreementDetailPage({
             <div className="flex flex-wrap items-center gap-2">
               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle.cls}`}>{statusStyle.label}</span>
               {agreement.is_draft && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-900/40 text-amber-400">DRAFT</span>}
-              {agreement.document_url && <RescanModal agreementId={agreement.id} userRole={userRole} />}
+              {/* RescanModal hidden during data-entry phase */}
               {(agreement.is_draft || !agreement.document_url) && (
                 <UploadSignedButton agreementId={agreement.id} label={agreement.document_url ? 'Replace Document' : 'Upload Document'} />
               )}
@@ -241,17 +240,7 @@ export default async function AgreementDetailPage({
           </div>
         </div>
 
-        {/* ── Rescan Banner ── */}
-        {agreement.rescan_required && (
-          <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-4 flex gap-4 items-center">
-            <div className="p-2 bg-amber-500/20 rounded-lg"><AlertTriangle className="w-5 h-5 text-amber-500" /></div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-amber-200">Rescan Recommended</h3>
-              <p className="text-xs text-amber-400/80 mt-0.5">This agreement was uploaded with an older extraction model. Rescan to ensure accuracy.</p>
-            </div>
-            <RescanModal agreementId={agreement.id} userRole={userRole} />
-          </div>
-        )}
+        {/* Rescan banner hidden during data-entry phase */}
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION 1: DATA — What the document says                          */}
