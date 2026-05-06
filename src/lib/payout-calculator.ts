@@ -137,10 +137,11 @@ export function calculatePayoutSchedule({
       const finalPeriodInterest = round2(gross - totalAccrued)
       const finalTds = round2(tds - rows.reduce((sum, r) => sum + (r.is_tds_only ? r.tds_amount : 0), 0))
 
+      const finalDeadline = getTdsFilingDeadline(toISO(maturity))
       rows.push({
         period_from: toISO(periodFrom),
         period_to: toISO(maturity),
-        due_by: toISO(maturity),
+        due_by: finalDeadline.due_by,
         no_of_days: lastPeriodDays,
         gross_interest: finalPeriodInterest,
         tds_amount: finalTds,
