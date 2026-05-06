@@ -95,5 +95,23 @@ The existing `/notifications` page is already close. Two changes:
 4. Confirm & Send → email received with subject reflecting the window
 
 ## Next Agent Action
-- Gemini implements the four file changes above
-- No DB migrations required — uses existing tables
+- Re-upload ~180 agreement PDFs via the app (data-entry phase)
+
+---
+
+## Backlog: DB Schema Review (next session)
+
+Currently `payout_schedule` holds three types of rows differentiated by flags:
+- Regular interest payouts (`is_tds_only=false`, `is_principal_repayment=false`)
+- TDS filing rows (`is_tds_only=true`)
+- Maturity/principal repayment (`is_principal_repayment=true`)
+
+**Consideration**: evaluate whether splitting into separate tables would be cleaner:
+- `interest_payouts` — periodic interest rows
+- `tds_filings` — TDS filing deadlines (one per payout quarter)
+- `maturity_payouts` — principal repayment row
+
+**Pros of split**: queries are simpler, no flag filtering, clearer semantics per table, easier to add type-specific fields later.
+**Cons of split**: more joins, more migrations, existing code touches `payout_schedule` in many places.
+
+**Decision point**: review after bulk re-upload is done and data is stable. Do not migrate mid-upload.
