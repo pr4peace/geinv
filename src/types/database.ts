@@ -4,7 +4,7 @@ export type PayoutFrequency = 'quarterly' | 'annual' | 'cumulative' | 'monthly' 
 export type InterestType = 'simple' | 'compound'
 export type DocStatus = 'draft' | 'partner_signed' | 'sent_to_client' | 'returned' | 'uploaded'
 export type PayoutStatus = 'pending' | 'notified' | 'paid' | 'overdue'
-export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_forecast' | 'payout_monthly_summary'
+export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_forecast' | 'payout_monthly_summary' | 'batch_notification'
 export type ReminderStatus = 'pending' | 'sent' | 'failed'
 
 export interface PaymentEntry {
