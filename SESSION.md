@@ -1,45 +1,38 @@
 # SESSION
 
 ## Branch
-- main
+- feature/batch-f-notifications
 
 ## Phase
-- releasing
+- building
 
 ## Active Batch
-- Extraction + UI Bug Fixes (2026-05-02)
+- Batch F — Notification Revamp (2026-05-25)
 
 ---
 
 ## Work Completed
-- **PDF Text-Layer Extraction:**
-  - `extractPdfTextLayer()` added to `src/lib/claude.ts` using pdfjs-dist `getTextContent()`
-  - `buildTextLayerContext()` formats extracted amounts + payout table rows as ground-truth preamble
-  - Injected into both Claude and Gemini extraction paths (no new dependencies)
-  - RULE 2 fix: `due_by` now explicitly uses "Payable to" column, not "On or before" TDS deadline
+- Design spec written and reviewed: `docs/superpowers/specs/2026-05-25-batch-f-notifications-design.md`
+- Implementation plan written: `docs/superpowers/plans/2026-05-25-batch-f-notifications.md`
+- Branch `feature/batch-f-notifications` created from main
 
-- **PayoutScheduleTable redesigned (per Irene):**
-  - Removed FY grouping and FY subtotals
-  - 3 clean sections: Interest Payouts | TDS Filing Requirements | Principal Repayment
-  - Single total row at bottom of Interest Payouts only
+## Pending (Gemini to implement — 8 tasks)
+1. Task 1 — Migration 024: add `batch_notification` to reminders check constraint
+2. Task 2 — Add `batch_notification` to `ReminderType` in `src/types/database.ts`
+3. Task 3 — Add `sendBatchNotification()` to `src/lib/email.ts`
+4. Task 4 — Write failing tests in `src/__tests__/notifications-send.test.ts`
+5. Task 5 — Create `POST /api/notifications/send/route.ts`
+6. Task 6 — Expand `src/app/(app)/notifications/page.tsx` (3 queries, 60-day window, history)
+7. Task 7 — Rebuild `src/components/notifications/NotificationsClient.tsx` (tabs, sections, checkboxes, history)
+8. Task 8 — Verify old monthly-summary trigger is gone; final build + test run
 
-- **Bug Fixes:**
-  - Net payout total was 0 for compound/cumulative agreements — fixed filter in `agreements/[id]/page.tsx`
-  - PendingPayouts — added net total subtotal row
-  - PendingTdsFilings — added total pending TDS subtotal row
-  - DocLifecycleStepper — "Uploaded" step now shows green (was indigo)
-  - Maturity notifications — net amount now displayed (was showing `—`)
-
-- **Batch Rescan Tool (Settings → /settings/batch-rescan):**
-  - Multi-select, parallel scan, diff cards, bulk apply
-
-- **Notification Filters:**
-  - Cascading When / Type / Who filters with date presets
-
-## Pending
-- Aanandsudhan N due date discrepancy (2026-03-31 vs 2026-04-07) — user checking with Irene
-- User to verify extraction improvement on real PDFs (especially principal amount and payout row count)
-- Geetha Das May 20 payout: needs "Refresh All Jobs" on her agreement page to queue the notification
+## Key Decisions
+- All coordinator batch emails are manual-only; no cron schedule
+- Auto emails are OFF — no vercel.json, no cron jobs
+- History tab reads `reminders` table filtered by `reminder_type='batch_notification'`
+- One `reminders` row per selected item (not one per batch) for reliable idempotency
+- `sendQuarterlyForecast` in `email.ts` left untouched (governs future Batch F cron items)
+- `/api/cron/monthly-summary` stays in place but is removed from the UI
 
 ## Next Agent Action
-- Push to remote and deploy
+- Gemini: read SESSION.md and the plan at `docs/superpowers/plans/2026-05-25-batch-f-notifications.md`, summarise all 8 tasks to the user, wait for confirmation, then implement in order
