@@ -3,24 +3,26 @@
 **Date:** 2026-05-25
 **Branch:** `feature/batch-e2-agreements`
 **Track:** Stable (main)
-**Depends on:** Batch E.1 merged (design tokens + shell must be in main first)
-**Status:** Approved
+**Depends on:** Batch E.1 merged to main
+**Status:** Pending review
 
 ---
 
 ## Goal
 
-Restyle all agreements pages (list, detail, new, import) to match the E.1 design system. No new functionality — layout and visual treatment only.
+Restyle all agreements pages (list, detail, new, import) to match the E.1 design system. Visual treatment only — no API changes, no new features, no changes to role-gating or salesperson-scoped visibility.
+
+**Salesperson restrictions stay unchanged.** The agreements list has role-dependent UI (salesperson sees only their agreements, cannot access certain actions, deleted agreements hidden). E.2 reskins the visual layer; all role checks and conditional rendering remain exactly as they are.
 
 ---
 
 ## Agreements List (`/agreements`)
 
-**File:** `src/components/agreements/AgreementsTable.tsx`
+**Files:** `src/app/(app)/agreements/page.tsx`, `src/components/agreements/AgreementsTable.tsx`
 
-- Page background: `bg-paper`
+- Page heading lives in `src/app/(app)/agreements/page.tsx` — update there, not in AgreementsTable
 - Page heading: Source Serif 4, 28px, `text-ink-1`, ruled bottom border (`border-b border-ink-1 pb-3 mb-5`)
-- "New Agreement" button: `bg-forest text-paper` primary style, 28px height
+- "New Agreement" button: `bg-forest text-paper` primary style, 28px height — update in `page.tsx`
 - Table: `.dt` pattern — `border-collapse`, `w-full`, `text-xs`
   - `thead th`: `text-ink-4 uppercase tracking-widest text-[10px] font-medium bg-surface-2 border-b border-hairline-strong px-3 py-2`
   - `tbody td`: `px-3 py-2 border-b border-hairline text-ink-2`
@@ -35,7 +37,7 @@ Restyle all agreements pages (list, detail, new, import) to match the E.1 design
 
 ## Agreement Detail (`/agreements/[id]`)
 
-**Files:** `src/app/(app)/agreements/[id]/page.tsx`, `src/components/agreements/PayoutScheduleTable.tsx`, `src/components/agreements/DocLifecycleStepper.tsx`, `src/components/agreements/PendingPayouts.tsx`, `src/components/agreements/PendingTdsFilings.tsx`, `src/components/agreements/Timeline.tsx`
+**Files:** `src/app/(app)/agreements/[id]/page.tsx`, `src/components/agreements/PayoutScheduleTable.tsx`, `src/components/agreements/DocLifecycleStepper.tsx`, `src/components/agreements/PendingPayouts.tsx`, `src/components/agreements/PendingTdsFilings.tsx`, `src/components/agreements/Timeline.tsx`, `src/components/agreements/PayoutScheduleSection.tsx`, `src/components/agreements/MaturityPayoutCard.tsx`, `src/components/agreements/TrashAgreements.tsx`, `src/components/agreements/DeleteAgreementButton.tsx`, `src/components/agreements/AuditLog.tsx`, `src/components/agreements/UploadSignedButton.tsx`
 
 ### Page heading
 ```
@@ -51,14 +53,18 @@ sub: reference_id · investor_name in text-ink-4 text-xs uppercase
 - Label rows: `text-ink-4 text-xs` + value `text-ink-1 text-sm`
 - Amount values: `font-mono tabular-nums`
 
-### PayoutScheduleTable
+### PayoutScheduleTable + PayoutScheduleSection
 - `.dt.compact` style — 28px rows
 - Overdue rows: `bg-rust-soft/40`
 - Paid rows: `text-ink-4` (dimmed)
-- Notified rows: normal
 - TDS-only rows: `bg-clay-soft/30 text-ink-3`
 - Net amount column: `font-mono font-semibold text-ink-1`
-- Status pills: replace colored badges with `.sdot` dots
+- Status: `.sdot` dots, no colored badges
+
+### MaturityPayoutCard
+- Card: `bg-surface border border-hairline rounded-sm p-4`
+- Principal amount: `font-mono text-xl font-semibold text-ink-1`
+- Maturity date label: `.lbl`
 
 ### DocLifecycleStepper
 - Active step: `text-forest font-semibold`
@@ -71,6 +77,17 @@ sub: reference_id · investor_name in text-ink-4 text-xs uppercase
 - Row: `border-b border-hairline px-4 py-3`
 - Amount: `font-mono text-ink-1`
 - Overdue badge: `bg-rust-soft text-rust text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm`
+
+### TrashAgreements + DeleteAgreementButton
+- Danger button: `border border-rust/40 text-rust bg-rust-soft/30 hover:bg-rust-soft`
+- Confirmation modal: `bg-surface border border-hairline rounded-sm` — same panel style
+
+### AuditLog
+- Log entries: `border-b border-hairline px-4 py-3 text-xs text-ink-3`
+- Timestamps: `font-mono text-ink-4`
+
+### UploadSignedButton
+- Button: `border border-hairline-strong text-ink-1 bg-surface hover:bg-surface-2`
 
 ### RescanModal + QuickActions buttons
 - Primary: `bg-forest text-paper`
@@ -110,24 +127,30 @@ sub: reference_id · investor_name in text-ink-4 text-xs uppercase
 
 | File | Action |
 |---|---|
-| `src/components/agreements/AgreementsTable.tsx` | Restyle table + page heading |
+| `src/app/(app)/agreements/page.tsx` | Restyle page heading + "New Agreement" button |
+| `src/components/agreements/AgreementsTable.tsx` | Restyle table |
 | `src/app/(app)/agreements/[id]/page.tsx` | Restyle page heading + layout |
 | `src/components/agreements/PayoutScheduleTable.tsx` | `.dt.compact` style |
+| `src/components/agreements/PayoutScheduleSection.tsx` | Light mode panel |
+| `src/components/agreements/MaturityPayoutCard.tsx` | Light mode card |
 | `src/components/agreements/DocLifecycleStepper.tsx` | Light mode colours |
-| `src/components/agreements/PendingPayouts.tsx` | Light mode panel style |
-| `src/components/agreements/PendingTdsFilings.tsx` | Light mode panel style |
+| `src/components/agreements/PendingPayouts.tsx` | Light mode panel |
+| `src/components/agreements/PendingTdsFilings.tsx` | Light mode panel |
 | `src/components/agreements/RescanModal.tsx` | Light mode buttons + modal |
 | `src/components/agreements/QuickActions.tsx` | Light mode buttons |
+| `src/components/agreements/TrashAgreements.tsx` | Light mode danger style |
+| `src/components/agreements/DeleteAgreementButton.tsx` | Light mode danger style |
+| `src/components/agreements/AuditLog.tsx` | Light mode log entries |
+| `src/components/agreements/UploadSignedButton.tsx` | Light mode button |
 | `src/components/agreements/UploadStep.tsx` | Light upload area |
 | `src/components/agreements/ManualAgreementForm.tsx` | Light inputs + form |
 | `src/components/agreements/ExtractionReview.tsx` | Light inputs + form |
 | `src/components/agreements/ImportFlow.tsx` | Light inputs + stepper |
-| `src/components/agreements/Timeline.tsx` | Light mode |
 
 ---
 
 ## Out of scope
 
-- New form fields or validation changes
+- Role-gating changes (salesperson restrictions unchanged)
 - API changes
 - E.3 pages

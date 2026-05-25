@@ -3,14 +3,14 @@
 **Date:** 2026-05-25
 **Branch:** `feature/batch-e3-remaining`
 **Track:** Stable (main)
-**Depends on:** Batch E.1 + E.2 merged
-**Status:** Approved
+**Depends on:** Batch E.1 + E.2 + Batch F all merged to main
+**Status:** Pending review
 
 ---
 
 ## Goal
 
-Apply the E.1 design system to all remaining pages: Notifications, Settings, Batch Rescan, Login, and modal components (WhatsNewModal, SplashScreen).
+Apply the E.1 design system to all remaining pages: Notifications, Settings, Batch Rescan, Login, error/404 pages, and modal components (WhatsNewModal, SplashScreen, UndoToast).
 
 ---
 
@@ -47,8 +47,8 @@ History rows: `border-b border-hairline`.
 - Page heading: Source Serif 4, 28px, ruled bottom border
 - Team members table: `.dt` style
 - Add member form: `.input` style inputs, `bg-forest text-paper` submit
-- Role badges: pills using sdot + ink-2 text (no colored backgrounds)
-- Danger zone (delete): `text-rust border-rust` button
+- Role badges: `.sdot` dot + `text-ink-2` (no colored backgrounds)
+- Danger zone (delete/deactivate): `text-rust border-rust/40 bg-rust-soft/30` button
 
 ---
 
@@ -56,8 +56,8 @@ History rows: `border-b border-hairline`.
 
 **File:** `src/app/(app)/settings/batch-rescan/page.tsx` + related components
 
-- Agreement selection table: `.dt` style with checkboxes
-- Diff cards: `bg-surface border border-hairline rounded-sm` — removed values in `text-rust`, added in `text-gain`
+- Agreement selection table: `.dt` style with checkboxes (`accent-forest`)
+- Diff cards: `bg-surface border border-hairline rounded-sm` — removed values `text-rust`, added `text-gain`
 - Warning banners: `bg-clay-soft border border-clay/20 text-clay`
 - Error banners: `bg-rust-soft border border-rust/20 text-rust`
 - Progress indicators: `text-forest`
@@ -74,6 +74,17 @@ History rows: `border-b border-hairline`.
 - Logo: forest mark (28×28) + "Good Earth" in Source Serif 4
 - Sub: `text-ink-4 text-xs uppercase tracking-widest` — "Investment Tracker"
 - Google sign-in button: `border border-hairline-strong bg-surface hover:bg-surface-2 text-ink-1 h-9 w-full rounded-sm text-sm font-medium`
+
+---
+
+## Error + Not Found Pages
+
+**Files:** `src/app/(app)/error.tsx`, `src/app/error.tsx`, `src/app/not-found.tsx` — check each for dark slate styling and apply token swap if present.
+
+- Background: `bg-paper`
+- Heading: `text-ink-1 font-serif`
+- Body text: `text-ink-3`
+- Action button: `bg-forest text-paper`
 
 ---
 
@@ -100,22 +111,18 @@ History rows: `border-b border-hairline`.
 
 ---
 
-## Files
+## UndoToast
 
-| File | Action |
-|---|---|
-| `src/components/notifications/NotificationsClient.tsx` | Token swap (dark → light) |
-| `src/app/(app)/settings/page.tsx` | Light mode restyle |
-| `src/app/(app)/settings/batch-rescan/page.tsx` | Light mode restyle |
-| `src/app/login/page.tsx` | Light mode login card |
-| `src/components/WhatsNewModal.tsx` | Light mode modal |
-| `src/components/SplashScreen.tsx` | Forest background splash |
-| `src/components/UndoToast.tsx` | Light mode toast |
+**File:** `src/components/UndoToast.tsx`
+
+- Toast: `bg-ink-1 text-paper border border-ink-2 rounded-sm shadow-lg`
+- Undo button: `text-forest-soft hover:text-paper underline text-sm`
 
 ---
 
 ## Out of scope
 
-- Quarterly review / quarterly reports pages (not in main nav — address separately)
-- Calendar page (not in main nav — address separately)
+- Quarterly review (`/quarterly-review`) and quarterly reports (`/quarterly-reports`) — not reachable from current shell nav; will be addressed when re-added to nav
+- Calendar (`/calendar`) — not reachable from current shell nav; same
+- API changes
 - New features

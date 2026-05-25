@@ -3,7 +3,7 @@
 **Date:** 2026-05-25
 **Branch:** `feature/batch-e1-foundation`
 **Track:** Stable (main)
-**Status:** Approved
+**Status:** Pending review
 
 ---
 
@@ -63,12 +63,12 @@ Add utility classes:
 .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum', 'zero'; }
 .lbl { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #7A776E; font-weight: 500; }
 .sdot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; vertical-align: middle; margin-right: 6px; }
-.sdot-active  { background: #1B5E3F; }
-.sdot-pending { background: #B8741E; }
-.sdot-overdue { background: #A4231F; }
-.sdot-paid    { background: #1B5E3F; }
+.sdot-active   { background: #1B5E3F; }
+.sdot-pending  { background: #B8741E; }
+.sdot-overdue  { background: #A4231F; }
+.sdot-paid     { background: #1B5E3F; }
 .sdot-notified { background: #1F3D6B; }
-.sdot-draft   { background: #B8741E; }
+.sdot-draft    { background: #B8741E; }
 ```
 
 ---
@@ -76,6 +76,10 @@ Add utility classes:
 ## Shell — Sidebar + Nav + Topbar
 
 **File:** `src/app/(app)/layout.tsx`
+
+### What changes vs current shell
+
+The current shell has: global search bar, sidebar collapse/expand toggle, WhatsNewModal trigger, SplashScreen, sign-out button. **E.1 intentionally removes global search and sidebar collapse toggle** — the new design uses a fixed 224px sidebar with no collapse. WhatsNewModal, SplashScreen, and sign-out are preserved (restyled in E.3 for WhatsNew/Splash; sign-out stays in the user strip).
 
 ### Sidebar
 - Background: `bg-surface` (white), right border: `border-r border-hairline`
@@ -119,21 +123,29 @@ join agreements (investor_name, reference_id, id, payout_frequency)
 
 // 2. This-week payouts
 payout_schedule where status IN ('pending','notified') AND due_by >= today AND due_by <= week AND is_tds_only=false
+join agreements (investor_name, reference_id, id, payout_frequency)
 
 // 3. Later-this-month payouts
 payout_schedule where status IN ('pending','notified') AND due_by > week AND due_by <= month AND is_tds_only=false
+join agreements (investor_name, reference_id, id, payout_frequency)
 
 // 4. Maturing soon
 agreements where status='active' AND maturity_date <= d90 AND deleted_at IS NULL
 compute daysLeft = diff(maturity_date, today)
 
-// 5. Docs pending
-agreements where status='active' AND doc_status IN ('sent_to_client','partner_signed','uploaded') AND deleted_at IS NULL
+// 5. Docs pending — awaiting client return only
+agreements where status='active'
+  AND doc_status = 'sent_to_client'   ← client has not yet returned signed doc
+  AND deleted_at IS NULL
 compute daysSince = diff(today, doc_sent_to_client_date)
+Note: doc_status='uploaded' means doc returned and complete — do NOT include.
+Note: doc_status='partner_signed' means ready to send to client — show separately if needed but
+      do not count as "pending return".
 
 // 6. Today's activity
 reminders where sent_at >= today AND status='sent'
 order by sent_at DESC, limit 5
+Note: reminders table does not have investor_name. Row text uses email_subject directly.
 ```
 
 ### KPI tiles (Row 1)
@@ -144,8 +156,8 @@ order by sent_at DESC, limit 5
 |---|---|---|
 | Open actions | count(overdue) + count(thisWeek) | "across queues" |
 | Net to disburse | sum(net_interest) of overdue+thisWeek formatted ₹ | "this week" |
-| Maturing in 90d | sum(principal_amount) of maturing | count + " agreements" |
-| Docs pending | count(docsPending) | "awaiting return" |
+| Maturing in 90d | sum(principal_amount) of maturing formatted ₹ | count + " agreements" |
+| Docs pending | count(docsPending) where doc_status='sent_to_client' | "awaiting return" |
 
 Value: `font-mono text-2xl font-medium text-ink-1`
 Label: `.lbl` class
@@ -186,22 +198,20 @@ Lane tones:
 Rows: investor name (12px semibold) + ref · date (11px ink-4) | principal (13px bold mono, earth-brown) + daysLeft badge (10px clay)
 
 **Docs pending:**
-Rows: investor name + "sent {date} · {ref}" | daysSince badge — clay if daysSince > doc_return_reminder_days, else earth-green
+Only shows agreements where `doc_status = 'sent_to_client'`.
+Rows: investor name + "sent {doc_sent_to_client_date} · {reference_id}" | daysSince badge — clay if daysSince > doc_return_reminder_days, else earth-green
 
 **Today's activity:**
-Rows: colored dot (gain=paid, info=notify, clay=other) + action text (12px) + time (10px ink-4)
-Activity text format:
-- payout reminder sent: "{investor_name} — payout reminder sent"
-- batch_notification: "Batch {type} sent to {email_to[0]}"
-- Other: use email_subject
+Rows: colored dot (gain=paid, info=batch_notification/notify, clay=other) + `email_subject` as row text (12px) + time extracted from `sent_at` (10px ink-4).
+No investor_name join — email_subject is sufficient and always present.
 
 ---
 
 ## Routing
 
-- Add `/dashboard` to nav (first item)
-- Update `src/middleware.ts`: redirect authenticated `/` → `/dashboard`
-- Remove any existing `/` redirect to `/agreements`
+- Add `/dashboard` to nav as first item
+- **`src/app/page.tsx`**: replace `redirect('/agreements')` with `redirect('/dashboard')` — this is where the `/` redirect actually lives
+- `src/middleware.ts`: no change needed for routing; keep focused on auth/RBAC only
 
 ---
 
@@ -212,10 +222,10 @@ Activity text format:
 | `tailwind.config.ts` | Add color tokens + font families |
 | `src/app/layout.tsx` | Update Google Fonts import |
 | `src/app/globals.css` | Replace dark body styles, add utility classes |
-| `src/app/(app)/layout.tsx` | Rebuild sidebar + nav + topbar (light) |
+| `src/app/page.tsx` | Replace `redirect('/agreements')` with `redirect('/dashboard')` |
+| `src/app/(app)/layout.tsx` | Rebuild sidebar + nav + topbar (light); remove search + collapse toggle |
 | `src/app/(app)/dashboard/page.tsx` | New server component with 6 queries |
 | `src/components/dashboard/DashboardClient.tsx` | New client component — KPI tiles, kanban, panels |
-| `src/middleware.ts` | Redirect `/` → `/dashboard` |
 
 ---
 
@@ -225,3 +235,5 @@ Activity text format:
 - E.3 (notifications/settings/login redesign) — separate branch
 - Mobile responsive refinements (basic responsiveness only)
 - Drag-and-drop between kanban lanes
+- Global search (removed; may be re-added in a future batch)
+- Sidebar collapse toggle (removed; fixed-width sidebar in new design)
