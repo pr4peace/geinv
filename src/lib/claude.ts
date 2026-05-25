@@ -237,7 +237,7 @@ async function extractWithClaude(
 
   // Pass 1 — metadata (fast, small output)
   const metaResponse = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 2048,
     system,
     messages: [{ role: 'user', content: [...docContent, { type: 'text' as const, text: EXTRACTION_PROMPT }] }],
@@ -247,7 +247,7 @@ async function extractWithClaude(
 
   // Pass 2 — payout schedule only (full focus, all tokens)
   const schedResponse = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 16000,
     system,
     messages: [{ role: 'user', content: [...docContent, { type: 'text' as const, text: SCHEDULE_PROMPT }] }],
@@ -263,7 +263,7 @@ async function extractWithGemini(
   mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ): Promise<ExtractedAgreement> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3.5-flash',
+    model: 'gemini-1.5-pro',
     generationConfig: {
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',

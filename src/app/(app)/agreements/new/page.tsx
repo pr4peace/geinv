@@ -79,16 +79,31 @@ export default function NewAgreementPage() {
         signal: controller.signal,
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error ?? `Extraction failed (${res.status})`)
+      if (res.redirected) {
+        window.location.href = res.url
+        return
       }
 
-      setExtractResult(data as ExtractResult)
-      setStep('review')
+      const contentType = res.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data.error ?? `Extraction failed (${res.status})`)
+        }
+        setExtractResult(data as ExtractResult)
+        setStep('review')
+      } else {
+        const text = await res.text()
+        const isErrorPage = text.includes('An error occurred') || text.includes('<!DOCTYPE html>')
+        throw new Error(
+          isErrorPage 
+            ? `Server error (${res.status}). The extraction service might be down.` 
+            : `Unexpected response: ${text.slice(0, 50)}...`
+        )
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
+      console.error('Extraction error:', err)
       setUploadError(err instanceof Error ? err.message : 'Extraction failed. Please try again.')
       setStep('upload')
     } finally {
