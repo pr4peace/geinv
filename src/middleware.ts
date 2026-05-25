@@ -81,6 +81,7 @@ export async function middleware(request: NextRequest) {
         '/settings',
         '/agreements/new',
         '/agreements/import',
+        '/notifications',
       ]
       const isRestricted = restrictedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 

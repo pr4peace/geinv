@@ -141,3 +141,81 @@ export async function sendQuarterlyForecast(params: {
     html,
   })
 }
+
+export interface BatchNotificationItem {
+  investor_name: string
+  reference_id: string
+  due_by?: string           // payouts + TDS
+  maturity_date?: string    // maturities
+  gross_interest?: number
+  tds_amount?: number
+  net_interest?: number
+  principal_amount?: number
+  is_overdue?: boolean
+}
+
+export async function sendBatchNotification(params: {
+  type: 'payouts' | 'maturities' | 'tds'
+  items: BatchNotificationItem[]
+  recipientEmail: string
+}): Promise<SendEmailResult> {
+  const { type, items, recipientEmail } = params
+
+  const totalNet = items.reduce((s, i) => s + (i.net_interest ?? 0), 0)
+  const totalTds = items.reduce((s, i) => s + (i.tds_amount ?? 0), 0)
+
+  const subject =
+    type === 'payouts'
+      ? `Interest Payouts — ${items.length} items · ₹${totalNet.toLocaleString('en-IN')} net payable`
+      : type === 'maturities'
+      ? `Principal Maturities — ${items.length} agreements maturing`
+      : `TDS Filings Due — ${items.length} items · ₹${totalTds.toLocaleString('en-IN')} due`
+
+  const rows = items
+    .map((item) => {
+      const overdueBadge = item.is_overdue
+        ? ` <strong style="font-size:10px;color:#b91c1c">[OVERDUE]</strong>`
+        : ''
+      const dateCell =
+        type === 'maturities'
+          ? esc(item.maturity_date ?? '')
+          : esc(item.due_by ?? '')
+      const amountCell =
+        type === 'payouts'
+          ? `<td style="padding:6px 12px;text-align:right">₹${(item.gross_interest ?? 0).toLocaleString('en-IN')}</td>
+             <td style="padding:6px 12px;text-align:right">₹${(item.tds_amount ?? 0).toLocaleString('en-IN')}</td>
+             <td style="padding:6px 12px;text-align:right;font-weight:600">₹${(item.net_interest ?? 0).toLocaleString('en-IN')}</td>`
+          : type === 'maturities'
+          ? `<td style="padding:6px 12px;text-align:right;font-weight:600">₹${(item.principal_amount ?? 0).toLocaleString('en-IN')}</td>`
+          : `<td style="padding:6px 12px;text-align:right;font-weight:600">₹${(item.tds_amount ?? 0).toLocaleString('en-IN')}</td>`
+      return `<tr>
+        <td style="padding:6px 12px">${esc(item.investor_name)}${overdueBadge}</td>
+        <td style="padding:6px 12px;font-family:monospace;font-size:12px">${esc(item.reference_id)}</td>
+        <td style="padding:6px 12px">${dateCell}</td>
+        ${amountCell}
+      </tr>`
+    })
+    .join('')
+
+  const headerCols =
+    type === 'payouts'
+      ? '<th>Investor</th><th>Ref</th><th>Due By</th><th>Gross</th><th>TDS</th><th>Net Payable</th>'
+      : type === 'maturities'
+      ? '<th>Investor</th><th>Ref</th><th>Maturity Date</th><th>Principal</th>'
+      : '<th>Investor</th><th>Ref</th><th>Due By</th><th>TDS Amount</th>'
+
+  const html = `
+    <h2>${esc(subject)}</h2>
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px">
+      <thead>
+        <tr style="background:#f1f5f9;color:#475569">${headerCols}</tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:24px;font-size:12px;color:#94a3b8">
+      Sent manually from Good Earth Investment Tracker.
+      <a href="${process.env.NEXT_PUBLIC_APP_URL}/notifications">View Notifications →</a>
+    </p>`
+
+  return sendEmail({ to: [recipientEmail], subject, html })
+}

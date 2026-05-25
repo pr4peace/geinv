@@ -1,121 +1,108 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import NotificationsClient from '@/components/notifications/NotificationsClient'
-import { startOfMonth, endOfMonth, addDays, endOfQuarter, format, getQuarter } from 'date-fns'
+import { addDays, format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
 
-interface PayoutWithAgreement {
-  due_by: string
-  gross_interest: number
-  tds_amount: number
-  net_interest: number
-  is_tds_only: boolean
-  agreement: {
-    investor_name: string
-    reference_id: string
-  }
-}
-
-function resolveWindow(
-  windowParam: string,
-  from: string | undefined,
-  to: string | undefined,
-  today: Date,
-): { startDate: string; endDate: string; windowLabel: string } {
-  const todayStr = format(today, 'yyyy-MM-dd')
-  if (windowParam === 'custom' && from && to) {
-    const fmt = (s: string) => new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    return { startDate: from, endDate: to, windowLabel: `${fmt(from)} → ${fmt(to)}` }
-  }
-  if (windowParam === '30days') {
-    const end = format(addDays(today, 30), 'yyyy-MM-dd')
-    return { startDate: todayStr, endDate: end, windowLabel: 'Next 30 Days' }
-  }
-  if (windowParam === 'quarter') {
-    const end = format(endOfQuarter(today), 'yyyy-MM-dd')
-    return { startDate: todayStr, endDate: end, windowLabel: `Next Quarter (Q${getQuarter(today)} ${today.getFullYear()})` }
-  }
-  // default: month
-  const start = format(startOfMonth(today), 'yyyy-MM-dd')
-  const end = format(endOfMonth(today), 'yyyy-MM-dd')
-  return { startDate: start, endDate: end, windowLabel: format(today, 'MMMM yyyy') }
-}
-
-export default async function NotificationsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ window?: string; from?: string; to?: string }>
-}) {
-  const { window: windowParam = 'month', from, to } = await searchParams
+export default async function NotificationsPage() {
   const supabase = createAdminClient()
   const today = new Date()
-  const todayStr = format(today, 'yyyy-MM-dd')
-  const { startDate, endDate, windowLabel } = resolveWindow(windowParam, from, to, today)
+  const window60 = format(addDays(today, 60), 'yyyy-MM-dd')
 
-  // Compute actual display dates for the selector
-  const displayRange = `${new Date(startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} → ${new Date(endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
-
-  // 1. Fetch Payouts (window + overdue)
-  const { data: payouts } = await supabase
+  // 1. Pending interest payouts (not TDS-only) — overdue + next 60 days
+  const { data: payoutsRaw } = await supabase
     .from('payout_schedule')
-    .select(`
-      due_by, gross_interest, tds_amount, net_interest, is_tds_only,
-      agreement:agreements!inner(investor_name, reference_id, status, deleted_at)
-    `)
+    .select('id, due_by, gross_interest, tds_amount, net_interest, agreement:agreements!inner(investor_name, reference_id, status, deleted_at)')
     .eq('status', 'pending')
+    .eq('is_tds_only', false)
     .eq('agreements.status', 'active')
     .is('agreements.deleted_at', null)
-    .lte('due_by', endDate)
+    .lte('due_by', window60)
     .order('due_by', { ascending: true })
 
-  // 2. Fetch Maturities
-  const { data: maturities } = await supabase
+  // 2. Pending TDS-only rows — overdue + next 60 days
+  const { data: tdsRaw } = await supabase
+    .from('payout_schedule')
+    .select('id, due_by, tds_amount, agreement:agreements!inner(investor_name, reference_id, status, deleted_at)')
+    .eq('status', 'pending')
+    .eq('is_tds_only', true)
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
+    .lte('due_by', window60)
+    .order('due_by', { ascending: true })
+
+  // 3. Active agreements maturing — overdue + next 60 days
+  const { data: maturitiesRaw } = await supabase
     .from('agreements')
     .select('id, investor_name, reference_id, maturity_date, principal_amount')
     .eq('status', 'active')
     .is('deleted_at', null)
-    .lte('maturity_date', endDate)
+    .lte('maturity_date', window60)
     .order('maturity_date', { ascending: true })
 
-  // 3. Fetch active accountants for preview modal
-  const { data: accountantsData } = await supabase
-    .from('team_members')
-    .select('name, email')
-    .eq('role', 'accountant')
-    .eq('is_active', true)
-  const accountants = (accountantsData ?? []) as { name: string; email: string }[]
+  // 4. Sent history — last 30 days
+  const thirtyDaysAgo = format(addDays(today, -30), 'yyyy-MM-dd')
+  const { data: historyRaw } = await supabase
+    .from('reminders')
+    .select('id, reminder_type, sent_at, email_subject, email_to')
+    .eq('status', 'sent')
+    .eq('reminder_type', 'batch_notification')
+    .gte('sent_at', thirtyDaysAgo)
+    .order('sent_at', { ascending: false })
 
-  const typedPayouts = (payouts || []) as unknown as PayoutWithAgreement[]
+  const todayStr = format(today, 'yyyy-MM-dd')
 
-  const summaryData = {
-    payouts: typedPayouts.map((p) => ({
-      investor_name: p.agreement.investor_name,
-      reference_id: p.agreement.reference_id,
+  type AgreementInner = { investor_name: string; reference_id: string }
+
+  const payouts = (payoutsRaw ?? []).map((p) => {
+    const agreement = p.agreement as unknown as AgreementInner
+    return {
+      id: p.id,
+      investor_name: agreement.investor_name,
+      reference_id: agreement.reference_id,
       due_by: p.due_by,
       gross_interest: p.gross_interest,
       tds_amount: p.tds_amount,
       net_interest: p.net_interest,
-      is_tds_only: p.is_tds_only,
       is_overdue: p.due_by < todayStr,
-    })),
-    maturities: (maturities ?? []).map((m) => ({
-      investor_name: m.investor_name,
-      reference_id: m.reference_id,
-      maturity_date: m.maturity_date,
-      principal_amount: m.principal_amount,
-      is_overdue: m.maturity_date < todayStr,
-    })),
-  }
+    }
+  })
+
+  const tdsFilings = (tdsRaw ?? []).map((p) => {
+    const agreement = p.agreement as unknown as AgreementInner
+    return {
+      id: p.id,
+      investor_name: agreement.investor_name,
+      reference_id: agreement.reference_id,
+      due_by: p.due_by,
+      tds_amount: p.tds_amount,
+      is_overdue: p.due_by < todayStr,
+    }
+  })
+
+  const maturities = (maturitiesRaw ?? []).map((m) => ({
+    id: m.id,
+    investor_name: m.investor_name,
+    reference_id: m.reference_id,
+    maturity_date: m.maturity_date,
+    principal_amount: m.principal_amount,
+    is_overdue: m.maturity_date < todayStr,
+  }))
+
+  const history = (historyRaw ?? []).map((r) => ({
+    id: r.id,
+    reminder_type: r.reminder_type,
+    sent_at: r.sent_at,
+    email_subject: r.email_subject || '',
+    email_to: r.email_to,
+  }))
 
   return (
     <NotificationsClient
-      monthLabel={windowLabel}
-      data={summaryData}
-      window={windowParam}
-      from={from}
-      to={to}
-      displayRange={displayRange}
-      accountants={accountants}
+      payouts={payouts}
+      tdsFilings={tdsFilings}
+      maturities={maturities}
+      history={history}
     />
   )
 }

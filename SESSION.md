@@ -4,11 +4,10 @@
 - main
 
 ## Phase
-- data-entry (re-uploading ~180 agreements with clean DB)
+- releasing
 
-## Stable Tag
-- `v1.0-stable` (commit 8376dd4) — restore point before bulk re-upload
-- To restore: `git checkout v1.0-stable`
+## Active Batch
+- Batch F — Notification Revamp (2026-05-25)
 
 ---
 
@@ -30,134 +29,44 @@
 - **TDS Filings card**: all `is_tds_only` rows, combined Status/Action column (Mark Filed)
 - **Maturity Payout card**: principal return, falls back to agreement data if no DB row exists
 
-### Agreements List
-- Joint investors display as "Primary & Secondary" name
-
 ---
 
-## Work Completed This Session
-- Auto-generate TDS filing rows post-extraction (new + rescan paths)
-- investor2 fields in extraction, ExtractionReview form, and DB
-- Remove Accrued Interest column from TDS table
-- Maturity payout ₹0 fix (fallback to principalAmount)
-- Three unified action cards replacing PendingPayouts + PendingTdsFilings + read-only table
-- Cumulative/compound full schedule auto-generation
-- TDS filing deadline fix for final stub-period row
-- download-pdfs.ts script (active agreements only, named by investor)
-- tds_filed not-null fix on payout row insert
+## Work Completed
+- **Batch F — Notification Revamp:**
+  - DB Migration: added `batch_notification` to `reminders` type check constraint.
+  - API: implemented `POST /api/notifications/send` for manual batched emails.
+  - UI: rebuilt `/notifications` with two tabs (Queue/History), 60-day window, and checkboxes.
+  - Cleanup: removed outdated auto-reminder logic and tests.
+  - Type Safety: resolved all ESLint errors and added proper types for Supabase responses.
+- **Codex Review Fixes:**
+  - Migration 024: recreated `reminders` table to fix drop/alter conflict and ensure availability.
+  - Security: hardened `POST /api/notifications/send` to allow only `coordinator` and `admin` roles.
+  - RBAC: added `/notifications` to restricted routes in middleware to block salespersons.
+  - Validation: tightened API input validation and added status/deleted_at checks during item fetch.
+  - Formatting: cleaned up trailing whitespace and extra blank lines across 3 files.
 
----
+## Files Changed
+- `supabase/migrations/024_batch_notification_reminder_type.sql`
+- `src/app/api/notifications/send/route.ts`
+- `src/middleware.ts`
+- `docs/superpowers/specs/2026-05-25-batch-f-notifications-design.md`
+- `src/__tests__/notifications-send.test.ts`
+- `src/lib/email.ts`
+- `src/app/(app)/notifications/page.tsx`
+- `src/components/notifications/NotificationsClient.tsx`
+- `SESSION.md`
 
-## Next Feature: Notification Reports (coordinator → accounts)
+## Pending (Batch G — Next)
+- [ ] User to verify manual batch notify workflow on real data
+- [ ] Refine email templates based on feedback
 
-### Design (approved)
-The existing `/notifications` page is already close. Two changes:
-1. **Selectable time window** — pill selector with 3 presets (URL param `?window=month|30days|quarter`)
-2. **Dynamic recipients** — fetch active accountants from `team_members` table instead of hardcoded email
-
-### Files to change
-
-**`src/app/(app)/notifications/page.tsx`**
-- Accept `searchParams: { window?: string }` prop (default `'month'`)
-- Compute `endDate`: month→`endOfMonth(today)`, 30days→`addDays(today,30)`, quarter→`endOfQuarter(today)` (all from date-fns, already in project)
-- Fetch accountants: `supabase.from('team_members').select('name, email').eq('role','accountant').eq('is_active',true)`
-- Pass `window` and `accountants: {name,email}[]` as props to `NotificationsClient`
-
-**`src/components/notifications/NotificationsClient.tsx`**
-- Add `window: string` and `accountants: {name:string; email:string}[]` to props
-- Add pill button row: **This Month** / **Next 30 Days** / **Next Quarter** — active pill in indigo
-  - On click: `router.replace('/notifications?window=...')` using `useRouter` from `next/navigation`
-- Preview modal "Sending To": iterate `accountants` prop instead of hardcoded Valli text
-- Rename button: **Send Report to Accounts**
-- `handleSendEmail`: `fetch('/api/cron/monthly-summary?window=' + window)`
-
-**`src/app/api/cron/monthly-summary/route.ts`**
-- Read `?window` search param (default `'month'`); compute `endDate` same as page
-- Replace hardcoded recipients with:
-  ```ts
-  const { data: accountants } = await supabase.from('team_members')
-    .select('email').eq('role','accountant').eq('is_active',true)
-  const recipients = (accountants ?? []).map(a => a.email).filter(Boolean)
-  if (!recipients.length) return NextResponse.json({ error: 'No active accountants found' }, { status: 400 })
-  ```
-- Window labels: `'month'`→`"This Month (May 2026)"`, `'30days'`→`"Next 30 Days"`, `'quarter'`→`"Next Quarter (Q2 2026)"`
-- Subject: `Investment Report — ${windowLabel}`
-- Pass `windowLabel` to `buildMonthlySummaryEmail`
-
-**`src/lib/reminders.ts` — `buildMonthlySummaryEmail`**
-- Add optional second param `windowLabel?: string`
-- Use it in the email `<h2>` header instead of the old month string
-
-### Verification
-1. `/notifications` default → "This Month" pill active, same data as before
-2. Click "Next 30 Days" → URL updates, page reloads, table shows rolling 30-day window
-3. "Send Report to Accounts" → preview modal lists accountants from team_members
-4. Confirm & Send → email received with subject reflecting the window
+## Key Decisions
+- All coordinator batch emails are manual-only; no cron schedule
+- Auto emails are OFF — no vercel.json, no cron jobs
+- History tab reads `reminders` table filtered by `reminder_type='batch_notification'`
+- One `reminders` row per selected item (not one per batch) for reliable idempotency
+- `sendQuarterlyForecast` in `email.ts` left untouched (governs future Batch F cron items)
+- `/api/cron/monthly-summary` stays in place but is removed from the UI
 
 ## Next Agent Action
-- Re-upload ~180 agreement PDFs via the app (data-entry phase)
-
----
-
-## Backlog: "Mark All Historical as Paid" Button (next session)
-
-### Problem
-When re-uploading historical agreements, past rows need to be marked as settled.
-Currently `mark_historical_paid` in `POST /api/agreements` only marks interest payout rows
-(`is_tds_only=false`) as `status='paid'`. It misses:
-- TDS filing rows — should set `tds_filed=true` where `due_by < today`
-- Maturity/principal repayment row — should set `status='paid'` where `due_by < today` (i.e. agreement already matured)
-
-### What to build
-**1. Fix `POST /api/agreements` `mark_historical_paid` path** (`src/app/api/agreements/route.ts`)
-After the existing interest-payout update, add:
-```ts
-// Mark past TDS filing rows as filed
-await supabase.from('payout_schedule')
-  .update({ tds_filed: true })
-  .eq('agreement_id', agreement.id)
-  .eq('is_tds_only', true)
-  .lt('due_by', todayStr)
-
-// Mark maturity row as paid if agreement has already matured
-await supabase.from('payout_schedule')
-  .update({ status: 'paid', paid_date: todayStr })
-  .eq('agreement_id', agreement.id)
-  .eq('is_principal_repayment', true)
-  .lt('due_by', todayStr)
-```
-
-**2. Add "Mark All Historical as Paid" button on agreement detail page**
-- Show only when the agreement has any `pending` payout rows with `due_by < today`
-- Single button: calls a new `POST /api/agreements/[id]/mark-historical-paid`
-- That route runs the same three updates above for the given agreement
-- On success, reload the page
-
-### UI placement
-**Option A — Checkbox on ExtractionReview** (preferred): before saving a new agreement, a checkbox
-"Mark all past payouts as paid (historical agreement)" — checked by default when maturity_date < today.
-Maps to the existing `mark_historical_paid` flag sent in the POST body.
-
-**Option B — Button on agreement detail page**: "Mark All Historical as Paid" shown only when
-there are pending rows with `due_by < today`. Calls `POST /api/agreements/[id]/mark-historical-paid`.
-
-Both options should trigger all three updates (interest + TDS + maturity).
-
----
-
-## Backlog: DB Schema Review (next session)
-
-Currently `payout_schedule` holds three types of rows differentiated by flags:
-- Regular interest payouts (`is_tds_only=false`, `is_principal_repayment=false`)
-- TDS filing rows (`is_tds_only=true`)
-- Maturity/principal repayment (`is_principal_repayment=true`)
-
-**Consideration**: evaluate whether splitting into separate tables would be cleaner:
-- `interest_payouts` — periodic interest rows
-- `tds_filings` — TDS filing deadlines (one per payout quarter)
-- `maturity_payouts` — principal repayment row
-
-**Pros of split**: queries are simpler, no flag filtering, clearer semantics per table, easier to add type-specific fields later.
-**Cons of split**: more joins, more migrations, existing code touches `payout_schedule` in many places.
-
-**Decision point**: review after bulk re-upload is done and data is stable. Do not migrate mid-upload.
+- Propose new batch from BACKLOG.md.
