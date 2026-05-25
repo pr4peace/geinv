@@ -89,15 +89,35 @@ function useSection<T extends { id: string }>(items: T[]) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ type, ids }),
       })
-      const data = await res.json()
-      if (res.ok) {
-        setResult({ success: true, warned: data.warned })
-        setSelected(new Set())
-      } else {
-        setResult({ error: data.error || 'Failed to send' })
+      
+      if (res.redirected) {
+        window.location.href = res.url
+        return
       }
-    } catch {
-      setResult({ error: 'Network error' })
+
+      const contentType = res.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json()
+        if (res.ok) {
+          setResult({ success: true, warned: data.warned })
+          setSelected(new Set())
+        } else {
+          setResult({ error: data.error || 'Failed to send' })
+        }
+      } else {
+        // Non-JSON response (likely a server crash or 404)
+        const text = await res.text()
+        const isErrorPage = text.includes('An error occurred') || text.includes('<!DOCTYPE html>')
+        console.error('Non-JSON response:', text)
+        setResult({ 
+          error: isErrorPage 
+            ? `Server error (${res.status}). The API might be down or misconfigured.`
+            : `Unexpected response: ${text.slice(0, 50)}...` 
+        })
+      }
+    } catch (err) {
+      console.error('Fetch error:', err)
+      setResult({ error: 'Network error or server unreachable' })
     } finally {
       setSending(false)
     }

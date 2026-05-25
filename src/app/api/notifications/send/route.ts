@@ -5,14 +5,24 @@ import { sendBatchNotification, type BatchNotificationItem } from '@/lib/email'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  console.log('[notifications/send] POST request received')
   try {
     const userRole = request.headers.get('x-user-role')
+    console.log('[notifications/send] userRole:', userRole)
     if (userRole !== 'coordinator' && userRole !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (e) {
+      console.error('[notifications/send] Failed to parse request body:', e)
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+    
     const { type: rawType, ids: rawIds } = body as { type?: unknown; ids?: unknown }
+    console.log('[notifications/send] type:', rawType, 'ids count:', Array.isArray(rawIds) ? rawIds.length : 0)
     const allowedTypes = new Set(['payouts', 'maturities', 'tds'])
 
     if (typeof rawType !== 'string' || !allowedTypes.has(rawType)) {
