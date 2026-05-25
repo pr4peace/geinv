@@ -18,10 +18,27 @@ All agents must read:
 
 ---
 
+## Two-Track Development Strategy
+
+As of 2026-05-25, the repo runs two parallel tracks:
+
+| Track | Branch | Purpose |
+|---|---|---|
+| **Stable** | `main` | Scanning fixes, bug fixes, UI polish (Batch E). Ships frequently. |
+| **Experimental** | `experimental` | Big new features (Batch D — Offer Letter Flow, V2). Ships when solid. |
+
+**Sync rule:** Every merge to `main` must also be merged into `experimental` (`git merge main` from the experimental branch) so experimental stays current with all fixes.
+
+**Merge-back rule:** `experimental` only merges into `main` when the full feature set is stable and reviewed.
+
+Batch branches are still cut from their respective track base (`main` for stable, `experimental` for new features).
+
+---
+
 ## Core Principles
 
 - Work is organised into **batches** — a batch is a group of related items shipped as one branch and one release
-- One batch active at a time, one agent edits code at a time
+- One batch active at a time per track; one agent edits code at a time
 - Keep changes small and reversible within each batch item
 - Plan before implementation
 - SESSION.md is the single source of truth for current work
