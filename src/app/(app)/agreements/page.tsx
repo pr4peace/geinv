@@ -78,12 +78,6 @@ export default async function AgreementsPage({
         {!isSalesperson && (
           <div className="flex items-center gap-2">
             <Link
-              href="/agreements/import"
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:bg-slate-800 transition-colors"
-            >
-              Import historical
-            </Link>
-            <Link
               href="/agreements/new"
               className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
             >

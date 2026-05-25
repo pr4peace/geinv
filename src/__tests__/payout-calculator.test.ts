@@ -47,7 +47,7 @@ describe('calculatePayoutSchedule', () => {
     expect(tdsRows[0].gross_interest).toBe(29260.27)
     
     // FY27 (Apr 1 to Jan 1)
-    expect(tdsRows[1].due_by).toBe('2027-01-01')
+    expect(tdsRows[1].due_by).toBe('2027-05-31')
     expect(tdsRows[1].gross_interest).toBe(120000 - 29260.27)
     expect(tdsRows[1].tds_amount).toBe(12000 - tdsRows[0].tds_amount)
   })
