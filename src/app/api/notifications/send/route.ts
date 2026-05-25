@@ -7,16 +7,27 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
-    if (userRole === 'salesperson') {
+    if (userRole !== 'coordinator' && userRole !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { type, ids } = body as { type: 'payouts' | 'maturities' | 'tds'; ids: string[] }
+    const { type: rawType, ids: rawIds } = body as { type?: unknown; ids?: unknown }
+    const allowedTypes = new Set(['payouts', 'maturities', 'tds'])
 
-    if (!type || !ids || ids.length === 0) {
-      return NextResponse.json({ error: 'type and ids are required' }, { status: 400 })
+    if (typeof rawType !== 'string' || !allowedTypes.has(rawType)) {
+      return NextResponse.json({ error: 'type must be payouts, maturities, or tds' }, { status: 400 })
     }
+    if (
+      !Array.isArray(rawIds) ||
+      rawIds.length === 0 ||
+      rawIds.some((id) => typeof id !== 'string' || id.length === 0)
+    ) {
+      return NextResponse.json({ error: 'ids must be a non-empty string array' }, { status: 400 })
+    }
+
+    const type = rawType as 'payouts' | 'maturities' | 'tds'
+    const ids = Array.from(new Set(rawIds))
 
     const supabase = createAdminClient()
 
@@ -28,7 +39,11 @@ export async function POST(request: NextRequest) {
     if (type === 'payouts' || type === 'tds') {
       const { data, error } = await supabase
         .from('payout_schedule')
-        .select('id, due_by, gross_interest, tds_amount, net_interest, is_tds_only, agreement:agreements!inner(investor_name, reference_id)')
+        .select('id, due_by, gross_interest, tds_amount, net_interest, is_tds_only, agreement:agreements!inner(investor_name, reference_id, status, deleted_at)')
+        .eq('status', 'pending')
+        .eq('is_tds_only', type === 'tds')
+        .eq('agreements.status', 'active')
+        .is('agreements.deleted_at', null)
         .in('id', ids)
       if (error) throw error
       payoutScheduleIds = ids
@@ -47,6 +62,8 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from('agreements')
         .select('id, investor_name, reference_id, maturity_date, principal_amount')
+        .eq('status', 'active')
+        .is('deleted_at', null)
         .in('id', ids)
       if (error) throw error
       agreementIds = ids
@@ -58,8 +75,8 @@ export async function POST(request: NextRequest) {
       }))
     }
 
-    if (items.length === 0) {
-      return NextResponse.json({ error: 'No items found for given ids' }, { status: 404 })
+    if (items.length !== ids.length) {
+      return NextResponse.json({ error: 'Some selected items were not found or are no longer pending' }, { status: 400 })
     }
 
     // 2. Idempotency check — warn if any item notified in last 7 days

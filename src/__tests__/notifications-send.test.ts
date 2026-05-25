@@ -65,12 +65,12 @@ describe('POST /api/notifications/send — route logic', () => {
       agreement: { investor_name: 'Test Investor', reference_id: 'GE-2026-001' },
     }
     const mockAccountant = { email: 'valli@goodearth.org.in' }
-    
+
     const mockChain = buildSupabaseMock()
     // Override methods that are awaited
     mockChain.limit = vi.fn().mockResolvedValue({ data: [], error: null })
     mockChain.insert = vi.fn().mockResolvedValue({ error: null })
-    
+
     const supabaseMock = {
       from: vi.fn((table: string) => {
         if (table === 'payout_schedule') {

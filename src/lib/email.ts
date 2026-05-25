@@ -219,4 +219,3 @@ export async function sendBatchNotification(params: {
 
   return sendEmail({ to: [recipientEmail], subject, html })
 }
-

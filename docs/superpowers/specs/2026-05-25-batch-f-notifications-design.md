@@ -1,7 +1,7 @@
 # Batch F — Notification Revamp Design
 
-**Date:** 2026-05-25  
-**Branch:** `feature/batch-f-notifications`  
+**Date:** 2026-05-25
+**Branch:** `feature/batch-f-notifications`
 **Status:** Approved
 
 ---
@@ -35,7 +35,7 @@ Each section has:
 
 ### History Tab
 
-Reads from `reminders` table: `status = 'sent'`, `sent_at ≥ 30 days ago`, ordered by `sent_at DESC`.  
+Reads from `reminders` table: `status = 'sent'`, `sent_at ≥ 30 days ago`, ordered by `sent_at DESC`.
 Columns: Date Sent · Type · Subject · Recipient.
 
 ---
