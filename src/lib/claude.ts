@@ -263,7 +263,7 @@ async function extractWithGemini(
   mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ): Promise<ExtractedAgreement> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-3.5-pro',
     generationConfig: {
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
