@@ -11,50 +11,32 @@
 
 ---
 
-## What's Stable in This Build
-
-### Extraction
-- Gemini extracts structured data from PDF/DOCX via text-layer grounding
-- `investor_name` = primary investor only; `investor2_name` = second investor for joint agreements
-- Extraction review shows: interest payouts + TDS filing preview + maturity payout card
-
-### Payout Schedule (auto-generated on save)
-- Interest rows: exactly as extracted from the agreement table
-- TDS filing rows (`is_tds_only`): one per payout, Indian quarterly deadlines (Jul 31 / Oct 31 / Jan 31 / May 31); stub-period row uses correct filing deadline
-- Principal repayment row: auto-added if extraction didn't produce one
-- Cumulative/compound: full schedule auto-generated (accrued interest row + annual TDS rows + principal repayment)
-
-### Agreement Detail Page (Actions section)
-- **Interest Payouts card**: all rows, combined Status/Action column (Mark Paid / Undo)
-- **TDS Filings card**: all `is_tds_only` rows, combined Status/Action column (Mark Filed)
-- **Maturity Payout card**: principal return, falls back to agreement data if no DB row exists
-
----
-
 ## Work Completed
-- Batch F complete and merged (see session log below)
+- **Batch E.1 — Design System Foundation + Dashboard:**
+  - Tailwind Config: added color tokens (paper, canvas, surface, ink, forest, etc.) and font families (Inter, JetBrains Mono, Source Serif 4).
+  - Layout: updated Google Fonts imports and established light-mode root styles.
+  - Globals: replaced dark body styles with light-mode defaults and added `.num`, `.lbl`, and `.sdot` utility classes.
+  - Shell: rebuilt sidebar (fixed 224px, white bg) and topbar; removed global search and sidebar collapse.
+  - Dashboard: implemented server component with 6 data queries and a high-fidelity client component with KPI tiles, kanban payout lanes, and summary panels.
+  - Routing: updated root redirect to `/dashboard`.
+- **Quality Assurance:**
+  - Fixed ESLint errors (unused imports, explicit any) in DashboardClient.
+  - Verified full build and all unit tests pass.
 
 ## Files Changed
-- (none yet — building)
-
-## Key Decisions
-- E.1 is the foundation sub-batch: design tokens + shell + dashboard. E.2 (agreements) and E.3 (remaining pages) follow on separate branches after E.1 merges.
-- Global search and sidebar collapse toggle are intentionally removed in the new design (fixed 224px sidebar).
-- `src/app/page.tsx` redirect changes from `/agreements` to `/dashboard` — do NOT touch `src/middleware.ts` for this.
-- Docs-pending panel: ONLY `doc_status='sent_to_client'`; `uploaded` means complete, not pending.
-- Activity feed: use `email_subject` directly from `reminders` table — no `investor_name` join needed.
-- Notify/Paid payout actions on kanban cards: `POST /api/agreements/[agreement_id]/payouts/[id]/notify` and `.../paid`.
-
-## Codex Review Notes
-- (none yet)
+- `tailwind.config.ts`
+- `src/app/layout.tsx`
+- `src/app/globals.css`
+- `src/app/page.tsx`
+- `src/app/(app)/layout.tsx`
+- `src/app/(app)/dashboard/page.tsx`
+- `src/components/dashboard/DashboardClient.tsx`
 
 ## Next Agent Action
-- Gemini to build Batch E.1 per spec at `docs/superpowers/specs/2026-05-25-batch-e1-foundation-dashboard-design.md`
+- Codex
 
 ## Session Log
-2026-05-25 · Gemini · releasing
-✅ Rebuilt /notifications UI with robust checkbox selection and 60-day window.
-✅ Successfully migrated Gemini extraction to 2.5/3.5 family with tiered fallback (Claude -> Pro -> Flash).
-✅ Hardened API security and input validation as per Codex review.
-❌ Initial release of Pro models failed with 404; resolved by using tiered fallback logic.
-💡 Use tiered fallback by default for all AI features to prevent single-model downtime or quota issues.
+2026-05-25 · Gemini · building
+✅ Successfully implemented light-mode design foundation and high-fidelity dashboard.
+✅ All build and test gates passed after minor ESLint fixes in client component.
+💡 The Source Serif 4 font adds a distinct premium "financial" feel to page headings.

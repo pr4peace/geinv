@@ -3,15 +3,45 @@
 @tailwind utilities;
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --font-inter: 'Inter', sans-serif;
+  --background: #FAFAF7;
+  --foreground: #0E0E0C;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  background-color: var(--background);
+}
+
+@layer components {
+  .num { 
+    font-family: var(--font-mono), 'JetBrains Mono', monospace; 
+    font-variant-numeric: tabular-nums; 
+    font-feature-settings: 'tnum', 'zero'; 
+  }
+  
+  .lbl { 
+    font-size: 10px; 
+    letter-spacing: 0.08em; 
+    text-transform: uppercase; 
+    color: #7A776E; 
+    font-weight: 500; 
+  }
+  
+  .sdot { 
+    display: inline-block; 
+    width: 6px; 
+    height: 6px; 
+    border-radius: 50%; 
+    vertical-align: middle; 
+    margin-right: 6px; 
+  }
+  
+  .sdot-active   { background: #1B5E3F; }
+  .sdot-pending  { background: #B8741E; }
+  .sdot-overdue  { background: #A4231F; }
+  .sdot-paid     { background: #1B5E3F; }
+  .sdot-notified { background: #1F3D6B; }
+  .sdot-draft    { background: #B8741E; }
 }
 
 @layer utilities {
