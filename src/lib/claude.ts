@@ -209,7 +209,7 @@ export async function extractAgreementData(
   // Tier 2: Gemini Pro (High Quality)
   if (process.env.GEMINI_API_KEY) {
     try {
-      return await withRetry(() => extractWithGemini(fileBuffer, mimeType, 'gemini-3.5-pro'), 2, 'Gemini Pro extraction')
+      return await withRetry(() => extractWithGemini(fileBuffer, mimeType, 'gemini-2.5-pro'), 2, 'Gemini Pro extraction')
     } catch (geminiProErr) {
       console.error('Gemini Pro extraction failed, falling back to Gemini Flash:', geminiProErr)
       lastError = geminiProErr
@@ -217,7 +217,7 @@ export async function extractAgreementData(
 
     // Tier 3: Gemini Flash (Reliable Backup)
     try {
-      return await withRetry(() => extractWithGemini(fileBuffer, mimeType, 'gemini-3.5-flash'), 1, 'Gemini Flash extraction')
+      return await withRetry(() => extractWithGemini(fileBuffer, mimeType, 'gemini-2.5-flash'), 1, 'Gemini Flash extraction')
     } catch (geminiFlashErr) {
       console.error('Gemini Flash extraction failed:', geminiFlashErr)
       lastError = geminiFlashErr
