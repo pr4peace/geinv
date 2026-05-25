@@ -1,39 +1,34 @@
 # SESSION
 
 ## Branch
-- feature/batch-e1-foundation
+- feature/batch-e2-agreements
 
 ## Phase
 - building
 
 ## Active Batch
-- Batch E.1 — Design System Foundation + Dashboard (2026-05-25)
+- Batch E.2 — Agreements Redesign (2026-05-25)
 
 ---
 
 ## Work Completed
-- **Batch E.1 — Design System Foundation + Dashboard:**
-  - Tailwind Config: added color tokens (paper, canvas, surface, ink, forest, etc.) and font families (Inter, JetBrains Mono, Source Serif 4).
-  - Layout: updated Google Fonts imports and established light-mode root styles.
-  - Globals: replaced dark body styles with light-mode defaults and added `.num`, `.lbl`, and `.sdot` utility classes.
-  - Shell: rebuilt sidebar (fixed 224px, white bg) and topbar; removed global search and sidebar collapse.
-  - Dashboard: implemented server component with 6 data queries and a high-fidelity client component with KPI tiles, kanban payout lanes, and summary panels.
-  - Routing: updated root redirect to `/dashboard`.
-- **Quality Assurance:**
-  - Fixed ESLint errors (unused imports, explicit any) in DashboardClient.
-  - Verified full build and all unit tests pass.
+- **Batch E.1 — Design System Foundation + Dashboard:** ✅ complete on `feature/batch-e1-foundation`
+  - Tailwind tokens, Google Fonts, globals.css, shell rebuilt, dashboard with 6 queries + kanban + panels, root redirect → /dashboard.
 
 ## Files Changed
-- `tailwind.config.ts`
-- `src/app/layout.tsx`
-- `src/app/globals.css`
-- `src/app/page.tsx`
-- `src/app/(app)/layout.tsx`
-- `src/app/(app)/dashboard/page.tsx`
-- `src/components/dashboard/DashboardClient.tsx`
+- (none yet — building E.2)
+
+## Key Decisions
+- E.2 builds on E.1 — branch cut from `feature/batch-e1-foundation` so all design tokens are available.
+- Page heading + "New Agreement" button live in `src/app/(app)/agreements/page.tsx` — NOT in AgreementsTable.
+- Salesperson restrictions (role-gating, scoped visibility) are unchanged — visual reskin only.
+- No API changes, no new features.
+
+## Codex Review Notes
+- (none yet)
 
 ## Next Agent Action
-- Codex
+- Gemini to build Batch E.2 per spec at `docs/superpowers/specs/2026-05-25-batch-e2-agreements-design.md`
 
 ## Session Log
 2026-05-25 · Gemini · building
