@@ -196,21 +196,31 @@ export async function extractAgreementData(
 ): Promise<ExtractedAgreement> {
   let lastError: unknown
 
+  // Tier 1: Claude (High Quality)
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       return await withRetry(() => extractWithClaude(fileBuffer, mimeType), 2, 'Claude extraction')
     } catch (claudeErr) {
-      console.error('Claude extraction failed, falling back to Gemini:', claudeErr)
+      console.error('Claude extraction failed, falling back to Gemini Pro:', claudeErr)
       lastError = claudeErr
     }
   }
 
+  // Tier 2: Gemini Pro (High Quality)
   if (process.env.GEMINI_API_KEY) {
     try {
-      return await withRetry(() => extractWithGemini(fileBuffer, mimeType), 2, 'Gemini extraction')
-    } catch (geminiErr) {
-      console.error('Gemini extraction failed:', geminiErr)
-      lastError = geminiErr
+      return await withRetry(() => extractWithGemini(fileBuffer, mimeType, 'gemini-3.5-pro'), 2, 'Gemini Pro extraction')
+    } catch (geminiProErr) {
+      console.error('Gemini Pro extraction failed, falling back to Gemini Flash:', geminiProErr)
+      lastError = geminiProErr
+    }
+
+    // Tier 3: Gemini Flash (Reliable Backup)
+    try {
+      return await withRetry(() => extractWithGemini(fileBuffer, mimeType, 'gemini-3.5-flash'), 1, 'Gemini Flash extraction')
+    } catch (geminiFlashErr) {
+      console.error('Gemini Flash extraction failed:', geminiFlashErr)
+      lastError = geminiFlashErr
     }
   }
 
@@ -260,10 +270,11 @@ async function extractWithClaude(
 
 async function extractWithGemini(
   fileBuffer: Buffer,
-  mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  mimeType: 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  modelName: string
 ): Promise<ExtractedAgreement> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3.5-pro',
+    model: modelName,
     generationConfig: {
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
