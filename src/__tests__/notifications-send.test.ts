@@ -65,37 +65,32 @@ describe('POST /api/notifications/send — route logic', () => {
       agreement: { investor_name: 'Test Investor', reference_id: 'GE-2026-001' },
     }
     const mockAccountant = { email: 'valli@goodearth.org.in' }
-    const mockReminders = { error: null }
-
+    
+    const mockChain = buildSupabaseMock()
+    // Override methods that are awaited
+    mockChain.limit = vi.fn().mockResolvedValue({ data: [], error: null })
+    mockChain.insert = vi.fn().mockResolvedValue({ error: null })
+    
     const supabaseMock = {
       from: vi.fn((table: string) => {
         if (table === 'payout_schedule') {
-          return { 
-            select: vi.fn().mockReturnThis(), 
-            in: vi.fn().mockReturnThis(), 
-            eq: vi.fn().mockReturnThis(),
-            // make it thenable
+          return {
+            ...mockChain,
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
             then: (resolve: any) => resolve({ data: [mockPayout], error: null })
           }
         }
         if (table === 'team_members') {
-          return { 
-            select: vi.fn().mockReturnThis(), 
-            eq: vi.fn().mockReturnThis(), 
-            is: vi.fn().mockReturnThis(), 
-            limit: vi.fn().mockResolvedValue({ data: [mockAccountant], error: null }) 
+          return {
+            ...mockChain,
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [mockAccountant], error: null })
           }
         }
-        if (table === 'reminders') {
-          return { 
-            select: vi.fn().mockReturnThis(), 
-            eq: vi.fn().mockReturnThis(), 
-            gte: vi.fn().mockReturnThis(), 
-            in: vi.fn().mockResolvedValue({ data: [], error: null }),
-            insert: vi.fn().mockResolvedValue(mockReminders) 
-          }
-        }
-        return buildSupabaseMock()
+        return mockChain
       }),
     }
     vi.mocked(createAdminClient).mockReturnValue(supabaseMock as any)
