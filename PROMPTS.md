@@ -30,7 +30,15 @@ Rules:
 - Keep changes small, no unrelated refactor
 - Preserve architecture
 
-After completing the full batch, update SESSION.md (Work Completed, Files Changed, Decisions, Next Agent Action → Codex). Then push:
+After completing the full batch, update SESSION.md (Work Completed, Files Changed, Decisions, Next Agent Action → Codex). Then append a session log entry to `## Session Log`:
+```
+YYYY-MM-DD · Gemini · building
+✅ What worked well this session
+❌ What failed or caused rework
+💡 What to do differently next time
+```
+
+Then push:
 ```bash
 git add -A && git commit -m "feat: [batch name] — all items complete" && git push
 ```
@@ -76,6 +84,14 @@ Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 5 bullets
 
 Every issue MUST include the exact fix: file path, line range, and replacement code as a code block. Vague fixes are not acceptable and will be sent back.
 
+Then append a session log entry to `## Session Log` in SESSION.md:
+```
+YYYY-MM-DD · Codex · reviewing
+✅ What was clean / well-structured
+❌ Issues found that required rework
+💡 Patterns to watch for in future reviews
+```
+
 ---
 
 ## CODEX — REVIEW
@@ -87,6 +103,14 @@ Find: bugs, unsafe assumptions, missing tests, edge cases, type issues, producti
 Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 5 bullets. Mark each as **blocking** or **minor**. Do NOT edit code.
 
 **Every issue MUST include the exact fix:** file path, line range, and the replacement code as a code block. Gemini applies it by copy-paste — no interpretation, no guessing. Vague fixes ("add scoping", "validate input", "handle the error") are not acceptable and will be sent back.
+
+Then append a session log entry to `## Session Log` in SESSION.md:
+```
+YYYY-MM-DD · Codex · reviewing
+✅ What was clean / well-structured
+❌ Issues found that required rework
+💡 Patterns to watch for in future reviews
+```
 
 ---
 
@@ -113,6 +137,14 @@ git merge --no-ff feature/<batch-branch> -m "feat: <batch name>"
 git push origin main
 git branch -d feature/<batch-branch>
 git push origin --delete feature/<batch-branch>
+```
+
+Then append a session log entry to `## Session Log` in SESSION.md:
+```
+YYYY-MM-DD · Gemini · releasing
+✅ What went smoothly in the release
+❌ What failed or needed a rollback
+💡 What to do differently next time
 ```
 
 Then sync session files and update BACKLOG.md to mark the batch as done:

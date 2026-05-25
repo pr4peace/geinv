@@ -150,6 +150,7 @@ Rules:
 - **Session file sync:** At the end of every session, all session files (AGENTS.md, SESSION.md, BACKLOG.md, PROMPTS.md, CLAUDE.md) must be committed and pushed. Never leave a session with uncommitted session files.
 - **Branch hygiene:** Only two long-lived branches exist at any time: `main` and the current active batch branch. All other branches must be deleted from remote immediately after merging. Never leave stale feature branches on the remote.
 - **Vercel deployment:** Vercel production branch is set to `main`. Every push to `main` triggers a production deployment automatically.
+- **Session learning log:** Every agent must append to `## Session Log` in SESSION.md at the end of every session — what worked, what failed, and what to do differently. See SESSION.md structure below.
 
 ---
 
@@ -211,6 +212,18 @@ Then update SESSION.md `## Branch` to `main` and push.
 -
 
 ## Codex Review Notes
+-
+
+## Next Agent Action
+-
+
+## Session Log
+<!-- Append one entry per session. Never delete entries. Format:
+YYYY-MM-DD · Agent · Phase
+✅ What worked well
+❌ What failed or caused rework
+💡 What to do differently next time
+-->
 -
 
 ## Next Agent Action
