@@ -4,7 +4,7 @@
 - feature/batch-f-notifications
 
 ## Phase
-- building
+- releasing
 
 ## Active Batch
 - Batch F — Notification Revamp (2026-05-25)
@@ -12,19 +12,16 @@
 ---
 
 ## Work Completed
-- Design spec written and reviewed: `docs/superpowers/specs/2026-05-25-batch-f-notifications-design.md`
-- Implementation plan written: `docs/superpowers/plans/2026-05-25-batch-f-notifications.md`
-- Branch `feature/batch-f-notifications` created from main
+- **Batch F — Notification Revamp:**
+  - DB Migration: added `batch_notification` to `reminders` type check constraint.
+  - API: implemented `POST /api/notifications/send` for manual batched emails.
+  - UI: rebuilt `/notifications` with two tabs (Queue/History), 60-day window, and checkboxes.
+  - Cleanup: removed outdated auto-reminder logic and tests.
+  - Type Safety: resolved all ESLint errors and added proper types for Supabase responses.
 
-## Pending (Gemini to implement — 8 tasks)
-1. Task 1 — Migration 024: add `batch_notification` to reminders check constraint
-2. Task 2 — Add `batch_notification` to `ReminderType` in `src/types/database.ts`
-3. Task 3 — Add `sendBatchNotification()` to `src/lib/email.ts`
-4. Task 4 — Write failing tests in `src/__tests__/notifications-send.test.ts`
-5. Task 5 — Create `POST /api/notifications/send/route.ts`
-6. Task 6 — Expand `src/app/(app)/notifications/page.tsx` (3 queries, 60-day window, history)
-7. Task 7 — Rebuild `src/components/notifications/NotificationsClient.tsx` (tabs, sections, checkboxes, history)
-8. Task 8 — Verify old monthly-summary trigger is gone; final build + test run
+## Pending (Batch G — Next)
+- [ ] User to verify manual batch notify workflow on real data
+- [ ] Refine email templates based on feedback
 
 ## Key Decisions
 - All coordinator batch emails are manual-only; no cron schedule
@@ -35,4 +32,4 @@
 - `/api/cron/monthly-summary` stays in place but is removed from the UI
 
 ## Next Agent Action
-- Gemini: read SESSION.md and the plan at `docs/superpowers/plans/2026-05-25-batch-f-notifications.md`, summarise all 8 tasks to the user, wait for confirmation, then implement in order
+- Propose release and merge to main.

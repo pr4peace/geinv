@@ -8,7 +8,7 @@
 
 ## Goal
 
-Replace the basic monthly summary + single send button on `/notifications` with a proper coordinator action center. All emails are **manual-only** — no cron jobs, no auto-sends.
+Replace the basic monthly summary + single send button on `/notifications` with a coordinator action center. Coordinator batch emails are **manual-only**; existing automated red-flag and summary jobs remain governed by Batch F.
 
 ---
 
@@ -42,8 +42,8 @@ Columns: Date Sent · Type · Subject · Recipient.
 
 ## Data Window
 
-All three Queue sections fetch: **overdue + current month + next 60 days**  
-Query filter: `due_by ≤ today + 60 days` (includes everything past-due since there's no lower bound)
+- Payouts/TDS filter: `due_by ≤ today + 60 days` (no lower bound — includes all overdue)
+- Maturities filter: `maturity_date ≤ today + 60 days` (no lower bound — includes all overdue)
 
 ---
 
@@ -66,7 +66,7 @@ Steps:
 3. Check idempotency — if any item has a `reminders` row with `status=sent` in last 7 days, include a warning in the response but proceed
 4. Build one batched HTML email (same style as existing monthly summary email in `src/lib/email.ts`)
 5. Send to accountant (fetch from `team_members` where `role=accountant`, `is_active=true`)
-6. Log **one** row to `reminders` table: `reminder_type='batch_notification'`, `status='sent'`, `email_subject`, `email_to`, `sent_at=now()`
+6. Log **one `reminders` row per selected item**, all with the same `email_subject`, `email_to`, and `sent_at=now()`. For payouts/TDS set `payout_schedule_id`; for maturities set `agreement_id`. Use `reminder_type='batch_notification'`.
 7. Return `{ success: true, warned: boolean, emailId: string }`
 
 ### `/api/cron/monthly-summary`
@@ -98,6 +98,12 @@ export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_for
 
 ---
 
+## Migration
+
+Add `supabase/migrations/024_batch_notification_reminder_type.sql` to update the `reminders_reminder_type_check` constraint to include `batch_notification`. Check the current allowed values in `supabase/migrations/011_feedback_apr2026.sql` before writing the constraint.
+
+---
+
 ## Files
 
 | File | Change |
@@ -105,16 +111,18 @@ export type ReminderType = 'payout' | 'maturity' | 'doc_return' | 'quarterly_for
 | `src/app/(app)/notifications/page.tsx` | Expand server component — 3 queries with 60-day window, pass to client |
 | `src/components/notifications/NotificationsClient.tsx` | Full rebuild — tabs, sections, checkboxes, Notify All/Selected, history list |
 | `src/types/database.ts` | Add `batch_notification` to `ReminderType` |
-| `src/lib/email.ts` | Delete `sendQuarterlyForecast` (dead code); add `sendBatchNotification()` helper |
-| `src/app/api/notifications/send/route.ts` | New POST route — validate, fetch, email, log |
+| `src/lib/email.ts` | Add `sendBatchNotification()` helper; leave `sendQuarterlyForecast()` untouched |
+| `src/app/api/notifications/send/route.ts` | New POST route — validate, fetch, email, log per-item |
+| `supabase/migrations/024_batch_notification_reminder_type.sql` | Add `batch_notification` to DB check constraint |
 
-No new migrations. No new tables. No nav changes (Notifications already in sidebar).
+No new tables. No nav changes (Notifications already in sidebar).
 
 ---
 
 ## Out of Scope
 
-- Auto-send / cron scheduling (intentionally off)
+- Auto-send / cron scheduling for coordinator batch emails
+- Automated red-flag and summary jobs (governed by rest of Batch F, not this spec)
 - Investor-direct emails (accountant only)
 - Per-row notify button changes on agreement detail page (unchanged)
 - `/api/cron/monthly-summary` deletion (leave in place, just remove UI trigger)
