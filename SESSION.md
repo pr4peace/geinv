@@ -1,13 +1,13 @@
 # SESSION
 
 ## Branch
-- main
+- feature/batch-e1-foundation
 
 ## Phase
-- releasing
+- building
 
 ## Active Batch
-- Batch F — Notification Revamp (2026-05-25)
+- Batch E.1 — Design System Foundation + Dashboard (2026-05-25)
 
 ---
 
@@ -32,44 +32,24 @@
 ---
 
 ## Work Completed
-- **Batch F — Notification Revamp:**
-  - DB Migration: added `batch_notification` to `reminders` type check constraint.
-  - API: implemented `POST /api/notifications/send` for manual batched emails.
-  - UI: rebuilt `/notifications` with two tabs (Queue/History), 60-day window, and checkboxes.
-  - Cleanup: removed outdated auto-reminder logic and tests.
-  - Type Safety: resolved all ESLint errors and added proper types for Supabase responses.
-- **Codex Review Fixes:**
-  - Migration 024: recreated `reminders` table to fix drop/alter conflict and ensure availability.
-  - Security: hardened `POST /api/notifications/send` to allow only `coordinator` and `admin` roles.
-  - RBAC: added `/notifications` to restricted routes in middleware to block salespersons.
-  - Validation: tightened API input validation and added status/deleted_at checks during item fetch.
-  - Formatting: cleaned up trailing whitespace and extra blank lines across 3 files.
+- Batch F complete and merged (see session log below)
 
 ## Files Changed
-- `supabase/migrations/024_batch_notification_reminder_type.sql`
-- `src/app/api/notifications/send/route.ts`
-- `src/middleware.ts`
-- `docs/superpowers/specs/2026-05-25-batch-f-notifications-design.md`
-- `src/__tests__/notifications-send.test.ts`
-- `src/lib/email.ts`
-- `src/app/(app)/notifications/page.tsx`
-- `src/components/notifications/NotificationsClient.tsx`
-- `SESSION.md`
-
-## Pending (Batch G — Next)
-- [ ] User to verify manual batch notify workflow on real data
-- [ ] Refine email templates based on feedback
+- (none yet — building)
 
 ## Key Decisions
-- All coordinator batch emails are manual-only; no cron schedule
-- Auto emails are OFF — no vercel.json, no cron jobs
-- History tab reads `reminders` table filtered by `reminder_type='batch_notification'`
-- One `reminders` row per selected item (not one per batch) for reliable idempotency
-- `sendQuarterlyForecast` in `email.ts` left untouched (governs future Batch F cron items)
-- `/api/cron/monthly-summary` stays in place but is removed from the UI
+- E.1 is the foundation sub-batch: design tokens + shell + dashboard. E.2 (agreements) and E.3 (remaining pages) follow on separate branches after E.1 merges.
+- Global search and sidebar collapse toggle are intentionally removed in the new design (fixed 224px sidebar).
+- `src/app/page.tsx` redirect changes from `/agreements` to `/dashboard` — do NOT touch `src/middleware.ts` for this.
+- Docs-pending panel: ONLY `doc_status='sent_to_client'`; `uploaded` means complete, not pending.
+- Activity feed: use `email_subject` directly from `reminders` table — no `investor_name` join needed.
+- Notify/Paid payout actions on kanban cards: `POST /api/agreements/[agreement_id]/payouts/[id]/notify` and `.../paid`.
+
+## Codex Review Notes
+- (none yet)
 
 ## Next Agent Action
-- Propose new batch from BACKLOG.md.
+- Gemini to build Batch E.1 per spec at `docs/superpowers/specs/2026-05-25-batch-e1-foundation-dashboard-design.md`
 
 ## Session Log
 2026-05-25 · Gemini · releasing
