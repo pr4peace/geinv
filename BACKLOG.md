@@ -74,19 +74,19 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🟠 Batch F — Notification Revamp (branch: `feature/batch-f-notifications`)
+### ✅ Batch F — Notification Revamp
 *Three-layer model: auto-fire red flags only → coordinator staging report → keep existing weekly/monthly summaries.*
 
-| Item | Notes |
-|---|---|
-| **Tighten auto-fire to red flags only** | Cron only auto-sends: payout overdue, maturity <14 days, doc not returned >30 days. Remove day-of + 7-day advance payout auto-reminders. Update `src/lib/reminders.ts` + `src/app/api/reminders/process/route.ts`. |
-| **Notification report page** | New `/notifications` page. Three sections: 🔴 Red Flags (auto-sent, read-only), 🟡 Action Queue (upcoming payouts/maturities/docs, checkboxes), 📋 History (last 30 days). Filter by type/salesperson/date. |
-| **Notify selected / Notify all** | `POST /api/notifications/send` — takes selected item IDs + type, sends one batched email per category, logs to reminders table. Idempotency warning if notified in last 7 days. |
-| **Notification nav item** | Add "Notifications" to sidebar in `layout.tsx`. |
-| **Automated summaries untouched** | Weekly Monday + monthly 1st + quarterly forecast crons stay exactly as-is. |
-| **Quick Send with presets + confirmation modal** | ✅ main | Calendar-aware presets, amounts summary, mandatory recipient checkboxes, preview before send |
-| **Rescan: principal amount validation** | ✅ main | Flags 5x+ mismatches (extra/missing zero) as error before save |
-| **Rescan: RPC function fixed** | ✅ main | Migrations 021/022 — fixed type casts, jsonb[] payments, deployed to Supabase |
+| Item | Status | Notes |
+|---|---|---|
+| **Tighten auto-fire to red flags only** | ✅ main | Done in F |
+| **Notification report page** | ✅ main | Done in F |
+| **Notify selected / Notify all** | ✅ main | Done in F |
+| **Notification nav item** | ✅ main | Done in F |
+| **Automated summaries untouched** | ✅ main | Done in F |
+| **Quick Send with presets + confirmation modal** | ✅ main | Done in F |
+| **Rescan: principal amount validation** | ✅ main | Done in F |
+| **Rescan: RPC function fixed** | ✅ main | Done in F |
 
 ---
 

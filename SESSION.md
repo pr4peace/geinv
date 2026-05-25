@@ -70,3 +70,11 @@
 
 ## Next Agent Action
 - Propose new batch from BACKLOG.md.
+
+## Session Log
+2026-05-25 · Gemini · releasing
+✅ Rebuilt /notifications UI with robust checkbox selection and 60-day window.
+✅ Successfully migrated Gemini extraction to 2.5/3.5 family with tiered fallback (Claude -> Pro -> Flash).
+✅ Hardened API security and input validation as per Codex review.
+❌ Initial release of Pro models failed with 404; resolved by using tiered fallback logic.
+💡 Use tiered fallback by default for all AI features to prevent single-model downtime or quota issues.
