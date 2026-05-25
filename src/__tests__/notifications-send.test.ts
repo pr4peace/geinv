@@ -78,7 +78,7 @@ describe('POST /api/notifications/send — route logic', () => {
             ...mockChain,
             select: vi.fn().mockReturnThis(),
             in: vi.fn().mockReturnThis(),
-            then: (resolve: any) => resolve({ data: [mockPayout], error: null })
+            then: (resolve: (val: unknown) => void) => resolve({ data: [mockPayout], error: null })
           }
         }
         if (table === 'team_members') {
@@ -93,7 +93,7 @@ describe('POST /api/notifications/send — route logic', () => {
         return mockChain
       }),
     }
-    vi.mocked(createAdminClient).mockReturnValue(supabaseMock as any)
+    vi.mocked(createAdminClient).mockReturnValue(supabaseMock as never)
 
     const { POST } = await import('@/app/api/notifications/send/route')
     const req = new Request('http://localhost/api/notifications/send', {
