@@ -54,41 +54,47 @@ export default async function NotificationsPage() {
 
   type AgreementInner = { investor_name: string; reference_id: string }
 
-  const payouts = (payoutsRaw ?? []).map((p: any) => ({
-    id: p.id as string,
-    investor_name: (p.agreement as AgreementInner).investor_name,
-    reference_id: (p.agreement as AgreementInner).reference_id,
-    due_by: p.due_by as string,
-    gross_interest: p.gross_interest as number,
-    tds_amount: p.tds_amount as number,
-    net_interest: p.net_interest as number,
-    is_overdue: (p.due_by as string) < todayStr,
+  const payouts = (payoutsRaw ?? []).map((p) => {
+    const agreement = p.agreement as unknown as AgreementInner
+    return {
+      id: p.id,
+      investor_name: agreement.investor_name,
+      reference_id: agreement.reference_id,
+      due_by: p.due_by,
+      gross_interest: p.gross_interest,
+      tds_amount: p.tds_amount,
+      net_interest: p.net_interest,
+      is_overdue: p.due_by < todayStr,
+    }
+  })
+
+  const tdsFilings = (tdsRaw ?? []).map((p) => {
+    const agreement = p.agreement as unknown as AgreementInner
+    return {
+      id: p.id,
+      investor_name: agreement.investor_name,
+      reference_id: agreement.reference_id,
+      due_by: p.due_by,
+      tds_amount: p.tds_amount,
+      is_overdue: p.due_by < todayStr,
+    }
+  })
+
+  const maturities = (maturitiesRaw ?? []).map((m) => ({
+    id: m.id,
+    investor_name: m.investor_name,
+    reference_id: m.reference_id,
+    maturity_date: m.maturity_date,
+    principal_amount: m.principal_amount,
+    is_overdue: m.maturity_date < todayStr,
   }))
 
-  const tdsFilings = (tdsRaw ?? []).map((p: any) => ({
-    id: p.id as string,
-    investor_name: (p.agreement as AgreementInner).investor_name,
-    reference_id: (p.agreement as AgreementInner).reference_id,
-    due_by: p.due_by as string,
-    tds_amount: p.tds_amount as number,
-    is_overdue: (p.due_by as string) < todayStr,
-  }))
-
-  const maturities = (maturitiesRaw ?? []).map((m: any) => ({
-    id: m.id as string,
-    investor_name: m.investor_name as string,
-    reference_id: m.reference_id as string,
-    maturity_date: m.maturity_date as string,
-    principal_amount: m.principal_amount as number,
-    is_overdue: (m.maturity_date as string) < todayStr,
-  }))
-
-  const history = (historyRaw ?? []).map((r: any) => ({
-    id: r.id as string,
-    reminder_type: r.reminder_type as string,
-    sent_at: r.sent_at as string,
-    email_subject: r.email_subject as string,
-    email_to: r.email_to as string[],
+  const history = (historyRaw ?? []).map((r) => ({
+    id: r.id,
+    reminder_type: r.reminder_type,
+    sent_at: r.sent_at,
+    email_subject: r.email_subject || '',
+    email_to: r.email_to,
   }))
 
   return (

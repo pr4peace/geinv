@@ -32,14 +32,17 @@ export async function POST(request: NextRequest) {
         .in('id', ids)
       if (error) throw error
       payoutScheduleIds = ids
-      items = (data ?? []).map((p: any) => ({
-        investor_name: p.agreement.investor_name,
-        reference_id: p.agreement.reference_id,
-        due_by: p.due_by,
-        gross_interest: p.gross_interest,
-        tds_amount: p.tds_amount,
-        net_interest: p.net_interest,
-      }))
+      items = (data ?? []).map((p) => {
+        const agreement = p.agreement as unknown as { investor_name: string; reference_id: string }
+        return {
+          investor_name: agreement.investor_name,
+          reference_id: agreement.reference_id,
+          due_by: p.due_by,
+          gross_interest: p.gross_interest,
+          tds_amount: p.tds_amount,
+          net_interest: p.net_interest,
+        }
+      })
     } else {
       const { data, error } = await supabase
         .from('agreements')
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
         .in('id', ids)
       if (error) throw error
       agreementIds = ids
-      items = (data ?? []).map((a: any) => ({
+      items = (data ?? []).map((a) => ({
         investor_name: a.investor_name,
         reference_id: a.reference_id,
         maturity_date: a.maturity_date,
