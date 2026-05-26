@@ -62,7 +62,7 @@ export default function AppLayout({
       <WhatsNewModal />
       <div className="flex h-screen bg-canvas overflow-hidden font-sans">
         {/* Sidebar */}
-        <aside className="w-[224px] flex-shrink-0 bg-surface border-r border-hairline flex flex-col z-20">
+        <aside className="hidden md:flex w-[224px] flex-shrink-0 bg-surface border-r border-hairline flex-col z-20">
           {/* Brand block */}
           <div className="h-[72px] flex items-center gap-3 px-6">
             <div className="w-7 h-7 bg-forest rounded-sm flex items-center justify-center flex-shrink-0 text-paper font-serif font-bold text-lg">

@@ -15,18 +15,22 @@ export default async function DashboardPage() {
   // 1. Overdue payouts
   const { data: overdue } = await supabase
     .from('payout_schedule')
-    .select('*, agreement:agreements!inner(investor_name, reference_id, id, payout_frequency)')
+    .select('*, agreement:agreements!inner(investor_name, reference_id, id, payout_frequency, status, deleted_at)')
     .in('status', ['pending', 'notified'])
     .eq('is_tds_only', false)
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
     .lt('due_by', todayStr)
     .order('due_by', { ascending: true })
 
   // 2. This-week payouts
   const { data: thisWeek } = await supabase
     .from('payout_schedule')
-    .select('*, agreement:agreements!inner(investor_name, reference_id, id, payout_frequency)')
+    .select('*, agreement:agreements!inner(investor_name, reference_id, id, payout_frequency, status, deleted_at)')
     .in('status', ['pending', 'notified'])
     .eq('is_tds_only', false)
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
     .gte('due_by', todayStr)
     .lte('due_by', weekStr)
     .order('due_by', { ascending: true })
@@ -34,9 +38,11 @@ export default async function DashboardPage() {
   // 3. Later-this-month payouts
   const { data: laterThisMonth } = await supabase
     .from('payout_schedule')
-    .select('*, agreement:agreements!inner(investor_name, reference_id, id, payout_frequency)')
+    .select('*, agreement:agreements!inner(investor_name, reference_id, id, payout_frequency, status, deleted_at)')
     .in('status', ['pending', 'notified'])
     .eq('is_tds_only', false)
+    .eq('agreements.status', 'active')
+    .is('agreements.deleted_at', null)
     .gt('due_by', weekStr)
     .lte('due_by', monthStr)
     .order('due_by', { ascending: true })

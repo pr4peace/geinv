@@ -9,9 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-        mono: ['JetBrains Mono', 'ui-monospace'],
-        serif: ['Source Serif 4', 'Georgia'],
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui'],
+        mono: ['var(--font-mono)', 'ui-monospace'],
+        serif: ['var(--font-serif)', 'Georgia'],
       },
       colors: {
         paper:    '#FAFAF7',

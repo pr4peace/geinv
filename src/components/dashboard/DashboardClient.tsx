@@ -272,6 +272,12 @@ function Lane({
   const activeItems = items.filter(i => i.status !== 'paid')
   const last8 = activeItems.slice(0, 8).map(i => i.net_interest)
   const maxNet = Math.max(...last8, 1)
+  const sparklineClass =
+    accentColor === 'text-earth-ochre'
+      ? 'bg-earth-ochre/40'
+      : accentColor === 'text-earth-green-mid'
+      ? 'bg-earth-green-mid/40'
+      : 'bg-earth-green/40'
 
   return (
     <div className={`flex flex-col h-full min-h-[500px] ${laneColor} rounded-sm overflow-hidden border border-hairline/30`}>
@@ -283,13 +289,13 @@ function Lane({
           </div>
           <p className="text-[11px] text-ink-4 font-medium mt-0.5">items needing action</p>
         </div>
-        
+
         {/* Simple sparkline visualization */}
         <div className="flex items-end gap-0.5 h-6">
           {last8.map((val, idx) => (
-            <div 
-              key={idx} 
-              className={`w-1 rounded-t-full ${accentColor.replace('text-', 'bg-')}/40`} 
+            <div
+              key={idx}
+              className={`w-1 rounded-t-full ${sparklineClass}`}
               style={{ height: `${(val / maxNet) * 100}%` }}
             />
           ))}
