@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Loader2, FileText, Calculator } from 'lucide-react'
 import UploadStep from '@/components/agreements/UploadStep'
 import ExtractionReview from '@/components/agreements/ExtractionReview'
 import type { ExtractedAgreement } from '@/lib/claude'
@@ -14,7 +15,7 @@ interface TeamMember {
   is_active: boolean
 }
 
-type Step = 'upload' | 'loading' | 'review'
+type Step = 'choose' | 'upload' | 'loading' | 'review'
 
 interface ExtractResult {
   extracted: ExtractedAgreement
@@ -23,31 +24,22 @@ interface ExtractResult {
 }
 
 export default function NewAgreementPage() {
-  const [step, setStep] = useState<Step>('upload')
+  const router = useRouter()
+  const [step, setStep] = useState<Step>('choose')
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [teamLoading, setTeamLoading] = useState(true)
-
-  // Upload step state
   const [uploadError, setUploadError] = useState<string | null>(null)
-
-  // Carry through for review
   const [file, setFile] = useState<File | null>(null)
   const [isDraft, setIsDraft] = useState(false)
   const [salespersonId, setSalespersonId] = useState<string | null>(null)
   const [salespersonCustom, setSalespersonCustom] = useState<string | null>(null)
-
-  // Extraction result
   const [extractResult, setExtractResult] = useState<ExtractResult | null>(null)
-
-  // Abort controller for in-flight extraction
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     fetch('/api/team')
       .then(r => r.json())
-      .then((data: TeamMember[]) => {
-        setTeamMembers(Array.isArray(data) ? data : [])
-      })
+      .then((data: TeamMember[]) => setTeamMembers(Array.isArray(data) ? data : []))
       .catch(() => setTeamMembers([]))
       .finally(() => setTeamLoading(false))
   }, [])
@@ -79,31 +71,21 @@ export default function NewAgreementPage() {
         signal: controller.signal,
       })
 
-      if (res.redirected) {
-        window.location.href = res.url
-        return
-      }
+      if (res.redirected) { window.location.href = res.url; return }
 
       const contentType = res.headers.get('content-type')
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType?.includes('application/json')) {
         const data = await res.json()
-        if (!res.ok) {
-          throw new Error(data.error ?? `Extraction failed (${res.status})`)
-        }
+        if (!res.ok) throw new Error(data.error ?? `Extraction failed (${res.status})`)
         setExtractResult(data as ExtractResult)
         setStep('review')
       } else {
         const text = await res.text()
         const isErrorPage = text.includes('An error occurred') || text.includes('<!DOCTYPE html>')
-        throw new Error(
-          isErrorPage 
-            ? `Server error (${res.status}). The extraction service might be down.` 
-            : `Unexpected response: ${text.slice(0, 50)}...`
-        )
+        throw new Error(isErrorPage ? `Server error (${res.status}).` : `Unexpected response: ${text.slice(0, 50)}...`)
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
-      console.error('Extraction error:', err)
       setUploadError(err instanceof Error ? err.message : 'Extraction failed. Please try again.')
       setStep('upload')
     } finally {
@@ -116,76 +98,62 @@ export default function NewAgreementPage() {
     abortRef.current = null
     setExtractResult(null)
     setUploadError(null)
-    setStep('upload')
+    setStep('choose')
   }
 
   function handleBack() {
     setExtractResult(null)
-    setStep('upload')
+    setStep('choose')
   }
 
   return (
     <div className="p-8 min-h-screen bg-canvas">
-      {/* Page header */}
       <div className="mb-6 border-b border-ink-1 pb-3">
         <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight">New Agreement</h1>
         <p className="text-xs text-ink-4 mt-0.5">Create a new investment agreement record</p>
       </div>
 
-      {/* Step indicator */}
-      <div className="flex items-center gap-3 mb-8">
-        {(['upload', 'loading', 'review'] as const)
-          .map((s, idx) => {
-            const labels: Record<Step, string> = {
-              upload: 'Upload',
-              loading: 'Extracting',
-              review: 'Review & Confirm',
-            }
-            const stepIdx: Record<Step, number> = { upload: 0, loading: 1, review: 2 }
-            const currentIdx = stepIdx[step]
-            const thisIdx = stepIdx[s]
-            const done = currentIdx > thisIdx
-            const active = currentIdx === thisIdx
-            return (
-              <div key={s} className="flex items-center gap-2">
-                {idx > 0 && <div className={`w-10 h-px ${done || active ? 'bg-forest' : 'bg-hairline-strong'}`} />}
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold transition-colors ${
-                      done
-                        ? 'bg-gain text-paper'
-                        : active
-                        ? 'bg-forest text-paper'
-                        : 'bg-surface text-ink-5 border border-hairline'
-                    }`}
-                  >
-                    {done ? '✓' : idx + 1}
-                  </div>
-                  <span
-                    className={`text-sm font-medium hidden sm:inline ${
-                      active ? 'text-ink-1' : done ? 'text-gain' : 'text-ink-5'
-                    }`}
-                  >
-                    {labels[s]}
-                  </span>
-                </div>
+      {step === 'choose' && (
+        <div className="max-w-2xl">
+          <p className="text-sm text-ink-3 mb-6">Choose how to add this agreement</p>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setStep('upload')}
+              className="text-left bg-surface border border-hairline rounded-sm p-6 hover:border-forest hover:bg-surface-2 transition-all group"
+            >
+              <div className="w-9 h-9 bg-surface-2 rounded-sm flex items-center justify-center mb-4">
+                <FileText className="w-4 h-4 text-ink-3 group-hover:text-forest" />
               </div>
-            )
-          })}
-      </div>
+              <div className="font-bold text-ink-1 text-sm mb-1">Upload Document</div>
+              <div className="text-xs text-ink-4 leading-relaxed">Scan an existing signed agreement — Gemini extracts all details automatically.</div>
+              <div className="mt-4 text-[10px] font-bold text-forest uppercase tracking-wide">Scan PDF / DOCX →</div>
+            </button>
 
-      {/* Step 1: Upload */}
+            <button
+              onClick={() => router.push('/agreements/new/calculator')}
+              className="text-left bg-surface border border-hairline rounded-sm p-6 hover:border-forest hover:bg-surface-2 transition-all group"
+            >
+              <div className="w-9 h-9 bg-surface-2 rounded-sm flex items-center justify-center mb-4">
+                <Calculator className="w-4 h-4 text-ink-3 group-hover:text-forest" />
+              </div>
+              <div className="font-bold text-ink-1 text-sm mb-1">Enter Details</div>
+              <div className="text-xs text-ink-4 leading-relaxed">Fill in investor and investment details — calculator generates the payout schedule live.</div>
+              <div className="mt-4 text-[10px] font-bold text-forest uppercase tracking-wide">Open Calculator →</div>
+            </button>
+          </div>
+        </div>
+      )}
+
       {step === 'upload' && (
         <UploadStep
           teamMembers={teamLoading ? [] : teamMembers}
           onExtract={handleExtract}
           isLoading={false}
           error={uploadError}
-          onBack={undefined}
+          onBack={() => setStep('choose')}
         />
       )}
 
-      {/* Step 3: Loading */}
       {step === 'loading' && (
         <div className="flex flex-col items-center justify-center py-32 space-y-6">
           <Loader2 className="w-12 h-12 text-forest animate-spin" />
@@ -202,7 +170,6 @@ export default function NewAgreementPage() {
         </div>
       )}
 
-      {/* Step 4: Review */}
       {step === 'review' && extractResult && file && (
         <ExtractionReview
           extracted={extractResult.extracted}
