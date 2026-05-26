@@ -37,11 +37,11 @@ const FILTERS = ['All', 'Pending', 'Sent', 'Overdue', 'Dismissed'] as const
 type Filter = (typeof FILTERS)[number]
 
 const filterColors: Record<Filter, { chip: string; active: string }> = {
-  All: { chip: 'bg-slate-700/50 text-slate-400', active: 'bg-slate-600 text-slate-200 border-slate-500' },
-  Pending: { chip: 'bg-amber-900/30 text-amber-400/70', active: 'bg-amber-900/50 text-amber-300 border-amber-700' },
-  Sent: { chip: 'bg-green-900/30 text-green-400/70', active: 'bg-green-900/50 text-green-300 border-green-700' },
-  Overdue: { chip: 'bg-red-900/30 text-red-400/70', active: 'bg-red-900/50 text-red-300 border-red-700' },
-  Dismissed: { chip: 'bg-slate-700/30 text-slate-400/70', active: 'bg-slate-600/50 text-slate-300 border-slate-500' },
+  All: { chip: 'bg-surface-2 text-ink-4', active: 'bg-ink-1 text-paper border-ink-2' },
+  Pending: { chip: 'bg-clay-soft text-clay', active: 'bg-clay-soft text-clay border-clay/30' },
+  Sent: { chip: 'bg-gain-soft text-gain', active: 'bg-gain-soft text-gain border-gain/30' },
+  Overdue: { chip: 'bg-rust-soft text-rust', active: 'bg-rust-soft text-rust border-rust/30' },
+  Dismissed: { chip: 'bg-surface-2 text-ink-5', active: 'bg-surface-2 text-ink-4 border-hairline-strong' },
 }
 
 export default function Timeline({ items }: Props) {
@@ -72,46 +72,46 @@ export default function Timeline({ items }: Props) {
     return (
       <div
         key={item.id}
-        className={`rounded-lg border transition-colors cursor-pointer ${
+        className={`rounded-sm border transition-colors cursor-pointer ${
           item.isOverdue
-            ? 'bg-red-900/10 border-red-800/30 hover:bg-red-900/20'
+            ? 'bg-rust-soft/40 border-rust/20 hover:bg-rust-soft/60'
             : item.status === 'sent'
-            ? 'bg-green-900/5 border-green-800/20 hover:bg-green-900/10'
-            : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800/50'
+            ? 'bg-gain-soft/30 border-gain/20 hover:bg-gain-soft/50'
+            : 'bg-surface border-hairline hover:bg-surface-2'
         }`}
         onClick={() => setExpandedId(isExpanded ? null : item.id)}
       >
         <div className="flex items-center gap-3 px-4 py-3">
-          <Bell className={`w-3.5 h-3.5 flex-shrink-0 ${item.isOverdue ? 'text-red-400' : 'text-slate-500'}`} />
+          <Bell className={`w-3.5 h-3.5 flex-shrink-0 ${item.isOverdue ? 'text-rust' : 'text-ink-4'}`} />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className={`text-sm font-medium ${item.isOverdue ? 'text-red-400' : 'text-slate-200'}`}>
+              <span className={`text-sm font-medium ${item.isOverdue ? 'text-rust' : 'text-ink-1'}`}>
                 {typeLabelMap[item.type] ?? item.type}
               </span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize ${
-                item.status === 'sent' ? 'bg-green-900/40 text-green-400' :
-                item.isOverdue ? 'bg-red-900/40 text-red-400' :
-                item.status === 'dismissed' ? 'bg-slate-700 text-slate-400' :
-                'bg-amber-900/40 text-amber-400'
+              <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-semibold capitalize ${
+                item.status === 'sent' ? 'bg-gain-soft text-gain' :
+                item.isOverdue ? 'bg-rust-soft text-rust' :
+                item.status === 'dismissed' ? 'bg-surface-2 text-ink-4' :
+                'bg-clay-soft text-clay'
               }`}>{item.isOverdue ? 'overdue' : item.status}</span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">{item.subject ?? '—'}</p>
+            <p className="text-xs text-ink-4 mt-0.5 truncate">{item.subject ?? '—'}</p>
           </div>
 
           <div className="text-right flex-shrink-0">
-            <p className={`text-xs ${item.isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+            <p className={`text-xs ${item.isOverdue ? 'text-rust font-medium' : 'text-ink-4'}`}>
               {fmtDate(item.dueDate ?? item.sentAt)}
               {item.isOverdue && <span className="ml-1 text-[10px] font-bold uppercase">(overdue)</span>}
             </p>
           </div>
 
-          {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />}
+          {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-ink-4 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-ink-4 flex-shrink-0" />}
         </div>
 
         {isExpanded && item.subject && (
-          <div className="px-4 pb-3 pt-0 border-t border-slate-700/20 mt-0">
-            <p className="text-xs text-slate-400 mt-2 whitespace-pre-wrap leading-relaxed">{item.subject}</p>
+          <div className="px-4 pb-3 pt-0 border-t border-hairline mt-0">
+            <p className="text-xs text-ink-3 mt-2 whitespace-pre-wrap leading-relaxed">{item.subject}</p>
           </div>
         )}
       </div>
@@ -134,7 +134,7 @@ export default function Timeline({ items }: Props) {
               key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                filter === f ? filterColors[f].active : `${filterColors[f].chip} border-transparent hover:border-slate-600`
+                filter === f ? filterColors[f].active : `${filterColors[f].chip} border-transparent hover:border-hairline-strong`
               }`}
             >
               {f} <span className="ml-1 opacity-60">{count}</span>
@@ -144,19 +144,19 @@ export default function Timeline({ items }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-slate-500 text-sm italic text-center py-8">No notifications match this filter.</p>
+        <p className="text-ink-4 text-sm italic text-center py-8">No notifications match this filter.</p>
       ) : (
         <>
           {upcoming.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Upcoming ({upcoming.length})</p>
+              <p className="text-xs font-bold text-ink-4 uppercase tracking-widest">Upcoming ({upcoming.length})</p>
               {upcoming.map(renderRow)}
             </div>
           )}
 
           {past.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Past ({past.length})</p>
+              <p className="text-xs font-bold text-ink-4 uppercase tracking-widest">Past ({past.length})</p>
               {past.map(renderRow)}
             </div>
           )}

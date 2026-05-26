@@ -44,62 +44,65 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
 
   const showStatus = interestRows.some(r => r.status !== undefined)
 
+  function StatusDot({ status }: { status?: string }) {
+    if (!status) return null
+    const dot = status === 'paid' ? 'sdot-paid' : status === 'overdue' ? 'sdot-overdue' : status === 'notified' ? 'sdot-notified' : 'sdot-pending'
+    return <span className={`sdot ${dot} m-0`} title={status} />
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
 
       {/* ── Interest Payouts ── */}
       {interestRows.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-            Interest Payouts ({interestRows.length})
-          </h4>
-          <div className="overflow-x-auto rounded-lg border border-slate-700">
-            <table className="min-w-full text-sm text-slate-300">
+        <div className="space-y-3">
+          <h4 className="lbl font-bold text-ink-1">Interest Payouts ({interestRows.length})</h4>
+          <div className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
+            <table className="border-collapse w-full text-xs">
               <thead>
-                <tr className="bg-slate-800/60 text-xs text-slate-400">
-                  <th className="py-2 px-3 text-left font-semibold">#</th>
-                  <th className="py-2 px-3 text-left font-semibold">Period</th>
-                  <th className="py-2 px-3 text-right font-semibold">Days</th>
-                  <th className="py-2 px-3 text-left font-semibold">Due By</th>
-                  <th className="py-2 px-3 text-right font-semibold">Gross</th>
-                  <th className="py-2 px-3 text-right font-semibold">TDS</th>
-                  <th className="py-2 px-3 text-right font-semibold">Net</th>
-                  {showStatus && <th className="py-2 px-3 text-center font-semibold">Status</th>}
+                <tr className="bg-surface-2 border-b border-hairline-strong text-[10px] uppercase tracking-widest font-medium text-ink-4">
+                  <th className="py-2 px-3 text-left w-8">#</th>
+                  <th className="py-2 px-3 text-left">Period</th>
+                  <th className="py-2 px-3 text-right">Days</th>
+                  <th className="py-2 px-3 text-left">Due By</th>
+                  <th className="py-2 px-3 text-right">Gross</th>
+                  <th className="py-2 px-3 text-right">TDS</th>
+                  <th className="py-2 px-3 text-right">Net</th>
+                  {showStatus && <th className="py-2 px-3 text-center w-12">Status</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/40">
-                {interestRows.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-2 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
-                    <td className="py-2 px-3 text-xs whitespace-nowrap">
-                      {fmtDate(row.period_from)} – {fmtDate(row.period_to)}
-                    </td>
-                    <td className="py-2 px-3 text-right text-xs text-slate-500">
-                      {row.no_of_days ?? '—'}
-                    </td>
-                    <td className="py-2 px-3 text-xs whitespace-nowrap">{fmtDate(row.due_by)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums">{fmtCurrency(row.gross_interest)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-emerald-400">{fmtCurrency(row.net_interest)}</td>
-                    {showStatus && (
-                      <td className="py-2 px-3 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-                          row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
-                          row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
-                          row.status === 'notified' ? 'bg-amber-900/40 text-amber-400' :
-                          'bg-slate-700 text-slate-300'
-                        }`}>{row.status}</span>
+              <tbody className="divide-y divide-hairline">
+                {interestRows.map((row, idx) => {
+                  const isPaid = row.status === 'paid'
+                  const isOverdue = row.status === 'overdue'
+                  return (
+                    <tr key={idx} className={`h-7 hover:bg-surface-2 transition-colors ${isOverdue ? 'bg-rust-soft/40' : ''} ${isPaid ? 'text-ink-4' : 'text-ink-2'}`}>
+                      <td className="px-3 py-1 font-mono text-[10px] opacity-50">{idx + 1}</td>
+                      <td className="px-3 py-1 whitespace-nowrap opacity-80">
+                        {fmtDate(row.period_from)} – {fmtDate(row.period_to)}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-3 py-1 text-right font-mono text-[10px] opacity-50">
+                        {row.no_of_days ?? '—'}
+                      </td>
+                      <td className={`px-3 py-1 whitespace-nowrap font-medium ${isOverdue ? 'text-rust' : ''}`}>{fmtDate(row.due_by)}</td>
+                      <td className="px-3 py-1 text-right num text-[11px] tabular-nums">{fmtCurrency(row.gross_interest)}</td>
+                      <td className="px-3 py-1 text-right num text-[11px] tabular-nums opacity-70">{fmtCurrency(row.tds_amount)}</td>
+                      <td className={`px-3 py-1 text-right num text-[11px] tabular-nums font-bold ${isPaid ? 'text-ink-4' : 'text-ink-1'}`}>{fmtCurrency(row.net_interest)}</td>
+                      {showStatus && (
+                        <td className="px-3 py-1 text-center">
+                          <StatusDot status={row.status} />
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
-              <tfoot>
-                <tr className="bg-slate-800/40 border-t-2 border-slate-600">
-                  <td colSpan={4} className="py-2 px-3 text-xs font-bold text-slate-100 uppercase tracking-wide">Total</td>
-                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-slate-100 tabular-nums">{fmtCurrency(interestTotal.gross)}</td>
-                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-red-400 tabular-nums">{fmtCurrency(interestTotal.tds)}</td>
-                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-emerald-400 tabular-nums">{fmtCurrency(interestTotal.net)}</td>
+              <tfoot className="bg-surface-2/50 border-t border-hairline-strong">
+                <tr className="h-8">
+                  <td colSpan={4} className="px-3 py-1 text-[10px] font-bold text-ink-3 uppercase tracking-widest">Total</td>
+                  <td className="px-3 py-1 text-right num font-bold text-ink-2">{fmtCurrency(interestTotal.gross)}</td>
+                  <td className="px-3 py-1 text-right num font-bold text-ink-3 opacity-70">{fmtCurrency(interestTotal.tds)}</td>
+                  <td className="px-3 py-1 text-right num font-bold text-ink-1 text-[13px]">{fmtCurrency(interestTotal.net)}</td>
                   {showStatus && <td />}
                 </tr>
               </tfoot>
@@ -110,39 +113,36 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
 
       {/* ── TDS Filing Requirements ── */}
       {tdsRows.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-            TDS Filing Requirements ({tdsRows.length})
-          </h4>
-          <div className="overflow-x-auto rounded-lg border border-violet-800/30">
-            <table className="min-w-full text-sm text-slate-300">
+        <div className="space-y-3">
+          <h4 className="lbl font-bold text-ink-1">TDS Filing Requirements ({tdsRows.length})</h4>
+          <div className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
+            <table className="border-collapse w-full text-xs">
               <thead>
-                <tr className="bg-violet-900/20 text-xs text-violet-300/70">
-                  <th className="py-2 px-3 text-left font-semibold">#</th>
-                  <th className="py-2 px-3 text-left font-semibold">Filing Deadline</th>
-                  <th className="py-2 px-3 text-right font-semibold">TDS Amount</th>
+                <tr className="bg-surface-2 border-b border-hairline-strong text-[10px] uppercase tracking-widest font-medium text-ink-4">
+                  <th className="py-2 px-3 text-left w-8">#</th>
+                  <th className="py-2 px-3 text-left">Filing Deadline</th>
+                  <th className="py-2 px-3 text-right">TDS Amount</th>
                   {tdsRows.some(r => r.status !== undefined) && (
-                    <th className="py-2 px-3 text-center font-semibold">Status</th>
+                    <th className="py-2 px-3 text-center w-16">Status</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-violet-800/20">
-                {tdsRows.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-violet-900/5 transition-colors">
-                    <td className="py-2 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
-                    <td className="py-2 px-3 text-xs">{fmtDate(row.due_by)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-xs tabular-nums text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
-                    {tdsRows.some(r => r.status !== undefined) && (
-                      <td className="py-2 px-3 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          row.tds_filed ? 'bg-green-900/40 text-green-400' : 'bg-red-900/30 text-red-400'
-                        }`}>
-                          {row.tds_filed ? 'Filed' : 'Not Filed'}
-                        </span>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-hairline">
+                {tdsRows.map((row, idx) => {
+                  const isFiled = row.tds_filed
+                  return (
+                    <tr key={idx} className={`h-7 hover:bg-surface-2 transition-colors bg-clay-soft/30 ${isFiled ? 'text-ink-4' : 'text-ink-3'}`}>
+                      <td className="px-3 py-1 font-mono text-[10px] opacity-50">{idx + 1}</td>
+                      <td className="px-3 py-1 font-medium">{fmtDate(row.due_by)}</td>
+                      <td className="px-3 py-1 text-right num font-bold">{fmtCurrency(row.tds_amount)}</td>
+                      {tdsRows.some(r => r.status !== undefined) && (
+                        <td className="px-3 py-1 text-center">
+                          <span className={`sdot ${isFiled ? 'sdot-active' : 'sdot-overdue'} m-0`} title={isFiled ? 'Filed' : 'Not Filed'} />
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -151,10 +151,8 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
 
       {/* ── Maturity Payout ── */}
       {principalRows.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-            Maturity Payout
-          </h4>
+        <div className="space-y-3">
+          <h4 className="lbl font-bold text-ink-1">Maturity Payout</h4>
           {principalRows.map((row, idx) => {
             const rawGross = row.gross_interest ?? 0
             const gross = rawGross === 0 && principalAmount ? principalAmount : rawGross
@@ -162,34 +160,32 @@ export default function PayoutScheduleTable({ payouts, principalAmount }: Props)
             const interestEarned = principalAmount && gross > principalAmount * 1.01
               ? gross - principalAmount
               : null
-            const showStatus = row.status !== undefined
             return (
-              <div key={idx} className="rounded-lg border border-amber-800/30 overflow-hidden">
-                <div className="bg-amber-900/10 px-4 py-3 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-slate-400">Scheduled for {fmtDate(row.due_by)}</p>
-                    <p className="text-lg font-bold text-amber-200">{fmtCurrency(gross - tds)}</p>
+              <div key={idx} className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
+                <div className="bg-earth-brown/5 px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="lbl opacity-70">Scheduled for {fmtDate(row.due_by)}</p>
+                    <p className="text-2xl font-bold num text-earth-brown leading-none">{fmtCurrency(gross - tds)}</p>
                     {interestEarned !== null && (
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Interest earned: {fmtCurrency(interestEarned)}
-                        {tds > 0 && <> · TDS: {fmtCurrency(tds)}</>}
-                        {' '}· Principal returned: {fmtCurrency(principalAmount!)}
+                      <p className="text-[11px] text-ink-4 mt-1">
+                        Interest earned: <span className="num font-medium">{fmtCurrency(interestEarned)}</span>
+                        {tds > 0 && <> · TDS: <span className="num font-medium">{fmtCurrency(tds)}</span></>}
+                        {' '}· Principal: <span className="num font-medium">{fmtCurrency(principalAmount!)}</span>
                       </p>
                     )}
                   </div>
-                  {showStatus && (
-                    <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold capitalize flex-shrink-0 ${
-                      row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
-                      row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
-                      'bg-slate-700 text-slate-300'
-                    }`}>{row.status}</span>
+                  {row.status && (
+                    <div className="flex flex-col items-center gap-1">
+                      <StatusDot status={row.status} />
+                      <span className="text-[9px] font-bold uppercase text-ink-4 tracking-tighter">{row.status}</span>
+                    </div>
                   )}
                 </div>
                 {interestEarned !== null && (
-                  <div className="bg-amber-900/5 border-t border-amber-800/20 px-4 py-2 grid grid-cols-3 gap-2 text-xs">
-                    <div><span className="text-slate-500">Interest</span><br /><span className="font-mono text-slate-200">{fmtCurrency(interestEarned)}</span></div>
-                    <div><span className="text-slate-500">TDS</span><br /><span className="font-mono text-red-400/80">{fmtCurrency(tds)}</span></div>
-                    <div><span className="text-slate-500">Net Interest</span><br /><span className="font-mono text-emerald-400">{fmtCurrency(interestEarned - tds)}</span></div>
+                  <div className="bg-surface border-t border-hairline px-6 py-3 grid grid-cols-3 gap-6">
+                    <div><p className="lbl text-[9px] mb-0.5 opacity-60">Interest</p><p className="num text-xs font-bold text-ink-2">{fmtCurrency(interestEarned)}</p></div>
+                    <div><p className="lbl text-[9px] mb-0.5 opacity-60">TDS</p><p className="num text-xs font-bold text-rust">{fmtCurrency(tds)}</p></div>
+                    <div><p className="lbl text-[9px] mb-0.5 opacity-60">Net Interest</p><p className="num text-xs font-bold text-gain">{fmtCurrency(interestEarned - tds)}</p></div>
                   </div>
                 )}
               </div>

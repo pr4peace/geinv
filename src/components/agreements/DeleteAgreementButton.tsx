@@ -6,10 +6,9 @@ import { Trash2 } from 'lucide-react'
 
 export default function DeleteAgreementButton({
   agreementId,
-  investorName,
 }: {
   agreementId: string
-  investorName: string
+  investorName?: string
 }) {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
@@ -39,34 +38,34 @@ export default function DeleteAgreementButton({
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 border border-red-800 hover:bg-red-900/30 transition-colors"
+        className="inline-flex items-center gap-1.5 h-7 px-3 border border-rust/40 text-rust text-[10px] font-bold uppercase rounded-sm hover:bg-rust-soft transition-all shadow-sm"
       >
-        <Trash2 className="w-3.5 h-3.5" />
+        <Trash2 className="w-3 h-3" />
         Delete
       </button>
     )
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <p className="text-xs text-red-400 text-right">
-        Move &ldquo;{investorName}&rdquo; to trash? It can be restored from the Agreements page.
+    <div className="flex flex-col items-end gap-2 animate-in fade-in slide-in-from-right-2">
+      <p className="text-[10px] font-bold text-rust italic text-right">
+        Move to trash? Can be restored later.
       </p>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-[10px] font-bold uppercase text-rust">{error}</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={() => setConfirming(false)}
           disabled={loading}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-slate-700 hover:bg-slate-700 transition-colors disabled:opacity-50"
+          className="text-[10px] font-bold uppercase text-ink-4 hover:text-ink-2 px-3 py-1 transition-colors disabled:opacity-40"
         >
           Cancel
         </button>
         <button
           onClick={handleDelete}
           disabled={loading}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-700 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+          className="h-7 px-3 bg-rust text-paper text-[10px] font-bold uppercase rounded-sm hover:bg-rust-2 transition-all shadow-sm disabled:opacity-50"
         >
-          {loading ? 'Deleting…' : 'Yes, delete'}
+          {loading ? 'Deleting…' : 'Yes, Delete'}
         </button>
       </div>
     </div>

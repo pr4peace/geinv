@@ -1,4 +1,3 @@
-// src/components/UndoToast.tsx
 'use client'
 import { useEffect, useState } from 'react'
 
@@ -27,23 +26,29 @@ export function UndoToast({ message, onUndo, onDismiss, durationMs = 5000 }: Und
   }, [durationMs, onDismiss])
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden min-w-72 animate-in slide-in-from-bottom-4 duration-300">
-      <div className="px-4 py-3 flex items-center justify-between gap-4">
-        <span className="text-sm text-slate-200">{message}</span>
-        <div className="flex items-center gap-2">
+    <div className="fixed bottom-8 right-8 z-[200] bg-surface border border-hairline-strong rounded-sm shadow-2xl overflow-hidden min-w-[320px] animate-in slide-in-from-right-4 duration-500">
+      <div className="px-6 py-4 flex items-center justify-between gap-6">
+        <span className="text-[13px] font-bold text-ink-1">{message}</span>
+        <div className="flex items-center gap-4">
           <button
             onClick={onUndo}
-            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors whitespace-nowrap"
+            className="text-[11px] font-bold uppercase tracking-widest text-forest hover:text-forest-2 transition-colors whitespace-nowrap"
           >
             Undo
           </button>
-          <button onClick={onDismiss} className="text-slate-500 hover:text-slate-300 text-xs">✕</button>
+          <button 
+            onClick={onDismiss} 
+            className="text-ink-5 hover:text-ink-2 transition-colors"
+            aria-label="Dismiss"
+          >
+            <span className="text-xs">✕</span>
+          </button>
         </div>
       </div>
       {/* Progress bar */}
-      <div className="h-0.5 bg-slate-700">
+      <div className="h-1 bg-hairline-strong">
         <div
-          className="h-full bg-indigo-500 transition-all duration-75"
+          className="h-full bg-forest transition-all duration-75"
           style={{ width: `${progress}%` }}
         />
       </div>

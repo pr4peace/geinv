@@ -67,11 +67,11 @@ export default async function AgreementsPage({
   ])
 
   return (
-    <div className="p-6 space-y-6 min-h-screen bg-slate-950">
-      <div className="flex items-center justify-between">
+    <div className="p-8 space-y-6 min-h-screen bg-canvas">
+      <div className="flex items-center justify-between border-b border-ink-1 pb-3 mb-5">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Agreements</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight">Agreements</h1>
+          <p className="text-xs text-ink-4 mt-0.5">
             {isSalesperson ? 'Your assigned investment agreements' : 'All investment agreements'}
           </p>
         </div>
@@ -79,7 +79,7 @@ export default async function AgreementsPage({
           <div className="flex items-center gap-2">
             <Link
               href="/agreements/new"
-              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+              className="px-4 py-1.5 rounded-sm bg-forest text-paper text-sm font-medium transition-colors hover:bg-forest-2 shadow-sm"
             >
               + New Agreement
             </Link>

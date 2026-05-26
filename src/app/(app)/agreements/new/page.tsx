@@ -125,11 +125,11 @@ export default function NewAgreementPage() {
   }
 
   return (
-    <div className="p-6 min-h-screen bg-slate-950">
+    <div className="p-8 min-h-screen bg-canvas">
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100">New Agreement</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Create a new investment agreement record</p>
+      <div className="mb-6 border-b border-ink-1 pb-3">
+        <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight">New Agreement</h1>
+        <p className="text-xs text-ink-4 mt-0.5">Create a new investment agreement record</p>
       </div>
 
       {/* Step indicator */}
@@ -148,22 +148,22 @@ export default function NewAgreementPage() {
             const active = currentIdx === thisIdx
             return (
               <div key={s} className="flex items-center gap-2">
-                {idx > 0 && <div className={`w-10 h-px ${done || active ? 'bg-indigo-600' : 'bg-slate-700'}`} />}
-                <div className={`flex items-center gap-2`}>
+                {idx > 0 && <div className={`w-10 h-px ${done || active ? 'bg-forest' : 'bg-hairline-strong'}`} />}
+                <div className="flex items-center gap-2">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                    className={`w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold transition-colors ${
                       done
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-gain text-paper'
                         : active
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-800 text-slate-500 border border-slate-700'
+                        ? 'bg-forest text-paper'
+                        : 'bg-surface text-ink-5 border border-hairline'
                     }`}
                   >
                     {done ? '✓' : idx + 1}
                   </div>
                   <span
                     className={`text-sm font-medium hidden sm:inline ${
-                      active ? 'text-slate-100' : done ? 'text-emerald-400' : 'text-slate-500'
+                      active ? 'text-ink-1' : done ? 'text-gain' : 'text-ink-5'
                     }`}
                   >
                     {labels[s]}
@@ -188,14 +188,14 @@ export default function NewAgreementPage() {
       {/* Step 3: Loading */}
       {step === 'loading' && (
         <div className="flex flex-col items-center justify-center py-32 space-y-6">
-          <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
+          <Loader2 className="w-12 h-12 text-forest animate-spin" />
           <div className="text-center space-y-1">
-            <p className="text-slate-300 text-base font-medium">Reading the agreement...</p>
-            <p className="text-slate-500 text-sm">This usually takes 10–30 seconds</p>
+            <p className="text-ink-2 text-base font-medium">Reading the agreement...</p>
+            <p className="text-ink-4 text-sm">This usually takes 10–30 seconds</p>
           </div>
           <button
             onClick={handleCancel}
-            className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 text-sm transition-colors"
+            className="px-4 py-2 rounded-sm border border-hairline-strong text-ink-3 hover:text-ink-1 hover:bg-surface-2 text-sm transition-colors"
           >
             Cancel
           </button>

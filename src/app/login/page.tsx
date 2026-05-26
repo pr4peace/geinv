@@ -25,16 +25,16 @@ function LoginForm() {
   }
 
   return (
-    <div className="bg-slate-900 rounded-xl p-6 border border-slate-800 space-y-4">
+    <div className="bg-surface rounded-sm p-8 border border-hairline space-y-6 shadow-xl">
       {errorMessage && (
-        <p className="text-red-400 text-sm text-center font-medium bg-red-400/10 py-2 px-3 rounded-lg border border-red-400/20">
+        <p className="text-rust text-xs text-center font-bold uppercase tracking-wider bg-rust-soft py-3 px-4 rounded-sm border border-rust/10">
           {errorMessage}
         </p>
       )}
       <button
         onClick={handleGoogleSignIn}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-900 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors shadow-sm"
+        className="w-full flex items-center justify-center gap-4 bg-white hover:bg-canvas disabled:opacity-50 text-ink-1 rounded-sm border border-hairline-strong h-12 text-[13px] font-bold uppercase tracking-widest transition-all shadow-sm active:scale-[0.98]"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -50,16 +50,16 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white tracking-tight">Good Earth</h1>
-          <p className="text-slate-500 text-sm mt-2 font-medium">Investment Tracker</p>
+        <div className="text-center mb-12">
+          <h1 className="text-[32px] font-bold text-ink-1 tracking-tight font-serif leading-tight">Good Earth</h1>
+          <p className="lbl font-bold mt-2 tracking-[0.2em] opacity-60">Investment Tracker</p>
         </div>
-        <Suspense fallback={<div className="bg-slate-900 rounded-xl h-[88px] animate-pulse border border-slate-800" />}>
+        <Suspense fallback={<div className="bg-surface rounded-sm h-[100px] animate-pulse border border-hairline shadow-xl" />}>
           <LoginForm />
         </Suspense>
-        <p className="text-center mt-8 text-xs text-slate-600 font-medium uppercase tracking-widest">
+        <p className="text-center mt-12 text-[10px] text-ink-5 font-bold uppercase tracking-[0.3em]">
           Internal Access Only
         </p>
       </div>

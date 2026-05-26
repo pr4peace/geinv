@@ -33,22 +33,27 @@ export default function MaturityPayoutCard({ agreementId, payouts, principalAmou
   const todayStr = new Date().toISOString().split('T')[0]
   const row = payouts.find(r => r.is_principal_repayment)
 
+  function StatusDot({ status, isOverdue }: { status?: string, isOverdue?: boolean }) {
+    const dot = status === 'paid' ? 'sdot-paid' : isOverdue ? 'sdot-overdue' : status === 'notified' ? 'sdot-notified' : 'sdot-pending'
+    return <span className={`sdot ${dot} m-0`} title={status} />
+  }
+
   // Show a read-only card from agreement-level data when no payout row exists yet
   if (!row) {
     if (!maturityDate || !principalAmount) return null
     const isOverdue = maturityDate < todayStr
     return (
-      <div className={`bg-slate-800/50 border rounded-xl p-5 ${isOverdue ? 'border-red-700/50' : 'border-amber-700/40'}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <Landmark className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Maturity Payout</h3>
+      <div className={`bg-surface border rounded-sm p-6 shadow-sm ${isOverdue ? 'border-rust/30' : 'border-hairline'}`}>
+        <div className="flex items-center gap-2 mb-6">
+          <Landmark className={`w-3.5 h-3.5 ${isOverdue ? 'text-rust' : 'text-earth-brown'}`} />
+          <h3 className="lbl font-bold text-ink-1 uppercase tracking-widest">Maturity Payout</h3>
         </div>
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-xs text-slate-500 mb-1">Scheduled for {fmtDate(maturityDate)}{isOverdue && <span className="ml-1 text-red-400 font-bold uppercase text-[10px]">(overdue)</span>}</p>
-            <p className="text-2xl font-bold text-amber-200">{fmtCurrency(principalAmount)}</p>
+            <p className="lbl opacity-70 mb-1">Scheduled for {fmtDate(maturityDate)}{isOverdue && <span className="ml-2 text-rust font-bold uppercase text-[9px] tracking-widest">(overdue)</span>}</p>
+            <p className={`text-2xl font-bold num ${isOverdue ? 'text-rust' : 'text-earth-brown'} leading-none`}>{fmtCurrency(principalAmount)}</p>
           </div>
-          <p className="text-xs text-slate-500">Principal <span className="text-slate-300 font-mono">{fmtCurrency(principalAmount)}</span></p>
+          <p className="text-[11px] text-ink-4 font-medium uppercase tracking-tight">Principal <span className="num font-bold text-ink-2">{fmtCurrency(principalAmount)}</span></p>
         </div>
       </div>
     )
@@ -82,48 +87,48 @@ export default function MaturityPayoutCard({ agreementId, payouts, principalAmou
   }
 
   return (
-    <div className={`bg-slate-800/50 border rounded-xl p-5 ${isOverdue ? 'border-red-700/50' : isPaid ? 'border-slate-700/30' : 'border-amber-700/40'}`}>
-      <div className="flex items-center justify-between mb-4">
+    <div className={`bg-surface border rounded-sm p-6 shadow-sm ${isOverdue ? 'border-rust/30' : isPaid ? 'border-hairline-strong/20 opacity-80' : 'border-hairline'}`}>
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Landmark className={`w-4 h-4 ${isPaid ? 'text-slate-400' : 'text-amber-400'}`} />
-          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Maturity Payout</h3>
+          <Landmark className={`w-3.5 h-3.5 ${isPaid ? 'text-ink-4' : isOverdue ? 'text-rust' : 'text-earth-brown'}`} />
+          <h3 className="lbl font-bold text-ink-1 uppercase tracking-widest">Maturity Payout</h3>
         </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-            isPaid ? 'bg-green-900/40 text-green-400' :
-            isOverdue ? 'bg-red-900/40 text-red-400' :
-            row.status === 'notified' ? 'bg-amber-900/40 text-amber-400' :
-            'bg-slate-700 text-slate-400'
-          }`}>{row.status}</span>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-1">
+            <StatusDot status={row.status} isOverdue={isOverdue} />
+            <span className="text-[9px] font-bold uppercase text-ink-4 tracking-tighter">{row.status}</span>
+          </div>
           {isCoordinator && (
-            isPaid ? (
-              <button onClick={revertPayout} disabled={loading} className="text-xs text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50">
-                {loading ? '…' : 'Undo'}
-              </button>
-            ) : (
-              <button onClick={markAsPaid} disabled={loading} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-50">
-                {loading ? '…' : 'Mark Paid'}
-              </button>
-            )
+            <div className="border-l border-hairline pl-4">
+              {isPaid ? (
+                <button onClick={revertPayout} disabled={loading} className="text-[10px] font-bold text-ink-5 hover:text-ink-3 transition-colors uppercase disabled:opacity-50">
+                  {loading ? '…' : 'Undo'}
+                </button>
+              ) : (
+                <button onClick={markAsPaid} disabled={loading} className="text-[10px] font-bold text-forest hover:text-ink-1 transition-colors uppercase disabled:opacity-50">
+                  {loading ? '…' : 'Mark Paid'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
 
       <div className="flex items-end justify-between">
-        <div>
-          <p className="text-xs text-slate-500 mb-1">Scheduled for {fmtDate(row.due_by)}{isOverdue && <span className="ml-1 text-red-400 font-bold uppercase text-[10px]">(overdue)</span>}</p>
-          <p className={`text-2xl font-bold ${isPaid ? 'text-slate-400' : isOverdue ? 'text-red-300' : 'text-amber-200'}`}>{fmtCurrency(net)}</p>
+        <div className="space-y-1">
+          <p className="lbl opacity-70">Scheduled for {fmtDate(row.due_by)}{isOverdue && <span className="ml-2 text-rust font-bold uppercase text-[9px] tracking-widest">(overdue)</span>}</p>
+          <p className={`text-2xl font-bold num leading-none ${isPaid ? 'text-ink-4' : isOverdue ? 'text-rust' : 'text-earth-brown'}`}>{fmtCurrency(net)}</p>
         </div>
-        <div className="text-right space-y-0.5">
+        <div className="text-right space-y-1">
           {interestComponent !== null ? (
             <>
-              <p className="text-xs text-slate-500">Principal <span className="text-slate-300 font-mono">{fmtCurrency(principalAmount)}</span></p>
-              <p className="text-xs text-slate-500">Interest <span className="text-slate-300 font-mono">{fmtCurrency(interestComponent)}</span></p>
+              <p className="text-[11px] text-ink-4 font-medium">Principal <span className="num font-bold text-ink-2 ml-1">{fmtCurrency(principalAmount)}</span></p>
+              <p className="text-[11px] text-ink-4 font-medium">Interest <span className="num font-bold text-gain ml-1">{fmtCurrency(interestComponent)}</span></p>
             </>
           ) : (
-            <p className="text-xs text-slate-500">Principal <span className="text-slate-300 font-mono">{fmtCurrency(principalAmount)}</span></p>
+            <p className="text-[11px] text-ink-4 font-medium">Principal <span className="num font-bold text-ink-2 ml-1">{fmtCurrency(principalAmount)}</span></p>
           )}
-          {tds > 0 && <p className="text-xs text-slate-500">TDS <span className="text-red-400/80 font-mono">{fmtCurrency(tds)}</span></p>}
+          {tds > 0 && <p className="text-[11px] text-ink-4 font-medium">TDS <span className="num font-bold text-rust ml-1">{fmtCurrency(tds)}</span></p>}
         </div>
       </div>
     </div>

@@ -15,18 +15,18 @@ export default function AppError({
   }, [error])
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="min-h-screen bg-canvas flex items-center justify-center">
       <div className="text-center space-y-6 max-w-md px-6">
-        <div className="w-16 h-16 bg-red-900/30 border border-red-800 rounded-2xl flex items-center justify-center mx-auto">
-          <span className="text-2xl text-red-400">!</span>
+        <div className="w-16 h-16 bg-rust-soft border border-hairline rounded-sm flex items-center justify-center mx-auto">
+          <span className="text-2xl text-rust">!</span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 mb-2">Something went wrong</h1>
-          <p className="text-slate-400 text-sm">
+          <h1 className="text-2xl font-bold text-ink-1 mb-2 font-serif">Something went wrong</h1>
+          <p className="text-ink-4 text-sm font-medium">
             An unexpected error occurred. Please try again or return to the dashboard.
           </p>
           {process.env.NODE_ENV === 'development' && error.message && (
-            <pre className="mt-4 text-left bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-red-400 overflow-auto">
+            <pre className="mt-4 text-left bg-surface border border-hairline rounded-sm p-4 text-[11px] font-mono text-rust overflow-auto whitespace-pre-wrap">
               {error.message}
               {error.digest && `\nDigest: ${error.digest}`}
             </pre>
@@ -35,15 +35,15 @@ export default function AppError({
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={reset}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="bg-forest hover:bg-forest-2 text-paper text-sm font-bold uppercase tracking-wider px-6 py-2 rounded-sm transition-all shadow-sm"
           >
             Try again
           </button>
           <Link
             href="/dashboard"
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="bg-surface-2 hover:bg-surface-3 text-ink-2 text-sm font-bold uppercase tracking-wider px-6 py-2 rounded-sm transition-all border border-hairline shadow-sm"
           >
-            Go to Dashboard
+            Dashboard
           </Link>
         </div>
       </div>

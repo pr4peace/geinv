@@ -62,24 +62,25 @@ export default function UploadSignedButton({
 
   if (success) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-900/40 text-green-400 text-sm font-medium">
-        Uploaded successfully
-      </span>
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-gain-soft text-gain border border-gain/20 shadow-sm">
+        <Check className="w-3.5 h-3.5 stroke-[3]" />
+        <span className="text-[10px] font-bold uppercase tracking-widest">Uploaded</span>
+      </div>
     )
   }
 
   return (
-    <div className={`flex flex-col items-start gap-1 ${className}`}>
+    <div className={`flex flex-col items-start gap-2 ${className}`}>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+        className="inline-flex items-center gap-2 h-7 px-3 border border-hairline-strong text-ink-1 bg-surface text-[10px] font-bold uppercase rounded-sm hover:bg-surface-2 transition-all flex items-center shadow-sm disabled:opacity-60"
       >
-        <Upload className="w-3.5 h-3.5" />
+        <Upload className="w-3 h-3" />
         {uploading ? 'Uploading…' : label}
       </button>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-rust text-[10px] font-bold uppercase">{error}</p>}
       <input
         ref={inputRef}
         type="file"
@@ -90,3 +91,5 @@ export default function UploadSignedButton({
     </div>
   )
 }
+
+import { Check } from 'lucide-react'

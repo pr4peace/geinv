@@ -27,10 +27,10 @@ function fmtCurrency(v: number) {
 }
 
 const stateStyle: Record<RowState, { row: string; badge: string; label: string }> = {
-  import:  { row: 'hover:bg-slate-700/20',                          badge: 'bg-green-900/40 text-green-400',  label: 'Will import' },
-  skip:    { row: 'opacity-50',                                      badge: 'bg-amber-900/40 text-amber-400',  label: 'Duplicate — skip' },
-  blocked: { row: 'opacity-50',                                      badge: 'bg-red-900/40 text-red-400',      label: 'Active — blocked' },
-  warn:    { row: 'bg-amber-900/5',                                  badge: 'bg-slate-700 text-slate-400',     label: 'Parse warning' },
+  import:  { row: 'hover:bg-surface-2',        badge: 'bg-gain-soft text-gain',      label: 'Will import' },
+  skip:    { row: 'opacity-50',                badge: 'bg-clay-soft text-clay',       label: 'Duplicate — skip' },
+  blocked: { row: 'opacity-50',                badge: 'bg-rust-soft text-rust',       label: 'Active — blocked' },
+  warn:    { row: 'bg-clay-soft/20',           badge: 'bg-surface-2 text-ink-4',      label: 'Parse warning' },
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -213,18 +213,18 @@ export default function ImportFlow() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-canvas text-ink-1">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
-        <Link href="/agreements" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+        <Link href="/agreements" className="inline-flex items-center gap-1.5 text-sm text-ink-4 hover:text-ink-1 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
           All Agreements
         </Link>
 
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Import from Spreadsheet</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Only <span className="text-slate-300">Expired / Matured</span> agreements are imported. Active, Cancelled, and Combined rows are blocked — those need to be entered manually with the original document via <Link href="/agreements/new" className="text-indigo-400 hover:text-indigo-300">+ New Agreement</Link>.
+          <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight">Import from Spreadsheet</h1>
+          <p className="text-xs text-ink-4 mt-0.5">
+            Only <span className="text-ink-2">Expired / Matured</span> agreements are imported. Active, Cancelled, and Combined rows are blocked — those need to be entered manually with the original document via <Link href="/agreements/new" className="text-forest hover:text-forest-2">+ New Agreement</Link>.
           </p>
         </div>
 
@@ -234,14 +234,14 @@ export default function ImportFlow() {
             onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
-            className={`border-2 border-dashed rounded-xl p-16 text-center transition-colors ${
-              dragOver ? 'border-indigo-500 bg-indigo-900/10' : 'border-slate-700 hover:border-slate-600'
+            className={`border-2 border-dashed rounded-sm p-16 text-center transition-colors ${
+              dragOver ? 'border-forest bg-forest-soft' : 'border-hairline-strong hover:border-forest'
             }`}
           >
-            <Upload className="w-10 h-10 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-300 font-medium mb-1">Drop your CSV or Excel file here</p>
-            <p className="text-sm text-slate-500 mb-4">Supports .csv and .xlsx from Google Sheets export</p>
-            <label className="cursor-pointer px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+            <Upload className="w-10 h-10 text-ink-5 mx-auto mb-4" />
+            <p className="text-ink-2 font-medium mb-1">Drop your CSV or Excel file here</p>
+            <p className="text-sm text-ink-4 mb-4">Supports .csv and .xlsx from Google Sheets export</p>
+            <label className="cursor-pointer px-4 py-2 rounded-sm bg-forest hover:bg-forest-2 text-paper text-sm font-medium transition-colors">
               Choose File
               <input
                 type="file"
@@ -250,65 +250,65 @@ export default function ImportFlow() {
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
               />
             </label>
-            {parseError && <p className="mt-4 text-sm text-red-400">{parseError}</p>}
+            {parseError && <p className="mt-4 text-sm text-rust">{parseError}</p>}
           </div>
         )}
 
         {/* Undo import — always visible on upload step */}
         {step === 'upload' && (
-          <div className="px-5 py-3 bg-slate-800/50 border border-slate-700 rounded-xl space-y-3">
+          <div className="px-5 py-3 bg-surface border border-hairline rounded-sm space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-300 font-medium">Undo previous import</p>
-                <p className="text-xs text-slate-500 mt-0.5">Soft-deletes all agreements imported from CSV — they can be restored from the Deleted section on the Agreements page.</p>
+                <p className="text-sm text-ink-2 font-medium">Undo previous import</p>
+                <p className="text-xs text-ink-4 mt-0.5">Soft-deletes all agreements imported from CSV — they can be restored from the Deleted section on the Agreements page.</p>
               </div>
               {!confirmUndo ? (
                 <button
                   onClick={() => { setConfirmUndo(true); setUndoResult(null) }}
                   disabled={undoing}
-                  className="ml-6 flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 border border-slate-600 hover:bg-slate-700 transition-colors disabled:opacity-40"
+                  className="ml-6 flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium text-ink-2 border border-hairline-strong hover:bg-surface-2 transition-colors disabled:opacity-40"
                 >
                   {undoing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
                   {undoing ? 'Undoing…' : 'Undo import'}
                 </button>
               ) : (
                 <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2">
-                  <span className="text-xs text-amber-400 font-medium">Are you sure?</span>
+                  <span className="text-xs text-clay font-medium">Are you sure?</span>
                   <button
                     onClick={handleUndoImport}
                     disabled={undoing}
-                    className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase"
+                    className="text-xs font-bold text-rust hover:text-rust/70 transition-colors uppercase"
                   >
                     Yes, Delete
                   </button>
                   <button
                     onClick={() => setConfirmUndo(false)}
                     disabled={undoing}
-                    className="text-xs font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase"
+                    className="text-xs font-bold text-ink-4 hover:text-ink-3 transition-colors uppercase"
                   >
                     Cancel
                   </button>
                 </div>
               )}
             </div>
-            {undoResult && <p className="text-xs text-green-400">{undoResult}</p>}
+            {undoResult && <p className="text-xs text-gain">{undoResult}</p>}
           </div>
         )}
 
         {/* ── Checking duplicates ── */}
         {step === 'checking' && (
           <div className="flex flex-col items-center justify-center py-24 gap-5">
-            <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
+            <Loader2 className="w-10 h-10 text-forest animate-spin" />
             <div className="text-center">
-              <p className="text-slate-300 font-medium">Checking for duplicates…</p>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-ink-2 font-medium">Checking for duplicates…</p>
+              <p className="text-sm text-ink-4 mt-1">
                 {checkProgress.done} of {checkProgress.total} rows checked
               </p>
             </div>
             {/* Progress bar */}
-            <div className="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-64 h-1.5 bg-hairline rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-200"
+                className="h-full bg-forest rounded-full transition-all duration-200"
                 style={{ width: `${checkProgress.total ? (checkProgress.done / checkProgress.total) * 100 : 0}%` }}
               />
             </div>
@@ -320,42 +320,42 @@ export default function ImportFlow() {
           <div className="space-y-4">
             {/* Summary bar */}
             <div className="flex flex-wrap gap-3">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-900/20 border border-green-800">
-                <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-green-400 font-medium">{counts.import} ready to import</span>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-gain-soft border border-gain/20">
+                <CheckCircle className="w-4 h-4 text-gain" />
+                <span className="text-sm text-gain font-medium">{counts.import} ready to import</span>
               </div>
               {counts.skip > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-900/20 border border-amber-800">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm text-amber-400 font-medium">{counts.skip} duplicates (skip)</span>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-clay-soft border border-clay/20">
+                  <AlertTriangle className="w-4 h-4 text-clay" />
+                  <span className="text-sm text-clay font-medium">{counts.skip} duplicates (skip)</span>
                 </div>
               )}
               {counts.blocked > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-900/20 border border-red-800">
-                  <XCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-sm text-red-400 font-medium">{counts.blocked} blocked — enter manually</span>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-rust-soft border border-rust/20">
+                  <XCircle className="w-4 h-4 text-rust" />
+                  <span className="text-sm text-rust font-medium">{counts.blocked} blocked — enter manually</span>
                 </div>
               )}
               {counts.warn > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700">
-                  <AlertTriangle className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-400 font-medium">{counts.warn} parse warnings</span>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-surface-2 border border-hairline">
+                  <AlertTriangle className="w-4 h-4 text-ink-4" />
+                  <span className="text-sm text-ink-4 font-medium">{counts.warn} parse warnings</span>
                 </div>
               )}
             </div>
 
             {/* Table */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+            <div className="bg-surface border border-hairline rounded-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-700 text-xs text-slate-500 uppercase tracking-wide">
+                    <tr className="border-b border-hairline-strong text-[10px] text-ink-4 uppercase tracking-widest bg-surface-2">
                       <th className="px-4 py-3 w-10">
                         <input
                           type="checkbox"
                           checked={allSelected}
                           onChange={(e) => toggleAll(e.target.checked)}
-                          className="rounded border-slate-600 bg-slate-700 text-indigo-500"
+                          className="rounded-sm accent-forest"
                           title="Select all importable rows"
                         />
                       </th>
@@ -368,7 +368,7 @@ export default function ImportFlow() {
                       <th className="text-left px-3 py-3">Result</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700/50">
+                  <tbody className="divide-y divide-hairline">
                     {preview.map((p, i) => {
                       const s = stateStyle[p.state]
                       return (
@@ -379,38 +379,38 @@ export default function ImportFlow() {
                                 type="checkbox"
                                 checked={p.selected}
                                 onChange={() => toggleRow(i)}
-                                className="rounded border-slate-600 bg-slate-700 text-indigo-500"
+                                className="rounded-sm accent-forest"
                               />
                             )}
                           </td>
                           <td className="px-3 py-2.5">
-                            <p className="text-slate-200 font-medium">{p.row.investor_name}</p>
+                            <p className="text-ink-2 font-medium">{p.row.investor_name}</p>
                             {p.row.investor2_name && (
-                              <p className="text-xs text-slate-500">+ {p.row.investor2_name}</p>
+                              <p className="text-xs text-ink-4">+ {p.row.investor2_name}</p>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-xs text-slate-400">{p.row.investor_pan ?? '—'}</td>
-                          <td className="px-3 py-2.5 text-right text-slate-200">
+                          <td className="px-3 py-2.5 font-mono text-xs text-ink-4">{p.row.investor_pan ?? '—'}</td>
+                          <td className="px-3 py-2.5 text-right text-ink-2">
                             {p.row.principal_amount ? fmtCurrency(p.row.principal_amount) : '—'}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-400 text-xs">
+                          <td className="px-3 py-2.5 text-ink-4 text-xs">
                             {p.row.roi_percentage}% / {p.row.payout_frequency}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-400 text-xs">
+                          <td className="px-3 py-2.5 text-ink-4 text-xs">
                             {p.row.agreement_date || '—'} → {p.row.maturity_date || '—'}
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize bg-slate-700 text-slate-300">
+                            <span className="inline-block px-2 py-0.5 rounded-sm text-xs font-semibold capitalize bg-surface-2 text-ink-3">
                               {p.row.status}
                             </span>
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${s.badge}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-sm text-xs font-semibold ${s.badge}`}>
                               {p.state === 'import' ? (p.selected ? 'Will import' : 'Skipped (unchecked)') : s.label}
                             </span>
-                            {p.reason && <p className="text-xs text-slate-500 mt-0.5">{p.reason}</p>}
+                            {p.reason && <p className="text-xs text-ink-4 mt-0.5">{p.reason}</p>}
                             {p.row._parseWarnings.length > 0 && p.state !== 'blocked' && p.state !== 'skip' && (
-                              <p className="text-xs text-amber-500 mt-0.5">{p.row._parseWarnings[0]}</p>
+                              <p className="text-xs text-clay mt-0.5">{p.row._parseWarnings[0]}</p>
                             )}
                           </td>
                         </tr>
@@ -425,18 +425,18 @@ export default function ImportFlow() {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => { setPreview([]); setStep('upload') }}
-                className="px-4 py-2 rounded-lg text-sm text-slate-400 border border-slate-700 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-sm text-sm text-ink-3 border border-hairline hover:bg-surface-2 transition-colors"
               >
                 ← Choose different file
               </button>
               <div className="flex items-center gap-3">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-4">
                   {selectedCount} of {counts.import} selected
                 </p>
                 <button
                   onClick={handleImport}
                   disabled={selectedCount === 0}
-                  className="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+                  className="px-6 py-2 rounded-sm bg-forest hover:bg-forest-2 disabled:opacity-40 text-paper text-sm font-medium transition-colors"
                 >
                   Import {selectedCount} agreement{selectedCount !== 1 ? 's' : ''}
                 </button>
@@ -448,60 +448,60 @@ export default function ImportFlow() {
         {/* ── Importing ── */}
         {step === 'importing' && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
-            <p className="text-slate-300 font-medium">Importing agreements…</p>
-            <p className="text-sm text-slate-500">This may take a moment.</p>
+            <Loader2 className="w-10 h-10 text-forest animate-spin" />
+            <p className="text-ink-2 font-medium">Importing agreements…</p>
+            <p className="text-sm text-ink-4">This may take a moment.</p>
           </div>
         )}
 
         {/* ── Done ── */}
         {step === 'done' && result && (
           <div className="space-y-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-8 text-center space-y-4">
-              <CheckCircle className="w-12 h-12 text-green-400 mx-auto" />
-              <h2 className="text-xl font-bold text-slate-100">Import complete</h2>
+            <div className="bg-surface border border-hairline rounded-sm p-8 text-center space-y-4">
+              <CheckCircle className="w-12 h-12 text-gain mx-auto" />
+              <h2 className="text-[28px] font-semibold text-ink-1 font-serif">Import complete</h2>
               <div className="flex justify-center gap-10 mt-2">
                 <div>
-                  <p className="text-3xl font-bold text-green-400">{result.imported}</p>
-                  <p className="text-sm text-slate-500 mt-1">Imported</p>
+                  <p className="text-3xl font-bold text-gain">{result.imported}</p>
+                  <p className="text-sm text-ink-4 mt-1">Imported</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-amber-400">{result.skipped}</p>
-                  <p className="text-sm text-slate-500 mt-1">Skipped (duplicates)</p>
+                  <p className="text-3xl font-bold text-clay">{result.skipped}</p>
+                  <p className="text-sm text-ink-4 mt-1">Skipped (duplicates)</p>
                 </div>
                 {result.errors.length > 0 && (
                   <div>
-                    <p className="text-3xl font-bold text-red-400">{result.errors.length}</p>
-                    <p className="text-sm text-slate-500 mt-1">Errors</p>
+                    <p className="text-3xl font-bold text-rust">{result.errors.length}</p>
+                    <p className="text-sm text-ink-4 mt-1">Errors</p>
                   </div>
                 )}
               </div>
 
               {/* Where did data go */}
-              <div className="mt-4 bg-slate-900 rounded-lg px-5 py-4 text-left space-y-2">
-                <p className="text-sm font-medium text-slate-300">Where is my data?</p>
-                <p className="text-sm text-slate-400">
+              <div className="mt-4 bg-canvas border border-hairline rounded-sm px-5 py-4 text-left space-y-2">
+                <p className="text-sm font-medium text-ink-2">Where is my data?</p>
+                <p className="text-sm text-ink-3">
                   Your {result.imported} imported agreements are now in the{' '}
-                  <Link href="/agreements?status=matured" className="text-indigo-400 hover:text-indigo-300 underline">
+                  <Link href="/agreements?status=matured" className="text-forest hover:text-forest-2 underline">
                     Agreements list → Matured tab
                   </Link>
                   .
                 </p>
-                <p className="text-xs text-slate-500">
-                  Blocked rows (Active, Cancelled, Combined) were not imported — add those individually via <Link href="/agreements/new" className="text-indigo-400 hover:text-indigo-300">+ New Agreement</Link> with the original document.
+                <p className="text-xs text-ink-4">
+                  Blocked rows (Active, Cancelled, Combined) were not imported — add those individually via <Link href="/agreements/new" className="text-forest hover:text-forest-2">+ New Agreement</Link> with the original document.
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-ink-4">
                   Made a mistake? Select records in the Agreements list and use bulk delete — they&apos;re soft-deleted and can be restored.
                 </p>
               </div>
             </div>
 
             {result.errors.length > 0 && (
-              <div className="bg-red-900/20 border border-red-800 rounded-xl p-4">
-                <p className="text-sm font-medium text-red-400 mb-2">Errors</p>
+              <div className="bg-rust-soft border border-rust/20 rounded-sm p-4">
+                <p className="text-sm font-medium text-rust mb-2">Errors</p>
                 <ul className="space-y-1">
                   {result.errors.map((e, i) => (
-                    <li key={i} className="text-xs text-red-300">{e}</li>
+                    <li key={i} className="text-xs text-rust/80">{e}</li>
                   ))}
                 </ul>
               </div>
@@ -510,13 +510,13 @@ export default function ImportFlow() {
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => { setStep('upload'); setResult(null); setPreview([]) }}
-                className="px-4 py-2 rounded-lg text-sm text-slate-400 border border-slate-700 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-sm text-sm text-ink-3 border border-hairline hover:bg-surface-2 transition-colors"
               >
                 Import another file
               </button>
               <button
                 onClick={() => router.push('/agreements?status=matured')}
-                className="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+                className="px-6 py-2 rounded-sm bg-forest hover:bg-forest-2 text-paper text-sm font-medium transition-colors"
               >
                 View matured agreements →
               </button>
