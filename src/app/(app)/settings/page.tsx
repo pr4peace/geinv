@@ -30,8 +30,8 @@ function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${
-        checked ? 'bg-emerald-600' : 'bg-slate-600'
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-forest/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+        checked ? 'bg-forest' : 'bg-hairline-strong'
       }`}
     >
       <span
@@ -45,9 +45,9 @@ function Toggle({
 
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-4">
-      <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    <div className="mb-6">
+      <h2 className="text-base font-bold text-ink-1 uppercase tracking-widest text-[11px]">{title}</h2>
+      {subtitle && <p className="text-[11px] text-ink-4 mt-1 font-medium italic">{subtitle}</p>}
     </div>
   )
 }
@@ -136,43 +136,43 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 space-y-8 min-h-screen bg-slate-950 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-xl font-bold text-slate-100">Settings</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Manage team members and notification recipients</p>
+    <div className="p-8 space-y-10 min-h-screen bg-canvas max-w-5xl mx-auto">
+      <div className="border-b border-ink-1 pb-3 mb-5">
+        <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight">Settings</h1>
+        <p className="text-xs text-ink-4 mt-0.5 font-medium">Manage team members and notification recipients</p>
       </div>
 
       {/* Team Members */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+      <section className="bg-surface border border-hairline rounded-sm p-8 shadow-sm">
         <SectionHeader
           title="Team Members"
           subtitle="Manage who receives notifications and appears in salesperson dropdowns"
         />
 
         {loadingTeam ? (
-          <div className="py-8 text-center text-slate-500 text-sm">Loading team…</div>
+          <div className="py-8 text-center text-ink-5 text-sm italic">Loading team…</div>
         ) : teamError ? (
-          <div className="py-4 text-center text-red-400 text-sm">{teamError}</div>
+          <div className="py-4 text-center text-rust text-sm font-bold uppercase">{teamError}</div>
         ) : members.length === 0 ? (
-          <div className="py-8 text-center text-slate-500 text-sm">No team members found.</div>
+          <div className="py-8 text-center text-ink-5 text-sm italic">No team members found.</div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-slate-800">
+          <div className="overflow-x-auto rounded-sm border border-hairline shadow-inner">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-800/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Role</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Active</th>
+                <tr className="border-b border-hairline bg-surface-2">
+                  <th className="px-4 py-3 text-left lbl">Name</th>
+                  <th className="px-4 py-3 text-left lbl">Email</th>
+                  <th className="px-4 py-3 text-left lbl">Role</th>
+                  <th className="px-4 py-3 text-center lbl">Active</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-hairline bg-surface">
                 {members.map((member) => (
-                  <tr key={member.id} className={`hover:bg-slate-800/30 transition-colors${!member.is_active ? ' opacity-50' : ''}`}>
-                    <td className="px-4 py-3 text-slate-100 font-medium">{member.name}</td>
-                    <td className="px-4 py-3 text-slate-400">{member.email}</td>
+                  <tr key={member.id} className={`hover:bg-surface-2 transition-colors${!member.is_active ? ' opacity-50 bg-canvas/50' : ''}`}>
+                    <td className="px-4 py-3 text-ink-1 font-semibold">{member.name}</td>
+                    <td className="px-4 py-3 text-ink-3 font-medium">{member.email}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-surface-2 text-ink-2 border border-hairline-strong">
                         {roleLabel(member.role)}
                       </span>
                     </td>
@@ -192,35 +192,35 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="mt-6 pt-5 border-t border-slate-800">
-          <h3 className="text-sm font-medium text-slate-300 mb-3">Add Member</h3>
-          <form onSubmit={handleAddMember} className="flex flex-wrap gap-3 items-end">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">Name</label>
+        <div className="mt-10 pt-8 border-t border-hairline">
+          <h3 className="lbl text-ink-1 font-bold mb-5 tracking-widest uppercase">Add New Member</h3>
+          <form onSubmit={handleAddMember} className="flex flex-wrap gap-4 items-end bg-canvas p-6 rounded-sm border border-hairline shadow-inner">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold uppercase text-ink-4">Name</label>
               <input
                 type="text"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Full name"
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-44"
+                className="bg-surface border border-hairline-strong rounded-sm px-3 py-2 text-sm text-ink-1 placeholder-ink-5 focus:border-forest focus:ring-2 focus:ring-forest/10 outline-none w-44 font-medium"
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">Email</label>
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold uppercase text-ink-4">Email</label>
               <input
                 type="email"
                 value={formEmail}
                 onChange={(e) => setFormEmail(e.target.value)}
                 placeholder="email@example.com"
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-52"
+                className="bg-surface border border-hairline-strong rounded-sm px-3 py-2 text-sm text-ink-1 placeholder-ink-5 focus:border-forest focus:ring-2 focus:ring-forest/10 outline-none w-52 font-medium"
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500">Role</label>
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold uppercase text-ink-4">Role</label>
               <select
                 value={formRole}
                 onChange={(e) => setFormRole(e.target.value as TeamMemberRole)}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="bg-surface border border-hairline-strong h-[38px] rounded-sm px-3 text-sm text-ink-1 focus:border-forest focus:ring-2 focus:ring-forest/10 outline-none font-bold"
               >
                 {ROLES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
@@ -230,26 +230,27 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={formSubmitting}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+              className="h-[38px] px-6 rounded-sm bg-forest hover:bg-forest-2 text-paper text-[11px] font-bold uppercase tracking-widest transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
             >
               {formSubmitting ? 'Adding…' : 'Add Member'}
             </button>
           </form>
-          {formError && <p className="mt-2 text-xs text-red-400">{formError}</p>}
+          {formError && <p className="mt-3 text-[10px] font-bold uppercase text-rust px-1">{formError}</p>}
         </div>
       </section>
 
       {/* Notifications Info */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+      <section className="bg-surface border border-hairline rounded-sm p-8 shadow-sm">
         <SectionHeader
-          title="Notification Summary"
-          subtitle="Consolidated monthly emails are sent to coordinators"
+          title="Notification Logic"
+          subtitle="How automated and manual notifications are handled"
         />
-        <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-4">
-          <p className="text-xs text-slate-400 leading-relaxed">
-            On the 1st of every month, a consolidated summary of all <strong>interest payouts</strong>, 
-            <strong>maturities</strong>, and <strong>TDS filings</strong> due for that month is sent to all 
-            active <strong>Coordinators</strong>.
+        <div className="bg-surface-2 border border-hairline rounded-sm p-6">
+          <p className="text-xs text-ink-3 font-medium leading-relaxed">
+            The system tracks all investment payouts and maturities. 
+            Automated red-flag alerts are sent daily for overdue items, while consolidated monthly summaries 
+            are dispatched to all active <strong className="text-ink-1">Coordinators</strong> on the 1st of each month.
+            Manual batched notifications can be triggered from the <strong className="text-ink-1">Notifications Dashboard</strong>.
           </p>
         </div>
       </section>

@@ -159,19 +159,19 @@ export default function BatchRescanPage() {
   const appliedCount = Object.values(cardStatuses).filter(s => s === 'applied').length
 
   return (
-    <div className="p-6 space-y-6 min-h-screen bg-slate-950">
-      <div className="flex items-center justify-between">
+    <div className="p-8 space-y-10 min-h-screen bg-canvas">
+      <div className="flex items-center justify-between border-b border-ink-1 pb-3 mb-5">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Batch Rescan</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Only agreements with rescan_required=true are shown</p>
+          <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight leading-tight">Batch Rescan</h1>
+          <p className="text-xs text-ink-4 mt-0.5 font-medium">Only agreements with rescan_required=true are shown</p>
         </div>
         {loaded && results.length === 0 && (
           <button
             onClick={handleScan}
             disabled={selectedIds.size === 0 || scanning}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+            className="h-9 px-6 bg-forest hover:bg-forest-2 disabled:bg-ink-5 disabled:opacity-40 text-paper text-[11px] font-bold uppercase tracking-widest rounded-sm transition-all flex items-center gap-2 shadow-md"
           >
-            {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             {scanning ? `Scanning ${scanProgress}/${scanTotal}...` : `Scan ${selectedIds.size} Selected`}
           </button>
         )}
@@ -179,17 +179,17 @@ export default function BatchRescanPage() {
 
       {/* Scan progress */}
       {scanning && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+        <div className="bg-surface border border-hairline rounded-sm p-6 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-6">
+            <Loader2 className="w-6 h-6 text-forest animate-spin" />
             <div className="flex-1">
-              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-canvas border border-hairline rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-500 transition-all duration-300"
+                  className="h-full bg-forest transition-all duration-500"
                   style={{ width: `${(scanProgress / scanTotal) * 100}%` }}
                 />
               </div>
-              <p className="text-xs text-slate-400 mt-1">{scanProgress} of {scanTotal} scanned</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-4 mt-2">{scanProgress} of {scanTotal} scanned</p>
             </div>
           </div>
         </div>
@@ -197,46 +197,46 @@ export default function BatchRescanPage() {
 
       {/* Agreement Selection */}
       {results.length === 0 && !scanning && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-          <div className="flex flex-wrap gap-3">
+        <div className="bg-surface border border-hairline rounded-sm p-8 space-y-8 shadow-sm">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-5" />
               <input
                 type="text"
                 placeholder="Search investor or reference..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-canvas border border-hairline rounded-sm pl-10 pr-3 h-10 text-sm text-ink-1 font-medium placeholder-ink-5 focus:border-forest focus:ring-2 focus:ring-forest/10 outline-none transition-all"
               />
             </div>
             {!loaded && (
               <button
                 onClick={loadAgreements}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg"
+                className="h-10 px-8 bg-forest hover:bg-forest-2 text-paper text-[11px] font-bold uppercase tracking-widest rounded-sm transition-all shadow-md"
               >
-                Load Rescan Queue
+                Load Queue
               </button>
             )}
           </div>
 
           {loaded && (
-            <>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 px-3 py-2 bg-surface-2 border border-hairline rounded-sm">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
                   onChange={() => toggleAll(filtered)}
-                  className="accent-indigo-500"
+                  className="accent-forest w-4 h-4 rounded-sm border-hairline-strong"
                 />
-                <span>Select all {filtered.length} visible · {selectedIds.size} total selected (max 20)</span>
+                <span className="lbl font-bold tracking-widest">Select all {filtered.length} visible · {selectedIds.size} total selected (max 20)</span>
               </div>
 
-              <div className="max-h-[400px] overflow-y-auto space-y-1">
+              <div className="max-h-[500px] overflow-y-auto space-y-1 custom-scrollbar pr-2">
                 {filtered.slice(0, 200).map(a => (
                   <label
                     key={a.id}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      selectedIds.has(a.id) ? 'bg-indigo-900/20 border border-indigo-800/50' : 'hover:bg-slate-800/50 border border-transparent'
+                    className={`flex items-center gap-4 px-4 py-3 rounded-sm cursor-pointer border transition-all ${
+                      selectedIds.has(a.id) ? 'bg-forest-soft/30 border-forest/20' : 'hover:bg-canvas border-transparent'
                     }`}
                   >
                     <input
@@ -244,55 +244,56 @@ export default function BatchRescanPage() {
                       checked={selectedIds.has(a.id)}
                       onChange={() => toggleSelect(a.id)}
                       disabled={selectedIds.size >= 20 && !selectedIds.has(a.id)}
-                      className="accent-indigo-500"
+                      className="accent-forest w-4 h-4 rounded-sm border-hairline-strong"
                     />
-                    <span className="font-mono text-[10px] text-slate-500 w-24">{a.reference_id}</span>
-                    <span className="flex-1 text-sm text-slate-200 truncate">{a.investor_name}</span>
-                    <span className="text-xs text-slate-400">₹{(a.principal_amount / 100000).toFixed(1)}L</span>
-                    <span className="text-[10px] text-slate-500 uppercase">{a.doc_status}</span>
+                    <span className="num font-bold text-[10px] text-ink-4 tracking-widest w-24">{a.reference_id}</span>
+                    <span className="flex-1 text-[13px] font-semibold text-ink-1 truncate">{a.investor_name}</span>
+                    <span className="num text-[11px] font-bold text-ink-3">₹{(a.principal_amount / 100000).toFixed(1)}L</span>
+                    <span className="text-[9px] font-bold uppercase text-ink-5 bg-surface-2 px-2 py-0.5 rounded-sm border border-hairline">{a.doc_status}</span>
                   </label>
                 ))}
+                {filtered.length === 0 && <p className="text-sm italic text-ink-5 text-center py-10">No agreements requiring rescan found.</p>}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
 
       {/* Results */}
       {results.length > 0 && (
-        <>
+        <div className="space-y-6 animate-in fade-in duration-500">
           {/* Summary bar */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex gap-4 text-xs">
-              <span className="text-slate-400"><strong className="text-emerald-400">{acceptedCount}</strong> accepted</span>
-              <span className="text-slate-400"><strong className="text-amber-400">{skippedCount}</strong> skipped</span>
-              <span className="text-slate-400"><strong className="text-indigo-400">{appliedCount}</strong> applied</span>
-              <span className="text-slate-400"><strong className="text-slate-200">{results.length}</strong> total</span>
+          <div className="bg-surface border border-hairline rounded-sm p-6 flex items-center justify-between flex-wrap gap-4 shadow-sm">
+            <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest">
+              <div className="flex flex-col gap-1"><span className="text-ink-5">Accepted</span><span className="text-gain text-base num">{acceptedCount}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-ink-5">Skipped</span><span className="text-clay text-base num">{skippedCount}</span></div>
+              <div className="flex flex-col gap-1"><span className="text-ink-5">Applied</span><span className="text-forest text-base num">{appliedCount}</span></div>
+              <div className="flex flex-col gap-1 border-l border-hairline pl-6"><span className="text-ink-5">Total</span><span className="text-ink-1 text-base num">{results.length}</span></div>
             </div>
             {acceptedCount > 0 && (
               <button
                 onClick={handleApplyAll}
                 disabled={applying}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                className="h-10 px-8 bg-gain hover:bg-forest text-paper text-[11px] font-bold uppercase tracking-widest rounded-sm transition-all flex items-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50"
               >
-                {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {applying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 Apply {acceptedCount} Accepted
               </button>
             )}
           </div>
 
           {/* Diff Cards */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             {results.map(r => {
               const status = cardStatuses[r.agreementId] ?? 'pending'
               const isExpanded = expandedCards.has(r.agreementId)
               if (r.status === 'error') {
                 return (
-                  <div key={r.agreementId} className="bg-red-900/20 border border-red-800 rounded-xl p-4 flex items-center gap-3">
-                    <X className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  <div key={r.agreementId} className="bg-rust-soft/20 border border-rust/10 rounded-sm p-5 flex items-center gap-4 shadow-sm">
+                    <X className="w-5 h-5 text-rust flex-shrink-0 stroke-[3]" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-red-200">{r.investorName || r.referenceId}</p>
-                      <p className="text-xs text-red-400/70">{r.error}</p>
+                      <p className="text-[13px] font-bold text-rust uppercase tracking-wider">{r.investorName || r.referenceId}</p>
+                      <p className="text-sm text-rust font-medium italic mt-0.5">{r.error}</p>
                     </div>
                   </div>
                 )
@@ -322,25 +323,28 @@ export default function BatchRescanPage() {
               return (
                 <div
                   key={r.agreementId}
-                  className={`border rounded-xl transition-colors ${
-                    status === 'applied' ? 'border-indigo-800 bg-indigo-900/10' :
-                    status === 'accepted' ? 'border-emerald-800 bg-emerald-900/10' :
-                    status === 'skipped' ? 'border-slate-700 bg-slate-800/30 opacity-60' :
-                    'border-slate-700 bg-slate-800/50'
+                  className={`bg-surface border rounded-sm transition-all shadow-sm ${
+                    status === 'applied' ? 'border-forest bg-forest-soft/10 opacity-70' :
+                    status === 'accepted' ? 'border-gain bg-gain-soft/10 ring-1 ring-gain/20' :
+                    status === 'skipped' ? 'border-hairline bg-canvas opacity-60' :
+                    'border-hairline'
                   }`}
                 >
                   {/* Card Header */}
-                  <div className="p-4 flex items-center gap-3">
-                    <span className="font-mono text-[10px] text-slate-500 w-24">{r.referenceId}</span>
-                    <span className="flex-1 text-sm font-medium text-slate-200 truncate">{r.investorName}</span>
-                    <span className="text-xs text-slate-400">
-                      {changes.length} change{changes.length !== 1 ? 's' : ''}
-                    </span>
-                    {errorFlags.length > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] text-red-400">
-                        <AlertTriangle className="w-3 h-3" /> {errorFlags.length}
+                  <div className="p-5 flex items-center gap-4">
+                    <span className="num text-[10px] font-bold text-ink-4 tracking-widest w-24 shrink-0">{r.referenceId}</span>
+                    <span className="flex-1 text-[15px] font-bold text-ink-1 font-serif truncate">{r.investorName}</span>
+                    <div className="flex items-center gap-4 px-4">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${changes.length > 0 ? 'text-clay' : 'text-ink-5 opacity-40'}`}>
+                        {changes.length} change{changes.length !== 1 ? 's' : ''}
                       </span>
-                    )}
+                      {errorFlags.length > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rust-soft text-rust rounded-sm border border-rust/10">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span className="num text-[10px] font-bold">{errorFlags.length}</span>
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         const next = new Set(expandedCards)
@@ -348,67 +352,79 @@ export default function BatchRescanPage() {
                         else next.add(r.agreementId)
                         setExpandedCards(next)
                       }}
-                      className="text-xs text-slate-400 hover:text-slate-200"
+                      className="text-[10px] font-bold uppercase tracking-widest text-ink-4 hover:text-ink-1 underline underline-offset-4 decoration-hairline-strong transition-all"
                     >
-                      {isExpanded ? 'Collapse' : 'Expand'}
+                      {isExpanded ? 'Collapse' : 'Compare'}
                     </button>
                   </div>
 
                   {/* Diff Details */}
-                  {isExpanded && changes.length > 0 && (
-                    <div className="px-4 pb-3 space-y-2">
-                      {changes.map(f => (
-                        <div key={f.key} className="flex items-center gap-3 text-xs">
-                          <span className="w-20 text-slate-500">{f.label}</span>
-                          <span className="text-slate-400 line-through">{f.format ? f.format(current?.[f.key] as number) : String(current?.[f.key] ?? '—')}</span>
-                          <ArrowRight className="w-3 h-3 text-amber-500" />
-                          <span className="text-amber-200">{f.format ? f.format(extracted?.[f.key] as number) : String(extracted?.[f.key] ?? '—')}</span>
+                  {isExpanded && (
+                    <div className="px-5 pb-5 animate-in slide-in-from-top-1">
+                      {changes.length > 0 ? (
+                        <div className="bg-canvas border border-hairline rounded-sm p-4 space-y-2 mb-4">
+                          {changes.map(f => (
+                            <div key={f.key} className="flex items-center gap-6 text-[11px] font-medium">
+                              <span className="lbl w-20 shrink-0 opacity-60">{f.label}</span>
+                              <span className="text-ink-4 line-through opacity-50 num">{f.format ? f.format(current?.[f.key] as number) : String(current?.[f.key] ?? '—')}</span>
+                              <ArrowRight className="w-3 h-3 text-clay shrink-0" />
+                              <span className="text-earth-brown font-bold num">{f.format ? f.format(extracted?.[f.key] as number) : String(extracted?.[f.key] ?? '—')}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ) : (
+                        <p className="text-[11px] italic text-ink-5 py-2 mb-2">No top-level metadata changes.</p>
+                      )}
 
-                  {isExpanded && errorFlags.length > 0 && (
-                    <div className="px-4 pb-3 space-y-1">
-                      {errorFlags.map(f => (
-                        <div key={f.id} className="text-xs text-red-400 flex items-start gap-2">
-                          <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                          <span>{f.message}</span>
+                      {errorFlags.length > 0 && (
+                        <div className="space-y-1 mb-4">
+                          {errorFlags.map(f => (
+                            <div key={f.id} className="text-[11px] font-semibold text-rust flex items-start gap-2 bg-rust-soft/20 px-3 py-1.5 rounded-sm border border-rust/10">
+                              <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                              <span>{f.message} (Expected: {f.expected} · Found: {f.found})</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
 
                   {/* Actions */}
                   {status === 'pending' && (
-                    <div className="px-4 py-3 border-t border-slate-700/50 flex gap-2">
+                    <div className="px-5 py-4 border-t border-hairline flex gap-3 bg-surface-2/50 items-center">
                       <button
                         onClick={() => setCardStatuses(prev => ({ ...prev, [r.agreementId]: 'accepted' }))}
-                        className="px-3 py-1.5 text-xs font-semibold bg-emerald-900/40 text-emerald-400 hover:bg-emerald-800/40 rounded-lg transition-colors flex items-center gap-1"
+                        className="h-8 px-5 text-[10px] font-bold uppercase tracking-widest bg-gain-soft text-gain border border-gain/20 rounded-sm hover:bg-gain hover:text-paper transition-all shadow-sm flex items-center gap-1.5"
                       >
-                        <Check className="w-3 h-3" /> Accept
+                        <Check className="w-3 h-3 stroke-[3]" /> Accept
                       </button>
                       <button
                         onClick={() => setCardStatuses(prev => ({ ...prev, [r.agreementId]: 'skipped' }))}
-                        className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-slate-400 hover:bg-slate-600 rounded-lg transition-colors flex items-center gap-1"
+                        className="h-8 px-5 text-[10px] font-bold uppercase tracking-widest bg-canvas text-ink-4 border border-hairline rounded-sm hover:bg-surface-3 transition-all flex items-center gap-1.5"
                       >
                         <X className="w-3 h-3" /> Skip
                       </button>
                       <button
                         onClick={() => handleApply(r.agreementId)}
                         disabled={applyingIds.has(r.agreementId)}
-                        className="px-3 py-1.5 text-xs font-semibold bg-indigo-900/40 text-indigo-400 hover:bg-indigo-800/40 rounded-lg transition-colors flex items-center gap-1 ml-auto disabled:opacity-50"
+                        className="h-8 px-5 text-[10px] font-bold uppercase tracking-widest bg-forest text-paper rounded-sm hover:bg-ink-1 transition-all flex items-center gap-2 ml-auto shadow-md disabled:opacity-40"
                       >
                         {applyingIds.has(r.agreementId) ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
                         Apply Now
                       </button>
                     </div>
                   )}
+                  
+                  {status === 'applied' && (
+                    <div className="px-5 py-2 border-t border-forest/10 flex justify-end">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest">Applied</span>
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

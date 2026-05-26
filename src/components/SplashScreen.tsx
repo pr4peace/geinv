@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Leaf } from 'lucide-react'
 
 export function SplashScreen() {
   const [visible, setVisible] = useState(false)
@@ -20,17 +19,18 @@ export function SplashScreen() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-canvas transition-opacity duration-500 ${
         fading ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-emerald-900/40 border border-emerald-500/20">
-          <Leaf className="w-10 h-10 text-white" />
+      <div className="flex flex-col items-center gap-6 text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-24 h-24 bg-forest rounded-sm flex items-center justify-center shadow-2xl border border-hairline relative">
+          <span className="text-paper font-serif font-bold text-4xl">G</span>
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-earth-ochre rounded-sm border border-hairline" />
         </div>
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Good Earth</h1>
-          <p className="text-sm text-slate-500 font-medium">Investment Tracker</p>
+          <h1 className="text-3xl font-bold text-ink-1 tracking-tight font-serif">Good Earth</h1>
+          <p className="lbl font-bold tracking-[0.3em] text-ink-5">Investments</p>
         </div>
       </div>
     </div>
