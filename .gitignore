@@ -40,3 +40,4 @@ playwright/.auth/
 .env.test
 test-results/
 .aider*
+.superpowers/
