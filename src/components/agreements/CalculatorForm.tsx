@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { calculatePayoutSchedule } from '@/lib/payout-calculator'
 import type { PayoutRow } from '@/lib/payout-calculator'
+import { validateCalculatorForm as _validateCalculatorForm } from '@/lib/calculator-validation'
 
 interface TeamMember {
   id: string
@@ -58,20 +59,7 @@ function fmtDate(d: string) {
   catch { return d }
 }
 
-export function validateCalculatorForm(form: FormState): string[] {
-  const errors: string[] = []
-  if (!form.investor_name.trim()) errors.push('Investor name is required')
-  const principal = parseFloat(form.principal_amount)
-  if (!form.principal_amount || isNaN(principal) || principal <= 0) errors.push('Principal amount must be a positive number')
-  const roi = parseFloat(form.roi_percentage)
-  if (!form.roi_percentage || isNaN(roi) || roi <= 0) errors.push('ROI % must be a positive number')
-  if (!form.investment_start_date) errors.push('Start date is required')
-  if (!form.maturity_date) errors.push('Maturity date is required')
-  if (form.investment_start_date && form.maturity_date && form.maturity_date <= form.investment_start_date) {
-    errors.push('Maturity date must be after start date')
-  }
-  return errors
-}
+export const validateCalculatorForm = _validateCalculatorForm
 
 export default function CalculatorForm({ teamMembers }: Props) {
   const router = useRouter()
