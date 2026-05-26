@@ -242,18 +242,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert payout schedule rows
-    const rows: Array<ExtractedPayoutRow & { is_tds_only?: boolean }> = Array.isArray(payoutScheduleRows)
+    // For cumulative/compound, always discard submitted interest rows and auto-generate
+    // (documents may print annual breakdown rows, but cumulative means one payout at maturity)
+    const submittedRows = Array.isArray(payoutScheduleRows)
       ? payoutScheduleRows
+          // Explicitly pick only known payout_schedule columns to prevent schema cache errors
+          // from any extra fields Gemini may include in extracted rows
           .map((row) => ({
-            ...row,
             agreement_id: agreement.id,
             period_from: row.period_from ?? row.due_by ?? null,
             period_to: row.period_to ?? row.due_by ?? null,
+            due_by: row.due_by,
+            no_of_days: row.no_of_days ?? null,
+            gross_interest: row.gross_interest ?? 0,
+            tds_amount: row.tds_amount ?? 0,
+            net_interest: row.net_interest ?? 0,
+            is_principal_repayment: row.is_principal_repayment ?? false,
+            is_tds_only: row.is_tds_only ?? false,
             tds_filed: false,
             status: 'pending',
           }))
           .filter((row) => row.period_from && row.period_to && row.due_by)
       : []
+
+    // For cumulative/compound: keep only TDS-only rows from submission (not interest rows)
+    const rows = isCumulativeType
+      ? submittedRows.filter(r => r.is_tds_only || r.is_principal_repayment)
+      : submittedRows
 
     // For cumulative/compound with no submitted schedule, auto-generate the full schedule
     const hasInterestRow = rows.some(r => !r.is_tds_only && !r.is_principal_repayment)

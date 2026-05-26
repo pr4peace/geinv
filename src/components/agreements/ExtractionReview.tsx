@@ -276,6 +276,18 @@ export default function ExtractionReview({
     let updatedSchedule = [...form.payout_schedule]
     let changed = false
 
+    const isCumulative = form.payout_frequency === 'cumulative' || form.interest_type === 'compound'
+
+    // For cumulative/compound: strip extracted interest rows (documents print annual breakdown
+    // rows, but cumulative means one payout at maturity — keep only TDS-only rows)
+    if (isCumulative) {
+      const nonInterestRows = updatedSchedule.filter(r => r.is_tds_only || r.is_principal_repayment)
+      if (nonInterestRows.length !== updatedSchedule.length) {
+        updatedSchedule = nonInterestRows
+        changed = true
+      }
+    }
+
     // Auto-generate full schedule if it's empty and we have enough data
     if (
       updatedSchedule.length === 0 &&

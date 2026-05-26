@@ -374,6 +374,7 @@ export default async function AgreementDetailPage({
                 agreementId={agreement.id}
                 payouts={payout_schedule}
                 userRole={userRole}
+                isCumulative={agreement.payout_frequency === 'cumulative' || agreement.interest_type === 'compound'}
               />
 
               <PendingTdsFilings

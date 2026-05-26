@@ -9,6 +9,7 @@ interface Props {
   agreementId: string
   payouts: PayoutSchedule[]
   userRole: string
+  isCumulative?: boolean
 }
 
 function fmtDate(dateStr: string | null | undefined): string {
@@ -23,7 +24,7 @@ function fmtCurrency(value: number | null | undefined): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value)
 }
 
-export default function PendingPayouts({ agreementId, payouts, userRole }: Props) {
+export default function PendingPayouts({ agreementId, payouts, userRole, isCumulative }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const isCoordinator = userRole !== 'salesperson'
@@ -67,6 +68,19 @@ export default function PendingPayouts({ agreementId, payouts, userRole }: Props
     } finally { setLoading(null) }
   }
 
+  async function regenerateSchedule() {
+    setLoading('regen')
+    try {
+      const res = await fetch(`/api/agreements/${agreementId}/regenerate-schedule`, { method: 'POST' })
+      if (!res.ok) return
+      router.refresh()
+    } finally { setLoading(null) }
+  }
+
+  // For cumulative agreements, only show this section if there are multiple interest rows
+  // (indicates bad data from before the fix). A correct cumulative agreement has 1 row at maturity,
+  // which is handled by MaturityPayoutCard.
+  if (isCumulative && rows.length <= 1) return null
   if (rows.length === 0) return null
 
   return (
@@ -79,7 +93,16 @@ export default function PendingPayouts({ agreementId, payouts, userRole }: Props
             <span className="text-[10px] font-bold text-ink-4 uppercase ml-2">{pendingCount} pending</span>
           )}
         </div>
-        {isCoordinator && rows.some(r => r.status !== 'paid' && r.due_by < todayStr) && (
+        {isCoordinator && isCumulative && rows.length > 1 && (
+          <button
+            onClick={regenerateSchedule}
+            disabled={!!loading}
+            className="text-[10px] font-bold uppercase px-3 py-1 bg-rust-soft text-rust border border-rust/20 rounded-sm hover:bg-rust hover:text-paper transition-all disabled:opacity-50"
+          >
+            {loading === 'regen' ? '…' : 'Fix Schedule'}
+          </button>
+        )}
+        {isCoordinator && !isCumulative && rows.some(r => r.status !== 'paid' && r.due_by < todayStr) && (
           <button
             onClick={markAllPastPaid}
             disabled={loading === 'bulk'}
@@ -121,7 +144,7 @@ export default function PendingPayouts({ agreementId, payouts, userRole }: Props
                   <span className="text-[9px] font-bold uppercase text-ink-4 tracking-tighter">{row.status}</span>
                 </div>
 
-                {isCoordinator && (
+                {isCoordinator && !isCumulative && (
                   <div className="border-l border-hairline pl-4 flex items-center">
                     {isPaid ? (
                       <button onClick={() => revertPayout(row.id)} disabled={loading === row.id} className="text-[10px] font-bold text-ink-5 hover:text-ink-3 transition-colors uppercase disabled:opacity-50">
