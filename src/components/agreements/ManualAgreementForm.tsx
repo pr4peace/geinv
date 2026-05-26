@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ChevronLeft, Plus, X, ExternalLink } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, X, ExternalLink } from 'lucide-react'
 import { calculatePayoutSchedule } from '@/lib/payout-calculator'
 import PayoutScheduleTable from './PayoutScheduleTable'
 
@@ -349,43 +349,43 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
 
   const salespersonOptions = teamMembers.filter(m => (m.role === 'salesperson' || m.role === 'coordinator') && m.is_active)
 
-  const inputBaseClass = "w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+  const inputBaseClass = "w-full h-10 border border-hairline-strong bg-surface px-3 text-sm rounded-sm font-medium focus:border-forest focus:ring-2 focus:ring-forest/12 outline-none transition-all"
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-100 transition-colors"
+        className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-4 hover:text-ink-2 transition-colors"
       >
-        <ChevronLeft className="w-4 h-4" />
-        Back to Choice
+        <ChevronLeft className="w-3.5 h-3.5" />
+        Back
       </button>
 
       {/* Duplicate warning banner */}
       {duplicates.length > 0 && (
-        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 space-y-3">
-          <div className="flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-red-300 mb-1">
-                Possible duplicate — this investor already has an agreement on this date
+        <div className="bg-rust-soft border border-rust/10 rounded-sm p-6 space-y-4 shadow-sm">
+          <div className="flex gap-4">
+            <AlertTriangle className="w-5 h-5 text-rust flex-shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase text-rust tracking-widest">
+                Possible Duplicate Detected
               </p>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {duplicates.map(d => (
-                  <div key={d.id} className="flex items-center gap-2 text-xs text-red-200/80">
-                    <span className="font-mono">{d.reference_id}</span>
-                    <span>—</span>
+                  <div key={d.id} className="flex items-center gap-3 text-xs text-ink-2 font-medium">
+                    <span className="num font-bold">{d.reference_id}</span>
+                    <span className="opacity-30">|</span>
                     <span>{d.investor_name}</span>
-                    <span>·</span>
-                    <span>{d.agreement_date}</span>
-                    <span>·</span>
-                    <span>₹{Number(d.principal_amount).toLocaleString('en-IN')}</span>
+                    <span className="opacity-30">|</span>
+                    <span className="num opacity-70">{d.agreement_date}</span>
+                    <span className="opacity-30">|</span>
+                    <span className="num font-bold">₹{Number(d.principal_amount).toLocaleString('en-IN')}</span>
                     <a
                       href={`/agreements/${d.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-1 inline-flex items-center gap-0.5 text-red-300 hover:text-red-100 transition-colors"
+                      className="ml-2 inline-flex items-center gap-1 text-rust hover:text-ink-1 transition-colors"
                     >
                       View <ExternalLink className="w-3 h-3" />
                     </a>
@@ -394,7 +394,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
               </div>
             </div>
           </div>
-          <label className="flex items-center gap-3 cursor-pointer pl-8">
+          <label className="flex items-center gap-3 cursor-pointer pl-9 group">
             <input
               type="checkbox"
               checked={bypassDuplicate}
@@ -402,25 +402,25 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                 setBypassDuplicate(e.target.checked)
                 if (e.target.checked) setSaveError(null)
               }}
-              className="accent-red-400 w-4 h-4 flex-shrink-0"
+              className="accent-rust w-4 h-4 flex-shrink-0 rounded-sm border-rust/30"
             />
-            <span className="text-xs text-red-200">
-              I confirm this is a new agreement and not a duplicate of the above
+            <span className="text-[11px] font-bold uppercase text-rust/80 group-hover:text-rust transition-colors">
+              I confirm this is a new agreement
             </span>
           </label>
         </div>
       )}
 
       {/* Form Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column: Agreement & Investor */}
-        <div className="space-y-6">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Details</h2>
+        <div className="space-y-8">
+          <div className="bg-surface border border-hairline rounded-sm p-6 space-y-6 shadow-sm">
+            <h2 className="lbl font-bold text-ink-1 tracking-widest">Agreement Terms</h2>
             
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Agreement Date *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Agreement Date *</label>
                 <input
                   type="date"
                   value={form.agreement_date}
@@ -428,8 +428,8 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                   className={inputBaseClass}
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Investment Start Date *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Investment Start *</label>
                 <input
                   type="date"
                   value={form.investment_start_date}
@@ -439,8 +439,8 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Agreement Type</label>
+            <div className="space-y-1.5">
+              <label className="lbl opacity-70">Agreement Type</label>
               <input
                 type="text"
                 value={form.agreement_type}
@@ -450,162 +450,172 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
             </div>
           </div>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Investor Details</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-6 space-y-6 shadow-sm">
+            <h2 className="lbl font-bold text-ink-1 tracking-widest">Investor Details</h2>
             
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Investor Name *</label>
+            <div className="space-y-1.5">
+              <label className="lbl opacity-70">Investor Name *</label>
               <input
                 type="text"
                 value={form.investor_name}
                 onChange={e => update('investor_name', e.target.value)}
                 className={inputBaseClass}
-                placeholder="Full Name"
+                placeholder="Primary applicant name"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">PAN</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">PAN</label>
                 <input
                   type="text"
                   value={form.investor_pan}
                   onChange={e => update('investor_pan', e.target.value)}
-                  className={inputBaseClass}
+                  className={inputBaseClass + " font-mono uppercase"}
                   placeholder="ABCDE1234F"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Aadhaar</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Aadhaar</label>
                 <input
                   type="text"
                   value={form.investor_aadhaar}
                   onChange={e => update('investor_aadhaar', e.target.value)}
-                  className={inputBaseClass}
-                  placeholder="1234 5678 9012"
+                  className={inputBaseClass + " font-mono"}
+                  placeholder="0000 0000 0000"
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Address</label>
+            <div className="space-y-1.5">
+              <label className="lbl opacity-70">Address</label>
               <textarea
                 rows={2}
                 value={form.investor_address}
                 onChange={e => update('investor_address', e.target.value)}
-                className={inputBaseClass + " resize-none"}
+                className={inputBaseClass + " h-auto resize-none p-2 font-medium leading-relaxed"}
               />
             </div>
 
             {/* Nominees */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-400">Nominees</label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-hairline pb-2">
+                <label className="lbl opacity-70">Nominees</label>
                 <button
                   type="button"
                   onClick={addNominee}
-                  className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  className="text-[10px] font-bold uppercase text-forest hover:text-ink-1 transition-colors"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Nominee
+                  + Add Row
                 </button>
               </div>
 
               <div className="space-y-3">
                 {form.nominees.map((nominee, idx) => (
-                  <div key={idx} className="relative bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                  <div key={idx} className="relative bg-surface-2 border border-hairline rounded-sm p-4 animate-in slide-in-from-top-1">
                     <button
                       type="button"
                       onClick={() => removeNominee(idx)}
-                      className="absolute top-2 right-2 text-slate-500 hover:text-red-400 transition-colors"
+                      className="absolute top-2 right-2 text-ink-5 hover:text-rust transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={nominee.name}
-                        onChange={e => updateNominee(idx, 'name', e.target.value)}
-                        placeholder="Nominee Name"
-                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100"
-                      />
-                      <input
-                        type="text"
-                        value={nominee.pan}
-                        onChange={e => updateNominee(idx, 'pan', e.target.value)}
-                        placeholder="Nominee PAN"
-                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100"
-                      />
-                      <input
-                        type="text"
-                        value={nominee.relationship}
-                        onChange={e => updateNominee(idx, 'relationship', e.target.value)}
-                        placeholder="Relationship"
-                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100"
-                      />
-                      <input
-                        type="number"
-                        value={nominee.share}
-                        onChange={e => updateNominee(idx, 'share', e.target.value)}
-                        placeholder="Share %"
-                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-bold uppercase text-ink-5">Name</p>
+                        <input
+                          type="text"
+                          value={nominee.name}
+                          onChange={e => updateNominee(idx, 'name', e.target.value)}
+                          className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-semibold rounded-sm outline-none focus:border-forest"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-bold uppercase text-ink-5">PAN</p>
+                        <input
+                          type="text"
+                          value={nominee.pan}
+                          onChange={e => updateNominee(idx, 'pan', e.target.value)}
+                          className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-semibold rounded-sm outline-none focus:border-forest uppercase font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-bold uppercase text-ink-5">Relationship</p>
+                        <input
+                          type="text"
+                          value={nominee.relationship}
+                          onChange={e => updateNominee(idx, 'relationship', e.target.value)}
+                          className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-semibold rounded-sm outline-none focus:border-forest"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-bold uppercase text-ink-5">Share %</p>
+                        <input
+                          type="number"
+                          value={nominee.share}
+                          onChange={e => updateNominee(idx, 'share', e.target.value)}
+                          className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-bold rounded-sm outline-none focus:border-forest num"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
+                {form.nominees.length === 0 && <p className="text-[10px] text-ink-5 italic text-center py-4 opacity-60">No nominees added.</p>}
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Column: Financial & Payment */}
-        <div className="space-y-6">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Financial Terms</h2>
+        <div className="space-y-8">
+          <div className="bg-surface border border-hairline rounded-sm p-6 space-y-6 shadow-sm">
+            <h2 className="lbl font-bold text-ink-1 tracking-widest">Financial Structure</h2>
             
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Principal Amount (₹) *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Principal (₹) *</label>
                 <input
                   type="number"
                   value={form.principal_amount}
                   onChange={e => update('principal_amount', e.target.value)}
-                  className={inputBaseClass}
+                  className={inputBaseClass + " font-bold num"}
                   placeholder="1000000"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">ROI % *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">ROI % *</label>
                 <input
                   type="number"
                   step="0.01"
                   value={form.roi_percentage}
                   onChange={e => update('roi_percentage', e.target.value)}
-                  className={inputBaseClass}
-                  placeholder="12"
+                  className={inputBaseClass + " font-bold num"}
+                  placeholder="12.00"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Payout Frequency *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Frequency *</label>
                 <select
                   value={form.payout_frequency}
                   onChange={e => update('payout_frequency', e.target.value as PayoutFrequency)}
-                  className={inputBaseClass}
+                  className={inputBaseClass + " font-bold"}
                 >
                   <option value="quarterly">Quarterly</option>
                   <option value="annual">Annual</option>
                   <option value="cumulative">Cumulative</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="biannual">Biannual</option>
                 </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Interest Type</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Interest Type</label>
                 <select
                   value={form.interest_type}
                   onChange={e => update('interest_type', e.target.value as InterestType)}
-                  className={inputBaseClass}
+                  className={inputBaseClass + " font-bold"}
                 >
                   <option value="simple">Simple</option>
                   <option value="compound">Compound</option>
@@ -614,53 +624,53 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Lock-in Years (Integer) *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Lock-in (Years) *</label>
                 <input
                   type="number"
                   step="1"
                   value={form.lock_in_years}
                   onChange={e => update('lock_in_years', e.target.value)}
-                  className={inputBaseClass}
+                  className={inputBaseClass + " num"}
                   placeholder="1"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-400">Maturity Date *</label>
+              <div className="space-y-1.5">
+                <label className="lbl opacity-70">Maturity Date *</label>
                 <input
                   type="date"
                   value={form.maturity_date}
                   onChange={e => update('maturity_date', e.target.value)}
-                  className={inputBaseClass}
+                  className={inputBaseClass + " font-bold num"}
                 />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Payments</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-hairline pb-2">
+              <h2 className="lbl font-bold text-ink-1 tracking-widest">Inflows</h2>
               <button
                 type="button"
                 onClick={() => setForm(f => ({
                   ...f,
                   payments: [...f.payments, { date: null, mode: null, bank: null, amount: null }]
                 }))}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                className="text-[10px] font-bold uppercase text-forest hover:text-ink-1 transition-colors"
               >
-                + Add payment
+                + Add Payment
               </button>
             </div>
 
             {form.payments.length === 0 && (
-              <p className="text-xs text-slate-600 italic">No payments recorded</p>
+              <p className="text-[10px] text-ink-5 italic text-center py-4 opacity-60">No payments recorded yet.</p>
             )}
 
             <div className="space-y-3">
               {form.payments.map((p, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 relative group">
+                <div key={i} className="grid grid-cols-4 gap-3 items-end bg-surface-2 p-4 rounded-sm border border-hairline relative group">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Date</label>
+                    <p className="text-[9px] font-bold uppercase text-ink-5">Date</p>
                     <input
                       type="date"
                       value={p.date ?? ''}
@@ -669,11 +679,11 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                         updated[i] = { ...updated[i], date: e.target.value || null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-bold rounded-sm outline-none focus:border-forest num"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Mode</label>
+                    <p className="text-[9px] font-bold uppercase text-ink-5">Mode</p>
                     <input
                       type="text"
                       value={p.mode ?? ''}
@@ -682,12 +692,12 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                         updated[i] = { ...updated[i], mode: e.target.value || null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
-                      placeholder="NEFT, RTGS..."
+                      className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-bold rounded-sm outline-none focus:border-forest"
+                      placeholder="NEFT"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Bank</label>
+                    <p className="text-[9px] font-bold uppercase text-ink-5">Bank</p>
                     <input
                       type="text"
                       value={p.bank ?? ''}
@@ -696,12 +706,12 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                         updated[i] = { ...updated[i], bank: e.target.value || null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
-                      placeholder="Bank name"
+                      className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-bold rounded-sm outline-none focus:border-forest"
+                      placeholder="ICICI"
                     />
                   </div>
                   <div className="space-y-1 pr-6">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Amount (₹)</label>
+                    <p className="text-[9px] font-bold uppercase text-ink-5">Amount (₹)</p>
                     <input
                       type="number"
                       value={p.amount ?? ''}
@@ -710,7 +720,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                         updated[i] = { ...updated[i], amount: e.target.value ? Number(e.target.value) : null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-bold rounded-sm outline-none focus:border-forest num"
                       placeholder="0.00"
                     />
                   </div>
@@ -720,7 +730,7 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
                       ...f,
                       payments: f.payments.filter((_, j) => j !== i)
                     }))}
-                    className="absolute top-2 right-2 text-slate-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 text-ink-5 hover:text-rust p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove payment"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -730,39 +740,39 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
             </div>
           </div>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Settings</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-6 space-y-6 shadow-sm">
+            <h2 className="lbl font-bold text-ink-1 tracking-widest">Metadata</h2>
             
-            <label className="flex items-center gap-3 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer group w-fit">
               <input
                 type="checkbox"
                 checked={form.is_draft}
                 onChange={e => update('is_draft', e.target.checked)}
-                className="accent-amber-500 w-4 h-4"
+                className="accent-clay w-4 h-4 rounded-sm border-hairline-strong"
               />
-              <span className="text-sm text-slate-100">Is Draft (pending signature)</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-3 group-hover:text-clay transition-colors">Record as Draft (pending signature)</span>
             </label>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Salesperson</label>
+            <div className="space-y-1.5 pt-2 border-t border-hairline">
+              <label className="lbl opacity-70">Assigned Salesperson</label>
               <select
                 value={form.salesperson_id}
                 onChange={e => update('salesperson_id', e.target.value)}
-                className={inputBaseClass}
+                className={inputBaseClass + " font-bold"}
               >
-                <option value="">— None —</option>
+                <option value="">— Unassigned —</option>
                 {salespersonOptions.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
-                <option value="other">Other (custom)</option>
+                <option value="other">Manual Entry...</option>
               </select>
               {form.salesperson_id === 'other' && (
                 <input
                   type="text"
-                  placeholder="Enter salesperson name"
+                  placeholder="Enter custom salesperson name..."
                   value={form.salesperson_custom}
                   onChange={e => update('salesperson_custom', e.target.value)}
-                  className={inputBaseClass + " mt-2"}
+                  className={inputBaseClass + " mt-3 animate-in slide-in-from-top-1"}
                 />
               )}
             </div>
@@ -772,29 +782,30 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
 
       {/* Payout Schedule Preview */}
       {payoutSchedule.length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-            Live Payout Schedule
-            <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(computed from terms above)</span>
-          </h2>
+        <div className="bg-surface border border-hairline rounded-sm p-6 space-y-5 shadow-md">
+          <div className="flex items-center justify-between border-b border-hairline pb-2">
+            <h2 className="lbl font-bold text-ink-1 tracking-widest">Live Projection</h2>
+            <span className="text-[10px] font-bold text-ink-5 italic uppercase">Preview only · Generated from terms</span>
+          </div>
           <PayoutScheduleTable payouts={payoutSchedule} />
         </div>
       )}
 
       {/* Save Action */}
-      <div className="space-y-4">
+      <div className="space-y-6 pt-6">
         {validationErrors.length > 0 && (
-          <div className="bg-red-900/30 border border-red-700 rounded-xl p-4">
-            <p className="text-sm font-semibold text-red-300 mb-1">Required fields missing:</p>
-            <ul className="text-xs text-red-200/80 list-disc list-inside space-y-0.5">
-              {validationErrors.map(f => <li key={f}>{f}</li>)}
+          <div className="bg-rust-soft border border-rust/10 rounded-sm p-5 shadow-sm">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-rust mb-3">Validation Errors</p>
+            <ul className="text-xs font-semibold text-rust/80 space-y-1 list-disc list-inside">
+              {validationErrors.map(f => <li key={f}>{f} is required</li>)}
             </ul>
           </div>
         )}
 
         {saveError && (
-          <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-300">
-            {saveError}
+          <div className="bg-rust-soft border border-rust/10 rounded-sm p-5 shadow-sm">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-rust mb-1">Error</p>
+            <p className="text-sm font-medium text-rust italic leading-relaxed">{saveError}</p>
           </div>
         )}
 
@@ -802,9 +813,9 @@ export default function ManualAgreementForm({ teamMembers, onBack }: ManualAgree
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 text-base"
+          className="w-full h-14 bg-forest text-paper hover:bg-ink-1 disabled:opacity-40 disabled:bg-ink-5 disabled:cursor-not-allowed text-[15px] font-bold uppercase tracking-[0.2em] rounded-sm transition-all shadow-lg active:scale-[0.99]"
         >
-          {saving ? 'Creating Agreement...' : 'Create Agreement'}
+          {saving ? 'Creating Agreement...' : 'Confirm & Create Agreement'}
         </button>
       </div>
     </div>

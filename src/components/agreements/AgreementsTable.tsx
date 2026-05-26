@@ -12,26 +12,29 @@ function fmt(n: number) {
 }
 
 function DocStatusBadge({ status }: { status: DocStatus }) {
-  const map: Record<DocStatus, { label: string; color: string }> = {
-    draft: { label: 'Draft', color: 'text-slate-400 bg-slate-700' },
-    partner_signed: { label: 'Partner Signed', color: 'text-blue-400 bg-blue-900/30' },
-    sent_to_client: { label: 'Sent to Client', color: 'text-amber-400 bg-amber-900/30' },
-    returned: { label: 'Returned', color: 'text-green-400 bg-green-900/30' },
-    uploaded: { label: 'Uploaded', color: 'text-emerald-400 bg-emerald-900/30' },
+  const map: Record<DocStatus, { label: string; dot: string }> = {
+    draft: { label: 'Draft', dot: 'sdot-pending' },
+    partner_signed: { label: 'Partner Signed', dot: 'sdot-notified' },
+    sent_to_client: { label: 'Sent to Client', dot: 'sdot-pending' },
+    returned: { label: 'Returned', dot: 'sdot-active' },
+    uploaded: { label: 'Uploaded', dot: 'sdot-paid' },
   }
-  const { label, color } = map[status] ?? { label: status, color: 'text-slate-400 bg-slate-700' }
-  return <span className={`text-xs px-2 py-0.5 rounded font-medium ${color}`}>{label}</span>
+  const { label, dot } = map[status] ?? { label: status, dot: 'sdot-pending' }
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`sdot ${dot}`} />
+      <span className="text-ink-2">{label}</span>
+    </div>
+  )
 }
 
 function StatusBadge({ status }: { status: AgreementStatus }) {
-  const map: Record<AgreementStatus, string> = {
-    active: 'text-green-400 bg-green-900/30',
-    matured: 'text-slate-400 bg-slate-700',
-    cancelled: 'text-red-400 bg-red-900/30',
-    combined: 'text-purple-400 bg-purple-900/30',
-  }
+  const dot = status === 'active' ? 'sdot-active' : status === 'cancelled' ? 'sdot-overdue' : 'sdot-pending'
   return (
-    <span className={`text-xs px-2 py-0.5 rounded font-medium capitalize ${map[status]}`}>{status}</span>
+    <div className="flex items-center gap-1.5">
+      <span className={`sdot ${dot}`} />
+      <span className="text-ink-2 capitalize">{status}</span>
+    </div>
   )
 }
 
@@ -132,14 +135,14 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
   // ── Sort icon ─────────────────────────────────────────────────────────────
 
   function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return <span className="text-slate-600 ml-1">↕</span>
-    return <span className="text-indigo-400 ml-1">{sortAsc ? '↑' : '↓'}</span>
+    if (sortKey !== k) return <span className="text-ink-5 ml-1">↕</span>
+    return <span className="text-forest ml-1">{sortAsc ? '↑' : '↓'}</span>
   }
 
-  function Th({ label, k }: { label: string; k: SortKey }) {
+  function Th({ label, k, className = '' }: { label: string; k: SortKey; className?: string }) {
     return (
       <th
-        className="text-left text-slate-400 font-medium pb-2 pr-4 cursor-pointer select-none hover:text-slate-200 transition-colors text-xs whitespace-nowrap"
+        className={`text-left text-ink-4 uppercase tracking-widest text-[10px] font-medium bg-surface-2 border-b border-hairline-strong px-3 py-2 cursor-pointer select-none hover:text-ink-2 transition-colors whitespace-nowrap ${className}`}
         onClick={() => handleSort(k)}
       >
         {label}<SortIcon k={k} />
@@ -148,38 +151,32 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Quick-filter tabs + filter bar */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={() => setFilterStatus('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === 'all' ? 'bg-slate-600 text-slate-100' : 'text-slate-400 hover:bg-slate-800'}`}
+          className={`px-3 py-1.5 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-all ${filterStatus === 'all' ? 'bg-ink-1 text-paper shadow-sm' : 'text-ink-4 hover:bg-surface-3'}`}
         >
           All
         </button>
         <button
           onClick={() => setFilterStatus('active')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === 'active' ? 'bg-green-900/60 text-green-300' : 'text-slate-400 hover:bg-slate-800'}`}
+          className={`px-3 py-1.5 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-all ${filterStatus === 'active' ? 'bg-gain text-paper shadow-sm' : 'text-ink-4 hover:bg-surface-3'}`}
         >
-          Active agreements
+          Active
         </button>
         <button
           onClick={() => setFilterStatus('matured')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === 'matured' ? 'bg-slate-700 text-slate-200' : 'text-slate-400 hover:bg-slate-800'}`}
+          className={`px-3 py-1.5 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-all ${filterStatus === 'matured' ? 'bg-ink-3 text-paper shadow-sm' : 'text-ink-4 hover:bg-surface-3'}`}
         >
           Matured
         </button>
         <button
           onClick={() => setFilterStatus('cancelled')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === 'cancelled' ? 'bg-red-900/50 text-red-300' : 'text-slate-400 hover:bg-slate-800'}`}
+          className={`px-3 py-1.5 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-all ${filterStatus === 'cancelled' ? 'bg-rust text-paper shadow-sm' : 'text-ink-4 hover:bg-surface-3'}`}
         >
           Cancelled
-        </button>
-        <button
-          onClick={() => setFilterStatus('combined')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === 'combined' ? 'bg-purple-900/50 text-purple-300' : 'text-slate-400 hover:bg-slate-800'}`}
-        >
-          Combined
         </button>
 
         <div className="flex-1" />
@@ -188,7 +185,7 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
         <select
           value={filterFrequency}
           onChange={(e) => setFilterFrequency(e.target.value as PayoutFrequency | 'all')}
-          className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-medium text-ink-2 rounded-sm focus:border-forest focus:ring-2 focus:ring-forest/12 outline-none"
         >
           <option value="all">All Frequencies</option>
           <option value="monthly">Monthly</option>
@@ -200,7 +197,7 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
         <select
           value={filterDocStatus}
           onChange={(e) => setFilterDocStatus(e.target.value as DocStatus | 'all')}
-          className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="h-7 border border-hairline-strong bg-surface px-2 text-[11px] font-medium text-ink-2 rounded-sm focus:border-forest focus:ring-2 focus:ring-forest/12 outline-none"
         >
           <option value="all">All Doc Statuses</option>
           <option value="draft">Draft</option>
@@ -211,42 +208,42 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
         </select>
       </div>
 
-      {/* Bulk action bar — shown when rows are selected (not in readOnly mode) */}
+      {/* Bulk action bar */}
       {!readOnly && deleteError && (
-        <div className="mb-3 px-4 py-2 bg-red-900/20 border border-red-800 rounded-lg text-xs text-red-400">
+        <div className="px-4 py-2 bg-rust-soft border border-rust/20 rounded-sm text-xs text-rust">
           {deleteError}
         </div>
       )}
       {!readOnly && someSelected && (
-        <div className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg">
-          <span className="text-sm text-slate-300 font-medium">{selected.size} selected</span>
+        <div className="flex items-center gap-3 px-4 py-2 bg-surface-2 border border-hairline rounded-sm shadow-sm">
+          <span className="text-[11px] uppercase tracking-wider font-bold text-ink-3">{selected.size} selected</span>
           <div className="flex-1" />
           {!confirmingDelete ? (
             <button
               onClick={() => setConfirmingDelete(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 border border-red-800 hover:bg-red-900/30 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface border border-rust/40 text-rust text-[10px] font-bold uppercase rounded-sm hover:bg-rust-soft transition-colors"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete {selected.size} agreement{selected.size !== 1 ? 's' : ''}
+              <Trash2 className="w-3 h-3" />
+              Delete Selection
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-red-400">
-                Soft-delete {selected.size} records? They can be restored from the Deleted section.
+              <span className="text-[10px] font-medium text-rust italic mr-2">
+                Soft-delete {selected.size} records?
               </span>
               <button
                 onClick={() => setConfirmingDelete(false)}
                 disabled={deleting}
-                className="px-3 py-1.5 rounded-lg text-xs text-slate-400 border border-slate-700 hover:bg-slate-700 transition-colors disabled:opacity-40"
+                className="px-3 py-1 text-[10px] font-bold uppercase text-ink-4 hover:text-ink-2 disabled:opacity-40"
               >
                 Cancel
               </button>
               <button
                 onClick={handleBulkDelete}
                 disabled={deleting}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-700 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                className="px-3 py-1 bg-rust text-paper text-[10px] font-bold uppercase rounded-sm hover:bg-rust-2 transition-colors disabled:opacity-50"
               >
-                {deleting ? 'Deleting…' : 'Yes, delete all'}
+                {deleting ? 'Deleting…' : 'Yes, Delete All'}
               </button>
             </div>
           )}
@@ -254,17 +251,17 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
       )}
 
       {/* Table */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="border-b border-slate-700">
+      <div className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
+        <table className="border-collapse w-full text-xs">
+          <thead>
             <tr>
               {!readOnly && (
-                <th className="pb-2 pl-3 pr-2 w-8">
+                <th className="bg-surface-2 border-b border-hairline-strong px-3 py-2 w-8">
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
                     onChange={(e) => toggleAll(e.target.checked)}
-                    className="rounded border-slate-600 bg-slate-700 text-indigo-500"
+                    className="rounded border-hairline-strong text-forest focus:ring-forest/20"
                     title="Select all visible"
                   />
                 </th>
@@ -273,66 +270,68 @@ export default function AgreementsTable({ agreements, initialStatus = 'all', rea
               <Th label="Principal" k="principal_amount" />
               <Th label="Rate %" k="roi_percentage" />
               <Th label="Frequency" k="payout_frequency" />
-              <th className="text-left text-slate-400 font-medium pb-2 pr-4 text-xs">Salesperson</th>
-              <Th label="Start Date" k="investment_start_date" />
-              <Th label="Maturity Date" k="maturity_date" />
-              <th className="text-left text-slate-400 font-medium pb-2 pr-4 text-xs">Doc Status</th>
-              <th className="text-left text-slate-400 font-medium pb-2 text-xs">Status</th>
+              <th className="text-left text-ink-4 uppercase tracking-widest text-[10px] font-medium bg-surface-2 border-b border-hairline-strong px-3 py-2">Salesperson</th>
+              <Th label="Start" k="investment_start_date" />
+              <Th label="Maturity" k="maturity_date" />
+              <th className="text-left text-ink-4 uppercase tracking-widest text-[10px] font-medium bg-surface-2 border-b border-hairline-strong px-3 py-2">Doc Status</th>
+              <th className="text-left text-ink-4 uppercase tracking-widest text-[10px] font-medium bg-surface-2 border-b border-hairline-strong px-3 py-2">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-hairline">
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={readOnly ? 9 : 10} className="py-8 text-center text-slate-500">No agreements match the selected filters.</td>
+                <td colSpan={readOnly ? 9 : 10} className="py-12 text-center text-ink-5 italic bg-canvas/30 text-[13px]">
+                  No agreements match the selected filters.
+                </td>
               </tr>
             )}
             {sorted.map((a) => (
               <tr
                 key={a.id}
-                className={`border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors ${a.is_draft ? 'border-l-2 border-l-amber-500' : ''} ${selected.has(a.id) ? 'bg-indigo-900/10' : ''}`}
+                className={`hover:bg-surface-2 transition-colors group ${a.is_draft ? 'bg-clay-soft/10' : ''} ${selected.has(a.id) ? 'bg-forest-soft/30' : ''}`}
               >
                 {!readOnly && (
-                  <td className="py-2.5 pl-3 pr-2 w-8">
+                  <td className="px-3 py-2 border-b border-hairline w-8">
                     <input
                       type="checkbox"
                       checked={selected.has(a.id)}
                       onChange={() => toggleOne(a.id)}
-                      className="rounded border-slate-600 bg-slate-700 text-indigo-500"
+                      className="rounded border-hairline-strong text-forest focus:ring-forest/20"
                     />
                   </td>
                 )}
-                <td className="py-2.5 pr-4">
+                <td className="px-3 py-2 border-b border-hairline">
                   <div className="flex items-center gap-2">
-                    <Link href={`/agreements/${a.id}`} className="font-medium text-slate-100 hover:text-indigo-400 transition-colors">
+                    <Link href={`/agreements/${a.id}`} className="font-semibold text-ink-1 hover:text-forest transition-colors">
                       {a.investor_name}{a.investor2_name ? ` & ${a.investor2_name}` : ''}
                     </Link>
                     {a.is_draft && (
-                      <span className="text-xs text-amber-400 bg-amber-900/30 px-1.5 py-0.5 rounded font-medium">Draft</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-clay bg-clay-soft px-1 rounded-sm">Draft</span>
                     )}
                     {a.rescan_required && (
-                      <span className="text-[10px] text-amber-300 bg-amber-900/40 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-amber-800/50">Rescan required</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-rust bg-rust-soft px-1 rounded-sm border border-rust/10">Rescan</span>
                     )}
                   </div>
-                  <div className="text-slate-500 text-xs">{a.reference_id}</div>
+                  <div className="text-ink-4 font-mono text-[10px] mt-0.5">{a.reference_id}</div>
                 </td>
-                <td className="py-2.5 pr-4 font-medium text-slate-100">{fmt(a.principal_amount)}</td>
-                <td className="py-2.5 pr-4 text-slate-300">{a.roi_percentage}%</td>
-                <td className="py-2.5 pr-4 text-slate-300 capitalize">{a.payout_frequency}</td>
-                <td className="py-2.5 pr-4 text-slate-400">{a.salesperson?.name ?? a.salesperson_custom ?? '—'}</td>
-                <td className="py-2.5 pr-4 text-slate-400">{format(parseISO(a.investment_start_date), 'dd MMM yyyy')}</td>
-                <td className="py-2.5 pr-4 text-slate-400">{format(parseISO(a.maturity_date), 'dd MMM yyyy')}</td>
-                <td className="py-2.5 pr-4"><DocStatusBadge status={a.doc_status} /></td>
-                <td className="py-2.5"><StatusBadge status={a.status} /></td>
+                <td className="px-3 py-2 border-b border-hairline font-bold num text-ink-1">{fmt(a.principal_amount)}</td>
+                <td className="px-3 py-2 border-b border-hairline num text-ink-2">{a.roi_percentage}%</td>
+                <td className="px-3 py-2 border-b border-hairline text-ink-3 capitalize">{a.payout_frequency}</td>
+                <td className="px-3 py-2 border-b border-hairline text-ink-3 truncate max-w-[120px]">{a.salesperson?.name ?? a.salesperson_custom ?? '—'}</td>
+                <td className="px-3 py-2 border-b border-hairline num text-ink-4">{format(parseISO(a.investment_start_date), 'dd MMM yy')}</td>
+                <td className="px-3 py-2 border-b border-hairline num text-ink-4">{format(parseISO(a.maturity_date), 'dd MMM yy')}</td>
+                <td className="px-3 py-2 border-b border-hairline"><DocStatusBadge status={a.doc_status} /></td>
+                <td className="px-3 py-2 border-b border-hairline"><StatusBadge status={a.status} /></td>
               </tr>
             ))}
           </tbody>
           {/* Footer totals */}
-          <tfoot className="border-t border-slate-700 bg-slate-900/50">
+          <tfoot className="bg-surface-2">
             <tr>
-              {!readOnly && <td className="py-2 pl-3" />}
-              <td className="py-2 pr-4 text-slate-400 font-medium">{filtered.length} agreement{filtered.length !== 1 ? 's' : ''}</td>
-              <td className="py-2 pr-4 font-semibold text-slate-100">{fmt(totalPrincipal)}</td>
-              <td colSpan={readOnly ? 7 : 7} />
+              {!readOnly && <td className="px-3 py-2" />}
+              <td className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-ink-4">{filtered.length} agreement{filtered.length !== 1 ? 's' : ''}</td>
+              <td className="px-3 py-2 font-bold num text-ink-1 text-[13px]">{fmt(totalPrincipal)}</td>
+              <td colSpan={readOnly ? 7 : 7} className="px-3 py-2" />
             </tr>
           </tfoot>
         </table>

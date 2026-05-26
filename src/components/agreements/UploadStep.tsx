@@ -86,26 +86,26 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
   const ext = file?.name.split('.').pop()?.toLowerCase()
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-8">
       {onBack && (
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-100 transition-colors"
+          className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-4 hover:text-ink-2 transition-colors"
         >
-          <ChevronLeft className="w-4 h-4" />
-          Back to Choice
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Back
         </button>
       )}
 
       {/* Drop zone */}
       <div
-        className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
+        className={`border-2 border-dashed rounded-sm p-16 text-center cursor-pointer transition-all shadow-sm ${
           dragOver
-            ? 'border-indigo-500 bg-indigo-500/10'
+            ? 'border-forest bg-forest-soft/30 scale-[1.01]'
             : file
-            ? 'border-emerald-600 bg-emerald-600/5'
-            : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
+            ? 'border-gain bg-gain-soft/10'
+            : 'border-hairline-strong bg-surface hover:border-forest-2/50'
         }`}
         onDrop={onDrop}
         onDragOver={onDragOver}
@@ -124,15 +124,17 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
         />
 
         {file ? (
-          <div className="flex items-center justify-center gap-3">
-            <FileText className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+          <div className="flex items-center justify-center gap-4 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 bg-gain-soft rounded-full flex items-center justify-center">
+              <FileText className="w-6 h-6 text-gain" />
+            </div>
             <div className="text-left">
-              <p className="text-sm font-medium text-slate-100">{file.name}</p>
-              <p className="text-xs text-slate-500">{(file.size / 1024).toFixed(1)} KB · {ext?.toUpperCase()}</p>
+              <p className="text-[15px] font-bold text-ink-1 font-serif leading-tight">{file.name}</p>
+              <p className="text-[11px] text-ink-4 font-bold num mt-1">{(file.size / 1024).toFixed(1)} KB · {ext?.toUpperCase()}</p>
             </div>
             <button
               type="button"
-              className="ml-4 text-slate-500 hover:text-red-400 transition-colors"
+              className="ml-6 w-8 h-8 rounded-full flex items-center justify-center text-ink-5 hover:text-rust hover:bg-rust-soft/30 transition-all"
               onClick={e => { e.stopPropagation(); setFile(null) }}
               aria-label="Remove file"
             >
@@ -140,81 +142,95 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
             </button>
           </div>
         ) : (
-          <>
-            <Upload className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-sm text-slate-300 font-medium">Drop your agreement here, or click to browse</p>
-            <p className="text-xs text-slate-500 mt-1">PDF or DOCX · max 10MB</p>
-          </>
+          <div className="space-y-4">
+            <div className="w-14 h-14 bg-canvas rounded-full flex items-center justify-center mx-auto">
+              <Upload className="w-6 h-6 text-ink-4" />
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-ink-1 font-serif">Drop your agreement here</p>
+              <p className="lbl mt-1.5 font-bold">PDF or DOCX · Max 10MB</p>
+            </div>
+          </div>
         )}
       </div>
 
       {fileError && (
-        <p className="text-red-400 text-sm">{fileError}</p>
+        <div className="bg-rust-soft border border-rust/10 p-3 rounded-sm">
+          <p className="text-xs text-rust font-bold uppercase tracking-tight">{fileError}</p>
+        </div>
       )}
 
       {/* Agreement type */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Agreement Status</p>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="radio"
-            name="agreementType"
-            checked={!isDraft}
-            onChange={() => setIsDraft(false)}
-            className="mt-0.5 accent-indigo-500"
-          />
-          <div>
-            <p className="text-sm font-medium text-slate-100">Signed Agreement</p>
-            <p className="text-xs text-slate-500">Document has been signed by all parties</p>
-          </div>
-        </label>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="radio"
-            name="agreementType"
-            checked={isDraft}
-            onChange={() => setIsDraft(true)}
-            className="mt-0.5 accent-amber-500"
-          />
-          <div>
-            <p className="text-sm font-medium text-slate-100">
-              Draft Agreement
-              <span className="ml-2 inline-block px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded font-semibold">DRAFT</span>
-            </p>
-            <p className="text-xs text-slate-500">Document not yet signed — tracking starts now</p>
-          </div>
-        </label>
+      <div className="bg-surface border border-hairline rounded-sm p-6 space-y-5 shadow-sm">
+        <p className="lbl font-bold text-ink-1 tracking-widest">Agreement Context</p>
+        <div className="space-y-4">
+          <label className="flex items-start gap-4 cursor-pointer group">
+            <div className="relative flex items-center justify-center mt-1">
+              <input
+                type="radio"
+                name="agreementType"
+                checked={!isDraft}
+                onChange={() => setIsDraft(false)}
+                className="peer h-4 w-4 border-hairline-strong text-forest focus:ring-forest/10"
+              />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-ink-1 group-hover:text-forest transition-colors">Signed Agreement</p>
+              <p className="text-[11px] text-ink-4 font-medium mt-0.5">Document has been fully executed by all parties</p>
+            </div>
+          </label>
+          <label className="flex items-start gap-4 cursor-pointer group">
+            <div className="relative flex items-center justify-center mt-1">
+              <input
+                type="radio"
+                name="agreementType"
+                checked={isDraft}
+                onChange={() => setIsDraft(true)}
+                className="peer h-4 w-4 border-hairline-strong text-clay focus:ring-clay/10"
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-[13px] font-bold text-ink-1 group-hover:text-clay transition-colors">Draft Record</p>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-clay bg-clay-soft px-1 rounded-sm border border-clay/10">DRAFT</span>
+              </div>
+              <p className="text-[11px] text-ink-4 font-medium mt-0.5">Not yet signed — useful for pre-emptive tracking</p>
+            </div>
+          </label>
+        </div>
       </div>
 
       {/* Salesperson */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Salesperson</p>
-        <select
-          value={salespersonId}
-          onChange={e => setSalespersonId(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">— None / Not assigned —</option>
-          {salespersonOptions.map(m => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-          <option value="other">Other (enter name)</option>
-        </select>
+      <div className="bg-surface border border-hairline rounded-sm p-6 space-y-5 shadow-sm">
+        <p className="lbl font-bold text-ink-1 tracking-widest">Ownership</p>
+        <div className="space-y-4">
+          <select
+            value={salespersonId}
+            onChange={e => setSalespersonId(e.target.value)}
+            className="w-full h-10 border border-hairline-strong bg-surface px-3 text-sm rounded-sm font-medium focus:border-forest focus:ring-2 focus:ring-forest/12 outline-none"
+          >
+            <option value="">— Unassigned —</option>
+            {salespersonOptions.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+            <option value="other">Manually specified...</option>
+          </select>
 
-        {salespersonId === 'other' && (
-          <input
-            type="text"
-            placeholder="Enter salesperson name"
-            value={salespersonCustom}
-            onChange={e => setSalespersonCustom(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        )}
+          {salespersonId === 'other' && (
+            <input
+              type="text"
+              placeholder="Enter name..."
+              value={salespersonCustom}
+              onChange={e => setSalespersonCustom(e.target.value)}
+              className="w-full h-10 border border-hairline-strong bg-surface px-3 text-sm rounded-sm font-medium focus:border-forest outline-none animate-in slide-in-from-top-1"
+            />
+          )}
+        </div>
       </div>
 
       {/* Error from parent */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-300">
+        <div className="bg-rust-soft border border-rust/10 rounded-sm p-4 text-[11px] text-rust font-bold uppercase tracking-tight italic">
           {error}
         </div>
       )}
@@ -224,9 +240,9 @@ export default function UploadStep({ teamMembers, onExtract, isLoading, error, o
         type="button"
         onClick={handleSubmit}
         disabled={!file || isLoading}
-        className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
+        className="w-full h-12 bg-forest text-paper hover:bg-ink-1 disabled:opacity-40 disabled:bg-ink-5 disabled:cursor-not-allowed text-[13px] font-bold uppercase tracking-widest rounded-sm transition-all shadow-md active:scale-[0.98]"
       >
-        {isLoading ? 'Extracting...' : 'Extract & Preview'}
+        {isLoading ? 'Processing Document...' : 'Extract & Preview'}
       </button>
     </div>
   )

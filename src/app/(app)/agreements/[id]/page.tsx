@@ -70,20 +70,20 @@ function getFY(dateStr: string): string {
 
 // ─── Sub-components (server) ──────────────────────────────────────────────────
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, className = '' }: { label: string; value: string; className?: string }) {
   return (
-    <div>
-      <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">{label}</p>
-      <p className="text-sm text-slate-200">{value}</p>
+    <div className={className}>
+      <p className="lbl mb-1">{label}</p>
+      <p className="text-sm font-medium text-ink-1">{value}</p>
     </div>
   )
 }
 
 function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-2 mb-4">
-      <div className="p-1.5 rounded-lg bg-slate-800 border border-slate-700">{icon}</div>
-      <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">{label}</h2>
+    <div className="flex items-center gap-2 mb-4 border-b border-hairline pb-2">
+      <div className="text-ink-4">{icon}</div>
+      <h2 className="text-[10px] uppercase tracking-widest font-bold text-ink-3">{label}</h2>
     </div>
   )
 }
@@ -189,49 +189,52 @@ export default async function AgreementDetailPage({
   }))
 
   // ─── Status ───
-  const statusMap: Record<string, { label: string; cls: string }> = {
-    active: { label: 'Active', cls: 'bg-green-900/40 text-green-400' },
-    matured: { label: 'Matured', cls: 'bg-slate-700 text-slate-300' },
-    cancelled: { label: 'Cancelled', cls: 'bg-red-900/40 text-red-400' },
-    combined: { label: 'Combined', cls: 'bg-purple-900/40 text-purple-400' },
+  const statusMap: Record<string, { label: string; dot: string }> = {
+    active: { label: 'Active', dot: 'sdot-active' },
+    matured: { label: 'Matured', dot: 'sdot-pending' },
+    cancelled: { label: 'Cancelled', dot: 'sdot-overdue' },
+    combined: { label: 'Combined', dot: 'sdot-pending' },
   }
-  const statusStyle = statusMap[agreement.status] ?? { label: agreement.status, cls: 'bg-slate-700 text-slate-300' }
+  const statusStyle = statusMap[agreement.status] ?? { label: agreement.status, dot: 'sdot-pending' }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <div className="min-h-screen bg-canvas text-ink-1 font-sans">
+      <div className="max-w-5xl mx-auto px-8 py-8 space-y-10">
 
         {/* Back link */}
         <div className="flex items-center justify-between">
-          <Link href="/agreements" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            All Agreements
+          <Link href="/agreements" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-ink-4 hover:text-ink-2 transition-colors">
+            <ArrowLeft className="w-3 h-3" />
+            Back to List
           </Link>
           {isNew === '1' && (
-            <Link href="/agreements/new" className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
-              + Add another agreement
+            <Link href="/agreements/new" className="px-3 py-1 bg-forest text-paper text-[10px] font-bold uppercase rounded-sm hover:bg-forest-2 transition-colors shadow-sm">
+              + Add Another Agreement
             </Link>
           )}
         </div>
 
         {/* Header */}
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <div className="flex flex-wrap items-start gap-4 justify-between">
+        <div className="border-b border-ink-1 pb-3 mb-5">
+          <div className="flex flex-wrap items-end gap-4 justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-100">{agreement.investor_name}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-[28px] font-semibold text-ink-1 font-serif tracking-tight leading-tight">{agreement.investor_name}</h1>
                 {investor?.id && (
-                  <Link href={`/investors/${investor.id}`} className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-800 rounded-full px-2 py-0.5 transition-colors" title="View investor profile">
-                    <User className="w-3 h-3" />Profile
+                  <Link href={`/investors/${investor.id}`} className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-forest hover:text-ink-1 border border-hairline-strong rounded-full px-2.5 py-0.5 bg-surface transition-colors" title="View investor profile">
+                    <User className="w-2.5 h-2.5" />Profile
                   </Link>
                 )}
               </div>
-              <p className="mt-0.5 text-sm text-slate-500 font-mono">{agreement.reference_id}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`sdot ${statusStyle.dot}`} />
+                <p className="text-xs text-ink-4 uppercase tracking-widest font-medium">
+                  {agreement.reference_id} · {statusStyle.label}
+                  {agreement.is_draft && <span className="ml-2 text-clay italic">· Draft</span>}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle.cls}`}>{statusStyle.label}</span>
-              {agreement.is_draft && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-900/40 text-amber-400">DRAFT</span>}
-              {/* RescanModal hidden during data-entry phase */}
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               {(agreement.is_draft || !agreement.document_url) && (
                 <UploadSignedButton agreementId={agreement.id} label={agreement.document_url ? 'Replace Document' : 'Upload Document'} />
               )}
@@ -240,176 +243,175 @@ export default async function AgreementDetailPage({
           </div>
         </div>
 
-        {/* Rescan banner hidden during data-entry phase */}
-
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION 1: DATA — What the document says                          */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
         <div className="space-y-6">
-          <SectionLabel icon={<Shield className="w-4 h-4 text-slate-400" />} label="Data" />
+          <SectionLabel icon={<Shield className="w-3.5 h-3.5" />} label="Agreement Data" />
 
-          {/* Summary Card — cascading numbers */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-800/80 border border-slate-700/50 rounded-xl p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-              <div className="sm:col-span-1">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Principal</p>
-                <p className="text-lg font-bold text-slate-100 text-right">{fmtCurrency(agreement.principal_amount)}</p>
+          {/* Summary Card */}
+          <div className="bg-surface border border-hairline rounded-sm shadow-sm p-6">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+              <div className="flex flex-col">
+                <p className="lbl mb-2">Principal</p>
+                <p className="text-xl font-bold num text-ink-1">{fmtCurrency(agreement.principal_amount)}</p>
               </div>
-              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Total Interest</p>
-                <p className="text-lg font-bold text-emerald-400 text-right">{fmtCurrency(totalInterest)}</p>
+              <div className="flex flex-col md:border-l md:border-hairline md:pl-6">
+                <p className="lbl mb-2">Total Interest</p>
+                <p className="text-xl font-bold num text-gain">{fmtCurrency(totalInterest)}</p>
               </div>
-              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Total TDS</p>
-                <p className="text-lg font-bold text-red-400 text-right">{fmtCurrency(totalTds)}</p>
+              <div className="flex flex-col md:border-l md:border-hairline md:pl-6">
+                <p className="lbl mb-2">Total TDS</p>
+                <p className="text-xl font-bold num text-rust">{fmtCurrency(totalTds)}</p>
               </div>
-              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Net Payout</p>
-                <p className="text-lg font-bold text-slate-100 text-right">{fmtCurrency(netPayout)}</p>
+              <div className="flex flex-col md:border-l md:border-hairline md:pl-6">
+                <p className="lbl mb-2">Net Payout</p>
+                <p className="text-xl font-bold num text-ink-1">{fmtCurrency(netPayout)}</p>
               </div>
-              <div className="sm:border-l sm:border-slate-700 sm:pl-4">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">ROI / Freq</p>
-                <p className="text-lg font-bold text-indigo-400 text-right">
-                  {agreement.roi_percentage != null ? `${agreement.roi_percentage}%` : '—'}
-                </p>
-                <p className="text-[10px] text-slate-500 text-right">{fmtFrequency(agreement.payout_frequency)}</p>
+              <div className="flex flex-col md:border-l md:border-hairline md:pl-6">
+                <p className="lbl mb-2">ROI · Freq</p>
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold num text-earth-brown leading-tight">
+                    {agreement.roi_percentage != null ? `${agreement.roi_percentage}%` : '—'}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold text-ink-4 tracking-tight">{fmtFrequency(agreement.payout_frequency)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Agreement Details */}
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-              <Field label="Agreement Date" value={fmtDate(agreement.agreement_date)} />
-              <Field label="Investment Start" value={fmtDate(agreement.investment_start_date)} />
-              <Field label="Agreement Type" value={fmt(agreement.agreement_type)} />
-              <Field label="Interest Type" value={fmtInterestType(agreement.interest_type)} />
-              <Field label="Lock-in" value={agreement.lock_in_years != null ? `${agreement.lock_in_years} yrs` : '—'} />
-              <Field label="Maturity Date" value={fmtDate(agreement.maturity_date)} />
-              <Field label="Salesperson" value={salespersonName} />
-              <Field label="TDS Filing Name" value={fmt(agreement.tds_filing_name)} />
-            </div>
-
-            {(agreement.payments ?? []).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-700/50">
-                <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Payment History</p>
-                <div className="space-y-1">
-                  {(agreement.payments ?? []).map((p, i) => (
-                    <div key={i} className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-slate-200">
-                      {p.date && <span>{fmtDate(p.date)}</span>}
-                      {p.mode && <span className="text-slate-400">{p.mode}</span>}
-                      {p.bank && <span className="text-slate-400">{p.bank}</span>}
-                      {p.amount != null && <span className="font-medium">{fmtCurrency(p.amount)}</span>}
-                    </div>
-                  ))}
-                </div>
+          {/* Details & History */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 bg-surface border border-hairline rounded-sm p-6 space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-6">
+                <Field label="Agreement Date" value={fmtDate(agreement.agreement_date)} />
+                <Field label="Investment Start" value={fmtDate(agreement.investment_start_date)} />
+                <Field label="Agreement Type" value={fmt(agreement.agreement_type)} />
+                <Field label="Interest Type" value={fmtInterestType(agreement.interest_type)} />
+                <Field label="Lock-in" value={agreement.lock_in_years != null ? `${agreement.lock_in_years} yrs` : '—'} />
+                <Field label="Maturity Date" value={fmtDate(agreement.maturity_date)} />
+                <Field label="Salesperson" value={salespersonName} />
+                <Field label="TDS Filing Name" value={fmt(agreement.tds_filing_name)} />
               </div>
-            )}
-          </div>
 
-          {/* Applicants */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">First Applicant</h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <Field label="Name" value={fmt(agreement.investor_name)} />
-                <Field label="PAN" value={fmt(agreement.investor_pan)} />
-                <Field label="Aadhaar" value={fmt(agreement.investor_aadhaar)} />
-                <div className="col-span-2">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Address</p>
-                  <p className="text-sm text-slate-200 whitespace-pre-line">{agreement.investor_address ?? '—'}</p>
-                </div>
-              </div>
-              {nominees.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-700/50">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Nominees</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {nominees.map((n, i) => (
-                      <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-700 text-slate-200 text-xs">
-                        <span className="font-medium">{n.name}</span>
-                        {n.pan && <span className="text-slate-400 font-mono">{n.pan}</span>}
-                      </span>
+              {(agreement.payments ?? []).length > 0 && (
+                <div className="pt-6 border-t border-hairline">
+                  <p className="lbl mb-4">Payment History</p>
+                  <div className="space-y-2">
+                    {(agreement.payments ?? []).map((p, i) => (
+                      <div key={i} className="flex items-center gap-4 text-[13px] text-ink-2">
+                        <span className="num text-ink-4 w-20">{p.date ? fmtDate(p.date) : '—'}</span>
+                        <span className="flex-1 italic">{p.mode || 'Payment'} {p.bank ? `via ${p.bank}` : ''}</span>
+                        <span className="num font-bold text-ink-1">{p.amount != null ? fmtCurrency(p.amount) : '—'}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            {(agreement.investor2_name || agreement.investor2_pan) && (
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Second Applicant</h3>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <Field label="Name" value={fmt(agreement.investor2_name)} />
-                  <Field label="PAN" value={fmt(agreement.investor2_pan)} />
-                  <Field label="Aadhaar" value={fmt(agreement.investor2_aadhaar)} />
-                  {agreement.investor2_address && (
-                    <div className="col-span-2">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Address</p>
-                      <p className="text-sm text-slate-200 whitespace-pre-line">{agreement.investor2_address}</p>
+
+            {/* Applicant Details */}
+            <div className="bg-surface border border-hairline rounded-sm flex flex-col divide-y divide-hairline">
+              <div className="p-5">
+                <h3 className="lbl mb-4 font-bold text-ink-1">Primary Applicant</h3>
+                <div className="space-y-4">
+                  <Field label="Name" value={fmt(agreement.investor_name)} />
+                  <div className="flex gap-6">
+                    <Field label="PAN" value={fmt(agreement.investor_pan)} className="flex-1" />
+                    <Field label="Aadhaar" value={fmt(agreement.investor_aadhaar)} className="flex-1" />
+                  </div>
+                  <Field label="Address" value={agreement.investor_address ?? '—'} />
+                  {nominees.length > 0 && (
+                    <div className="pt-2">
+                      <p className="lbl mb-2">Nominees</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {nominees.map((n, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-canvas border border-hairline rounded-sm text-[10px] text-ink-2 font-medium">
+                            {n.name} {n.pan && <span className="num text-ink-4 ml-1">{n.pan}</span>}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            )}
+              {(agreement.investor2_name || agreement.investor2_pan) && (
+                <div className="p-5 bg-surface-2/50">
+                  <h3 className="lbl mb-4 font-bold text-ink-1">Second Applicant</h3>
+                  <div className="space-y-4">
+                    <Field label="Name" value={fmt(agreement.investor2_name)} />
+                    <div className="flex gap-6">
+                      <Field label="PAN" value={fmt(agreement.investor2_pan)} className="flex-1" />
+                      <Field label="Aadhaar" value={fmt(agreement.investor2_aadhaar)} className="flex-1" />
+                    </div>
+                    {agreement.investor2_address && <Field label="Address" value={agreement.investor2_address} />}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION 2: ACTIONS — What needs to be done                        */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <SectionLabel icon={<Activity className="w-4 h-4 text-slate-400" />} label="Actions" />
+        <div className="space-y-6">
+          <SectionLabel icon={<Activity className="w-3.5 h-3.5" />} label="Operational Actions" />
 
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            <DocLifecycleStepper
-              agreementId={agreement.id}
-              docStatus={agreement.doc_status}
-              docSentToClientDate={agreement.doc_sent_to_client_date}
-              docReturnedDate={agreement.doc_returned_date}
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+              <div className="bg-surface border border-hairline rounded-sm p-6 shadow-sm">
+                <p className="lbl mb-6 font-bold text-ink-1">Document Lifecycle</p>
+                <DocLifecycleStepper
+                  agreementId={agreement.id}
+                  docStatus={agreement.doc_status}
+                  docSentToClientDate={agreement.doc_sent_to_client_date}
+                  docReturnedDate={agreement.doc_returned_date}
+                />
+              </div>
 
-          <PendingPayouts
-            agreementId={agreement.id}
-            payouts={payout_schedule}
-            userRole={userRole}
-          />
+              <PendingPayouts
+                agreementId={agreement.id}
+                payouts={payout_schedule}
+                userRole={userRole}
+              />
 
-          <PendingTdsFilings
-            payouts={payout_schedule}
-            userRole={userRole}
-          />
+              <PendingTdsFilings
+                payouts={payout_schedule}
+                userRole={userRole}
+              />
+            </div>
 
-          <MaturityPayoutCard
-            agreementId={agreement.id}
-            payouts={payout_schedule}
-            principalAmount={agreement.principal_amount ?? undefined}
-            maturityDate={agreement.maturity_date}
-            userRole={userRole}
-          />
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* SECTION 3: TIMELINE — Notifications & Reminders                   */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <SectionLabel icon={<Mail className="w-4 h-4 text-slate-400" />} label="Timeline" />
-
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            <Timeline items={timelineItems} />
+            <div className="space-y-6">
+              <MaturityPayoutCard
+                agreementId={agreement.id}
+                payouts={payout_schedule}
+                principalAmount={agreement.principal_amount ?? undefined}
+                maturityDate={agreement.maturity_date}
+                userRole={userRole}
+              />
+              
+              <div className="bg-surface-2 border border-hairline rounded-sm p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <Mail className="w-3.5 h-3.5 text-ink-4" />
+                  <h3 className="lbl font-bold text-ink-1">Notification History</h3>
+                </div>
+                <Timeline items={timelineItems} />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* ── Original Document ── */}
         {agreement.document_url && (
-          <div className="space-y-4">
-            <SectionLabel icon={<FileText className="w-4 h-4 text-slate-400" />} label="Document" />
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+          <div className="space-y-6">
+            <SectionLabel icon={<FileText className="w-3.5 h-3.5" />} label="Original Agreement" />
+            <div className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
               {agreement.document_url.toLowerCase().includes('.pdf') || agreement.document_url.includes('content-type=application%2Fpdf') ? (
                 <iframe src={agreement.document_url} className="w-full" style={{ minHeight: '500px', height: '70vh' }} title="Agreement Document" />
               ) : (
-                <div className="p-5">
-                  <a href={agreement.document_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm transition-colors">
+                <div className="p-12 text-center bg-canvas/30">
+                  <a href={agreement.document_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 border border-hairline-strong bg-surface text-ink-1 text-[13px] font-semibold rounded-sm hover:bg-surface-2 shadow-sm transition-colors">
                     <FileText className="w-4 h-4" /> Download Document
                   </a>
                 </div>
@@ -419,7 +421,9 @@ export default async function AgreementDetailPage({
         )}
 
         {/* ── Audit Log ── */}
-        <AuditLog entries={(auditEntries ?? []) as Parameters<typeof AuditLog>[0]['entries']} />
+        <div className="pt-10 border-t border-hairline">
+          <AuditLog entries={(auditEntries ?? []) as Parameters<typeof AuditLog>[0]['entries']} />
+        </div>
 
       </div>
     </div>

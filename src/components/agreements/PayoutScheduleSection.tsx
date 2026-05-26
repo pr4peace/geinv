@@ -46,6 +46,12 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
     totals.net += row.net_interest
   }
 
+  function StatusDot({ status }: { status?: string }) {
+    if (!status) return null
+    const dot = status === 'paid' ? 'sdot-paid' : status === 'overdue' ? 'sdot-overdue' : status === 'notified' ? 'sdot-notified' : 'sdot-pending'
+    return <span className={`sdot ${dot} m-0`} title={status} />
+  }
+
   async function markAsPaid(payoutId: string) {
     setLoading(payoutId)
     setError(null)
@@ -97,21 +103,21 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
   }
 
   if (payouts.length === 0) {
-    return <p className="text-slate-500 text-sm italic">No payout schedule available.</p>
+    return <p className="text-ink-5 text-sm italic py-4">No payout schedule available.</p>
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {isCoordinator && hasPastPending && (
         <div className="flex justify-end items-center gap-4">
           {confirmBulk ? (
-            <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-right-2">
-              <span className="text-xs text-slate-300 font-medium">Mark all past pending as paid?</span>
-              <button onClick={() => markPastPaid()} disabled={loading === 'bulk'} className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors uppercase">Yes</button>
-              <button onClick={() => setConfirmBulk(false)} disabled={loading === 'bulk'} className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase">No</button>
+            <div className="flex items-center gap-3 bg-surface-2 border border-hairline px-3 py-1.5 rounded-sm animate-in fade-in slide-in-from-right-2">
+              <span className="text-[11px] font-bold uppercase text-ink-3">Mark all past pending as paid?</span>
+              <button onClick={() => markPastPaid()} disabled={loading === 'bulk'} className="text-[10px] font-bold text-gain hover:text-ink-1 transition-colors uppercase">Yes</button>
+              <button onClick={() => setConfirmBulk(false)} disabled={loading === 'bulk'} className="text-[10px] font-bold text-ink-4 hover:text-ink-2 transition-colors uppercase">No</button>
             </div>
           ) : (
-            <button onClick={() => setConfirmBulk(true)} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/40 text-emerald-400 hover:bg-emerald-800/40 border border-emerald-800/50 transition-colors">
+            <button onClick={() => setConfirmBulk(true)} className="text-[10px] font-bold uppercase px-3 py-1.5 rounded-sm bg-gain text-paper hover:bg-forest transition-colors shadow-sm">
               Mark all past payouts as paid
             </button>
           )}
@@ -119,62 +125,54 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
       )}
 
       {error && (
-        <div className="bg-red-900/20 border border-red-800/50 px-4 py-2 rounded-lg">
-          <p className="text-xs text-red-400 font-medium">{error}</p>
+        <div className="bg-rust-soft border border-rust/20 px-4 py-2 rounded-sm shadow-sm">
+          <p className="text-xs text-rust font-bold uppercase tracking-tight">{error}</p>
         </div>
       )}
 
       {/* ── Interest Payouts ── */}
       {interestRows.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-              Interest Payouts ({interestRows.length})
-            </h4>
-          </div>
-          <div className="overflow-x-auto rounded-lg border border-slate-700">
-            <table className="min-w-full text-sm text-slate-300">
+        <div className="space-y-3">
+          <h4 className="lbl font-bold text-ink-1">Interest Payouts ({interestRows.length})</h4>
+          <div className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
+            <table className="border-collapse w-full text-xs">
               <thead>
-                <tr className="bg-slate-800/60 text-xs text-slate-400">
-                  <th className="py-2 px-3 text-left font-semibold">#</th>
-                  <th className="py-2 px-3 text-left font-semibold">Period</th>
-                  <th className="py-2 px-3 text-right font-semibold">Days</th>
-                  <th className="py-2 px-3 text-left font-semibold">Due By</th>
-                  <th className="py-2 px-3 text-right font-semibold">Gross</th>
-                  <th className="py-2 px-3 text-right font-semibold">TDS</th>
-                  <th className="py-2 px-3 text-right font-semibold">Net</th>
-                  <th className="py-2 px-3 text-center font-semibold">Status</th>
-                  {isCoordinator && <th className="py-2 px-3 text-center font-semibold">Action</th>}
+                <tr className="bg-surface-2 border-b border-hairline-strong text-[10px] uppercase tracking-widest font-medium text-ink-4">
+                  <th className="py-2 px-3 text-left w-8">#</th>
+                  <th className="py-2 px-3 text-left">Period</th>
+                  <th className="py-2 px-3 text-right w-12">Days</th>
+                  <th className="py-2 px-3 text-left">Due By</th>
+                  <th className="py-2 px-3 text-right">Gross</th>
+                  <th className="py-2 px-3 text-right">TDS</th>
+                  <th className="py-2 px-3 text-right">Net</th>
+                  <th className="py-2 px-3 text-center w-12">Status</th>
+                  {isCoordinator && <th className="py-2 px-3 text-center w-16">Action</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/40">
+              <tbody className="divide-y divide-hairline">
                 {interestRows.map((row, idx) => {
+                  const isPaid = row.status === 'paid'
                   const isPastPending = row.status !== 'paid' && row.due_by < todayStr
                   return (
-                    <tr key={row.id} className={`hover:bg-slate-800/30 transition-colors ${isPastPending ? 'bg-red-900/5 border-l-2 border-l-red-500' : ''}`}>
-                      <td className="py-2.5 px-3 text-xs text-slate-500 font-mono">{idx + 1}</td>
-                      <td className="py-2.5 px-3 text-xs whitespace-nowrap">{fmtDate(row.period_from)} – {fmtDate(row.period_to)}</td>
-                      <td className="py-2.5 px-3 text-right text-xs text-slate-500">{row.no_of_days}</td>
-                      <td className="py-2.5 px-3 text-xs whitespace-nowrap">{fmtDate(row.due_by)}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-xs">{fmtCurrency(row.gross_interest)}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-xs text-red-400/80">{fmtCurrency(row.tds_amount)}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-xs text-emerald-400">{fmtCurrency(row.net_interest)}</td>
-                      <td className="py-2.5 px-3 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-                          row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
-                          row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
-                          row.status === 'notified' ? 'bg-amber-900/40 text-amber-400' :
-                          'bg-slate-700 text-slate-300'
-                        }`}>{row.status}</span>
+                    <tr key={row.id} className={`h-7 hover:bg-surface-2 transition-colors ${isPastPending ? 'bg-rust-soft/40' : ''} ${isPaid ? 'text-ink-4' : 'text-ink-2'}`}>
+                      <td className="px-3 py-1 font-mono text-[10px] opacity-50">{idx + 1}</td>
+                      <td className="px-3 py-1 whitespace-nowrap opacity-80">{fmtDate(row.period_from)} – {fmtDate(row.period_to)}</td>
+                      <td className="px-3 py-1 text-right font-mono text-[10px] opacity-50">{row.no_of_days}</td>
+                      <td className={`px-3 py-1 whitespace-nowrap font-medium ${isPastPending ? 'text-rust' : ''}`}>{fmtDate(row.due_by)}</td>
+                      <td className="px-3 py-1 text-right num text-[11px] tabular-nums">{fmtCurrency(row.gross_interest)}</td>
+                      <td className="px-3 py-1 text-right num text-[11px] tabular-nums opacity-70">{fmtCurrency(row.tds_amount)}</td>
+                      <td className={`px-3 py-1 text-right num text-[11px] tabular-nums font-bold ${isPaid ? 'text-ink-4' : 'text-ink-1'}`}>{fmtCurrency(row.net_interest)}</td>
+                      <td className="px-3 py-1 text-center">
+                        <StatusDot status={row.status} />
                       </td>
                       {isCoordinator && (
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="px-3 py-1 text-center">
                           {row.status !== 'paid' ? (
-                            <button onClick={() => markAsPaid(row.id)} disabled={loading === row.id} className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase">
+                            <button onClick={() => markAsPaid(row.id)} disabled={loading === row.id} className="text-[10px] font-bold text-forest hover:text-ink-1 transition-colors uppercase">
                               {loading === row.id ? '…' : 'Paid'}
                             </button>
                           ) : (
-                            <button onClick={() => revertPayout(row.id)} disabled={loading === row.id} className="text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase">
+                            <button onClick={() => revertPayout(row.id)} disabled={loading === row.id} className="text-[10px] font-bold text-ink-5 hover:text-ink-3 transition-colors uppercase">
                               {loading === row.id ? '…' : 'Undo'}
                             </button>
                           )}
@@ -184,14 +182,13 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
                   )
                 })}
               </tbody>
-              <tfoot>
-                <tr className="bg-slate-800/40 border-t border-slate-600">
-                  <td colSpan={4} className="py-2 px-3 text-xs font-bold text-slate-200 uppercase tracking-wide">Total</td>
-                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-slate-100">{fmtCurrency(totals.gross)}</td>
-                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-red-400">{fmtCurrency(totals.tds)}</td>
-                  <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-emerald-400">{fmtCurrency(totals.net)}</td>
-                  <td></td>
-                  {isCoordinator && <td></td>}
+              <tfoot className="bg-surface-2/50 border-t border-hairline-strong">
+                <tr className="h-8">
+                  <td colSpan={4} className="px-3 py-1 text-[10px] font-bold text-ink-3 uppercase tracking-widest">Total</td>
+                  <td className="px-3 py-1 text-right num font-bold text-ink-2">{fmtCurrency(totals.gross)}</td>
+                  <td className="px-3 py-1 text-right num font-bold text-ink-3 opacity-70">{fmtCurrency(totals.tds)}</td>
+                  <td className="px-3 py-1 text-right num font-bold text-ink-1 text-[13px]">{fmtCurrency(totals.net)}</td>
+                  <td colSpan={isCoordinator ? 2 : 1}></td>
                 </tr>
               </tfoot>
             </table>
@@ -201,33 +198,40 @@ export default function PayoutScheduleSection({ agreementId, payouts, userRole }
 
       {/* ── Maturity Repayment ── */}
       {principalRows.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-            Maturity Repayment
-          </h4>
+        <div className="space-y-3">
+          <h4 className="lbl font-bold text-ink-1">Maturity Repayment</h4>
           {principalRows.map((row) => (
-            <div key={row.id} className="flex items-center justify-between p-4 bg-amber-900/10 border border-amber-800/30 rounded-lg">
-              <div className="flex items-center gap-4">
+            <div key={row.id} className="flex items-center justify-between p-6 bg-surface border border-hairline rounded-sm shadow-sm">
+              <div className="flex items-center gap-6">
                 <div>
-                  <p className="text-xs text-slate-400">Scheduled for {fmtDate(row.due_by)}</p>
-                  <p className="text-xl font-bold text-slate-100">{fmtCurrency(row.gross_interest)}</p>
+                  <p className="lbl opacity-70">Scheduled for {fmtDate(row.due_by)}</p>
+                  <p className="text-2xl font-bold num text-earth-brown leading-none">{fmtCurrency(row.gross_interest)}</p>
                 </div>
-                <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold capitalize ${
-                  row.status === 'paid' ? 'bg-green-900/40 text-green-400' :
-                  row.status === 'overdue' ? 'bg-red-900/40 text-red-400' :
-                  'bg-slate-700 text-slate-300'
-                }`}>{row.status}</span>
+                <div className="flex flex-col items-center gap-1 border-l border-hairline pl-6">
+                  <StatusDot status={row.status} />
+                  <span className="text-[9px] font-bold uppercase text-ink-4 tracking-tighter">{row.status}</span>
+                </div>
               </div>
               {isCoordinator && (
-                row.status !== 'paid' ? (
-                  <button onClick={() => markAsPaid(row.id)} disabled={loading === row.id} className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors uppercase disabled:opacity-50">
-                    {loading === row.id ? '…' : 'Mark Repaid'}
-                  </button>
-                ) : (
-                  <button onClick={() => revertPayout(row.id)} disabled={loading === row.id} className="text-xs font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase">
-                    Undo
-                  </button>
-                )
+                <div className="flex items-center gap-3">
+                  {row.status !== 'paid' ? (
+                    <button 
+                      onClick={() => markAsPaid(row.id)} 
+                      disabled={loading === row.id} 
+                      className="px-4 py-2 bg-forest text-paper text-[11px] font-bold rounded-sm hover:bg-ink-1 transition-all uppercase shadow-sm disabled:opacity-50"
+                    >
+                      {loading === row.id ? '…' : 'Mark Repaid'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => revertPayout(row.id)} 
+                      disabled={loading === row.id} 
+                      className="px-4 py-2 border border-hairline-strong text-ink-4 text-[11px] font-bold rounded-sm hover:bg-surface-2 transition-all uppercase"
+                    >
+                      Undo
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ))}

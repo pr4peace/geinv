@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, X, AlertTriangle, Check, ArrowRight } from 'lucide-react'
+import { RefreshCw, X, AlertTriangle, AlertCircle, Check, ArrowRight, Loader2 } from 'lucide-react'
 import type { ExtractedAgreement, ExtractedPayoutRow } from '@/lib/claude'
 import type { PayoutFrequency, InterestType } from '@/types/database'
 import type { ExtractionFlag } from '@/lib/extraction-validator'
@@ -52,38 +52,38 @@ function FlagsPanel({
   return (
     <div className="mb-6 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className={`text-sm font-semibold flex items-center gap-2 ${blocking.length > 0 ? 'text-red-400' : 'text-amber-400'}`}>
-          <AlertTriangle className="w-4 h-4" />
+        <h3 className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 ${blocking.length > 0 ? 'text-rust' : 'text-clay'}`}>
+          <AlertTriangle className="w-3.5 h-3.5" />
           {blocking.length > 0
-            ? `${blocking.length} error${blocking.length !== 1 ? 's' : ''} must be resolved before saving`
-            : `${pending.length} warning${pending.length !== 1 ? 's' : ''} — review and proceed`}
+            ? `${blocking.length} error${blocking.length !== 1 ? 's' : ''} to resolve`
+            : `${pending.length} warning${pending.length !== 1 ? 's' : ''} — review`}
         </h3>
-        <span className="text-xs text-slate-500">{resolved.length} of {flags.length} resolved</span>
+        <span className="text-[10px] font-bold text-ink-5 uppercase">{resolved.length} of {flags.length} resolved</span>
       </div>
 
       {flags.map(flag => (
         <div
           key={flag.id}
-          className={`border-l-4 rounded-xl p-4 space-y-3 ${
+          className={`border-l-4 rounded-sm p-4 space-y-3 shadow-sm ${
             flag.resolution === 'pending'
-              ? 'border-red-500 bg-red-900/10'
+              ? 'border-rust bg-rust-soft/20'
               : flag.resolution === 'accepted'
-              ? 'border-amber-500 bg-amber-900/10'
-              : 'border-emerald-500 bg-emerald-900/10'
+              ? 'border-clay bg-clay-soft/20'
+              : 'border-gain bg-gain-soft/20'
           }`}
         >
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-slate-200">{flag.message}</p>
-              <p className="text-xs text-slate-400">
-                Expected: <span className="text-emerald-400">{flag.expected}</span>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-ink-1">{flag.message}</p>
+              <p className="text-xs text-ink-3">
+                Expected: <span className="text-gain font-bold num">{flag.expected}</span>
                 {' · '}
-                Found: <span className="text-red-400">{flag.found}</span>
+                Found: <span className="text-rust font-bold num">{flag.found}</span>
               </p>
             </div>
             {flag.resolution !== 'pending' && (
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                flag.resolution === 'accepted' ? 'bg-amber-900/40 text-amber-400' : 'bg-emerald-900/40 text-emerald-400'
+              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-sm ${
+                flag.resolution === 'accepted' ? 'bg-clay text-paper' : 'bg-gain text-paper'
               }`}>
                 {flag.resolution}
               </span>
@@ -91,12 +91,12 @@ function FlagsPanel({
           </div>
 
           {flag.resolution === 'pending' && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               {flag.rowIndex !== null && (
                 <button
                   type="button"
                   onClick={() => onFix(flag.id)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-900/40 text-indigo-400 hover:bg-indigo-800/40 rounded-lg transition-colors"
+                  className="h-7 px-3 text-[10px] font-bold uppercase bg-ink-1 text-paper rounded-sm hover:bg-forest transition-all shadow-sm"
                 >
                   Fix value
                 </button>
@@ -104,32 +104,32 @@ function FlagsPanel({
               <button
                 type="button"
                 onClick={onReUpload}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-lg transition-colors"
+                className="h-7 px-3 text-[10px] font-bold uppercase border border-hairline-strong text-ink-2 bg-surface rounded-sm hover:bg-surface-2 transition-all shadow-sm"
               >
                 Retry Scan
               </button>
               {accepting === flag.id ? (
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex items-center gap-2 w-full mt-2">
                   <input
                     type="text"
-                    placeholder="Why is this correct? (required)"
+                    placeholder="Reason for accepting..."
                     value={acceptNotes[flag.id] ?? ''}
                     onChange={e => setAcceptNotes(n => ({ ...n, [flag.id]: e.target.value }))}
-                    className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    className="flex-1 h-7 border border-clay/30 bg-surface px-2 text-xs rounded-sm focus:border-clay focus:ring-2 focus:ring-clay/10 outline-none"
                     autoFocus
                   />
                   <button
                     type="button"
                     disabled={(acceptNotes[flag.id] ?? '').trim().length < 5}
                     onClick={() => { onAccept(flag.id, acceptNotes[flag.id]); setAccepting(null) }}
-                    className="px-3 py-1.5 text-xs font-semibold bg-amber-700 text-white hover:bg-amber-600 disabled:opacity-40 rounded-lg transition-colors"
+                    className="h-7 px-3 text-[10px] font-bold uppercase bg-clay text-paper rounded-sm hover:bg-earth-brown disabled:opacity-40 transition-all shadow-sm"
                   >
                     Confirm
                   </button>
                   <button
                     type="button"
                     onClick={() => setAccepting(null)}
-                    className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+                    className="px-2 text-[10px] font-bold uppercase text-ink-4 hover:text-ink-2"
                   >
                     Cancel
                   </button>
@@ -138,7 +138,7 @@ function FlagsPanel({
                 <button
                   type="button"
                   onClick={() => setAccepting(flag.id)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 rounded-lg transition-colors"
+                  className="h-7 px-3 text-[10px] font-bold uppercase bg-clay-soft text-clay border border-clay/20 rounded-sm hover:bg-clay hover:text-paper transition-all shadow-sm"
                 >
                   Accept as-is
                 </button>
@@ -147,7 +147,7 @@ function FlagsPanel({
           )}
 
           {flag.resolution === 'accepted' && flag.acceptanceNote && (
-            <p className="text-xs text-amber-400/70 italic">Note: {flag.acceptanceNote}</p>
+            <p className="text-[11px] text-clay/80 italic font-medium">Note: {flag.acceptanceNote}</p>
           )}
         </div>
       ))}
@@ -171,21 +171,21 @@ function RescanDiff({
   const isChanged = String(oldVal ?? '') !== String(newVal ?? '')
 
   return (
-    <div className={`p-3 rounded-xl border transition-colors ${isChanged ? 'bg-amber-900/10 border-amber-700/50' : 'bg-slate-800/40 border-slate-700'}`}>
-      <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">{label}</label>
-      <div className="flex items-center gap-3">
+    <div className={`p-4 rounded-sm border transition-colors ${isChanged ? 'bg-clay-soft/20 border-clay/30 shadow-sm' : 'bg-surface-2 border-hairline'}`}>
+      <label className="lbl mb-2 block">{label}</label>
+      <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-slate-500">Current</p>
-          <p className="text-sm text-slate-400 truncate">{oldVal ?? '—'}</p>
+          <p className="text-[9px] font-bold uppercase text-ink-5 mb-0.5">Current</p>
+          <p className="text-[13px] text-ink-3 truncate font-medium">{oldVal ?? '—'}</p>
         </div>
-        <ArrowRight className={`w-4 h-4 flex-shrink-0 ${isChanged ? 'text-amber-500' : 'text-slate-700'}`} />
+        <ArrowRight className={`w-3.5 h-3.5 flex-shrink-0 ${isChanged ? 'text-clay' : 'text-ink-5'}`} />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-indigo-400">Extracted</p>
+          <p className="text-[9px] font-bold uppercase text-forest mb-0.5">Extracted</p>
           <input
             type={type}
             value={newVal ?? ''}
             onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
-            className={`w-full bg-slate-900 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${isChanged ? 'border-amber-600 text-amber-200' : 'border-slate-700 text-slate-200'}`}
+            className={`w-full h-7 bg-surface border rounded-sm px-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-forest/10 ${isChanged ? 'border-clay text-earth-brown' : 'border-hairline-strong text-ink-1'}`}
           />
         </div>
       </div>
@@ -203,19 +203,19 @@ function PayoutScheduleDiff({
   const maxLength = Math.max(currentRows.length, extractedRows.length)
 
   return (
-    <div className="space-y-2">
-      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2">Payout Schedule Comparison</p>
-      <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/50">
-        <table className="w-full text-[10px]">
+    <div className="space-y-3">
+      <p className="lbl font-bold">Payout Schedule Comparison</p>
+      <div className="overflow-x-auto rounded-sm border border-hairline bg-surface shadow-sm">
+        <table className="border-collapse w-full text-[11px]">
           <thead>
-            <tr className="border-b border-slate-700 bg-slate-800/50">
-              <th className="px-2 py-2 text-left text-slate-400">#</th>
-              <th className="px-2 py-2 text-left text-slate-400">Property</th>
-              <th className="px-2 py-2 text-left text-slate-500 italic">Current</th>
-              <th className="px-2 py-2 text-left text-indigo-400">Extracted</th>
+            <tr className="bg-surface-2 border-b border-hairline-strong">
+              <th className="px-3 py-2 text-left text-ink-5 w-8 font-bold">#</th>
+              <th className="px-3 py-2 text-left text-ink-5 uppercase tracking-widest text-[9px] font-bold">Property</th>
+              <th className="px-3 py-2 text-left text-ink-4 italic font-medium">Current</th>
+              <th className="px-3 py-2 text-left text-forest uppercase tracking-widest text-[9px] font-bold">Extracted</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-hairline">
             {Array.from({ length: maxLength }).map((_, i) => {
               const cur = currentRows[i]
               const ext = extractedRows[i]
@@ -230,23 +230,23 @@ function PayoutScheduleDiff({
 
               return (
                 <React.Fragment key={i}>
-                  <tr className="bg-slate-800/20">
-                    <td rowSpan={props.length} className="px-2 py-2 align-top font-bold text-slate-500 border-r border-slate-800">
+                  <tr className="bg-surface-2/30">
+                    <td rowSpan={props.length} className="px-3 py-2 align-top font-bold text-ink-5 border-r border-hairline num bg-surface-2/50">
                       {i + 1}
                     </td>
-                    <td className="px-2 py-1 text-slate-500">{props[0]}</td>
-                    <td className="px-2 py-1 text-slate-400">{cur?.[props[0]] ?? '—'}</td>
-                    <td className={`px-2 py-1 ${cur?.[props[0]] !== ext?.[props[0]] ? 'bg-amber-900/20 text-amber-200' : 'text-slate-300'}`}>
+                    <td className="px-3 py-1 text-ink-5 font-bold uppercase text-[9px]">{props[0].replace('_', ' ')}</td>
+                    <td className="px-3 py-1 text-ink-4 num">{cur?.[props[0]] ?? '—'}</td>
+                    <td className={`px-3 py-1 num font-bold ${cur?.[props[0]] !== ext?.[props[0]] ? 'bg-clay-soft/30 text-earth-brown' : 'text-ink-2'}`}>
                       {ext?.[props[0]] ?? '—'}
                     </td>
                   </tr>
                   {props.slice(1).map((p) => (
                     <tr key={p}>
-                      <td className="px-2 py-1 text-slate-500">{p}</td>
-                      <td className="px-2 py-1 text-slate-400">
+                      <td className="px-3 py-1 text-ink-5 font-bold uppercase text-[9px]">{p.replace('_', ' ')}</td>
+                      <td className="px-3 py-1 text-ink-4 num">
                         {typeof cur?.[p] === 'number' ? cur[p].toLocaleString('en-IN') : (cur?.[p] ?? '—')}
                       </td>
-                      <td className={`px-2 py-1 ${String(cur?.[p]) !== String(ext?.[p]) ? 'bg-amber-900/20 text-amber-200' : 'text-slate-300'}`}>
+                      <td className={`px-3 py-1 num font-bold ${String(cur?.[p]) !== String(ext?.[p]) ? 'bg-clay-soft/30 text-earth-brown' : 'text-ink-2'}`}>
                         {typeof ext?.[p] === 'number' ? ext[p].toLocaleString('en-IN') : (ext?.[p] ?? '—')}
                       </td>
                     </tr>
@@ -258,11 +258,14 @@ function PayoutScheduleDiff({
         </table>
       </div>
       {currentRows.length !== extractedRows.length && (
-        <p className={`text-[10px] italic ${extractedRows.length < currentRows.length ? 'text-red-400 font-semibold' : 'text-amber-500'}`}>
-          {extractedRows.length < currentRows.length
-            ? `⚠️ Extracted has fewer rows (${extractedRows.length}) than current (${currentRows.length}). Applying will DELETE the ${currentRows.length - extractedRows.length} missing rows. Re-scan again or proceed carefully.`
-            : `⚠️ Row count mismatch: Current has ${currentRows.length} rows, Extracted has ${extractedRows.length} rows.`}
-        </p>
+        <div className={`p-3 rounded-sm border ${extractedRows.length < currentRows.length ? 'bg-rust-soft/20 border-rust/20' : 'bg-clay-soft/20 border-clay/20'}`}>
+          <p className={`text-[11px] italic flex items-center gap-2 ${extractedRows.length < currentRows.length ? 'text-rust font-bold' : 'text-clay font-bold'}`}>
+            <AlertCircle className="w-3.5 h-3.5" />
+            {extractedRows.length < currentRows.length
+              ? `Extracted has fewer rows (${extractedRows.length}) than current (${currentRows.length}). Applying will DELETE ${currentRows.length - extractedRows.length} rows.`
+              : `Row count mismatch: Current has ${currentRows.length}, Extracted has ${extractedRows.length}.`}
+          </p>
+        </div>
       )}
     </div>
   )
@@ -355,52 +358,58 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
       <button
         type="button"
         onClick={handleRescan}
-        className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors flex items-center gap-1.5"
+        className="h-7 px-3 border border-hairline-strong text-ink-1 bg-surface text-[10px] font-bold uppercase rounded-sm hover:bg-surface-2 transition-all flex items-center gap-1.5 shadow-sm"
       >
         <RefreshCw className="w-3 h-3" />
         Re-scan Doc
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-ink-1/40 backdrop-blur-[2px]">
+          <div className="bg-surface border border-hairline rounded-sm w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin text-indigo-400' : 'text-slate-400'}`} />
-                Re-scan Agreement
+            <div className="px-6 py-4 border-b border-hairline flex items-center justify-between bg-surface-2">
+              <h3 className="text-sm font-bold text-ink-1 flex items-center gap-3 uppercase tracking-widest">
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-forest' : 'text-ink-4'}`} />
+                Review Data Sync
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-slate-500 hover:text-slate-300 transition-colors"
+                className="text-ink-5 hover:text-ink-1 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
               {loading && (
-                <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                  <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-                  <p className="text-slate-400 animate-pulse">Gemini is re-reading the document...</p>
+                <div className="py-20 flex flex-col items-center justify-center space-y-6">
+                  <Loader2 className="w-10 h-10 text-forest animate-spin" />
+                  <div className="text-center space-y-1">
+                    <p className="text-ink-2 text-[15px] font-semibold font-serif">Rethinking extraction...</p>
+                    <p className="text-ink-5 text-[11px] font-bold uppercase tracking-wider">Gemini is re-reading the agreement</p>
+                  </div>
                 </div>
               )}
 
               {error && (
-                <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 flex gap-3 mb-6">
-                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-200">{error}</p>
+                <div className="bg-rust-soft border border-rust/20 rounded-sm p-5 flex gap-4 mb-8">
+                  <AlertTriangle className="w-5 h-5 text-rust flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-rust uppercase tracking-wider">Extraction Failed</p>
+                    <p className="text-sm text-rust font-medium italic">{error}</p>
+                  </div>
                 </div>
               )}
 
               {extracted && current && !loading && (
-                <div className="space-y-6">
-                  <div className="bg-emerald-900/20 border border-emerald-800/50 rounded-xl p-4 flex gap-3">
-                    <Check className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-10">
+                  <div className="bg-gain-soft border border-gain/20 rounded-sm p-5 flex gap-4">
+                    <Check className="w-5 h-5 text-gain flex-shrink-0 mt-0.5 stroke-[3]" />
                     <div>
-                      <p className="text-sm font-medium text-emerald-300">Extraction Complete</p>
-                      <p className="text-xs text-emerald-400/70">Verify the changes below. Confirming will overwrite the current agreement and payout schedule.</p>
+                      <p className="text-[11px] font-bold uppercase text-gain tracking-widest">Extraction Ready</p>
+                      <p className="text-[13px] text-ink-2 font-medium mt-1">Verify the changes below. Confirming will overwrite the current record.</p>
                     </div>
                   </div>
 
@@ -453,12 +462,12 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
                       type="number"
                       onChange={(v) => setExtracted(prev => prev ? { ...prev, roi_percentage: Number(v) } : null)}
                     />
-                    <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Frequency</p>
+                    <div className="p-4 rounded-sm border bg-surface-2 border-hairline">
+                      <p className="lbl mb-2">Frequency</p>
                       <select
                         value={extracted.payout_frequency || ''}
                         onChange={(e) => setExtracted(prev => prev ? { ...prev, payout_frequency: e.target.value as PayoutFrequency } : null)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[13px] font-semibold rounded-sm focus:border-forest outline-none"
                       >
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
@@ -467,12 +476,12 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
                         <option value="cumulative">Cumulative</option>
                       </select>
                     </div>
-                    <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Interest Type</p>
+                    <div className="p-4 rounded-sm border bg-surface-2 border-hairline">
+                      <p className="lbl mb-2">Interest Type</p>
                       <select
                         value={extracted.interest_type || ''}
                         onChange={(e) => setExtracted(prev => prev ? { ...prev, interest_type: e.target.value as InterestType } : null)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full h-7 border border-hairline-strong bg-surface px-2 text-[13px] font-semibold rounded-sm focus:border-forest outline-none"
                       >
                         <option value="simple">Simple</option>
                         <option value="compound">Compound</option>
@@ -480,13 +489,13 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl border bg-slate-800/40 border-slate-700">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Address</p>
+                  <div className="p-4 rounded-sm border bg-surface-2 border-hairline">
+                    <p className="lbl mb-2">Address</p>
                     <textarea
                       rows={2}
                       value={extracted.investor_address || ''}
                       onChange={(e) => setExtracted(prev => prev ? { ...prev, investor_address: e.target.value } : null)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                      className="w-full border border-hairline-strong bg-surface p-2 text-[13px] font-medium text-ink-2 rounded-sm focus:border-forest outline-none resize-none"
                     />
                   </div>
 
@@ -499,24 +508,24 @@ export default function RescanModal({ agreementId, userRole }: RescanModalProps)
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-700 flex justify-end gap-3 bg-slate-800/50 rounded-b-2xl">
+            <div className="px-8 py-4 border-t border-hairline flex justify-end items-center gap-4 bg-surface-2">
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-[11px] font-bold uppercase text-ink-4 hover:text-ink-1 transition-colors"
               >
-                Cancel
+                Discard
               </button>
               {extracted && current && !loading && (
                 <button
                   onClick={handleConfirm}
                   disabled={saving || unresolvedCount > 0}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
+                  className="h-8 px-6 bg-forest text-paper text-[11px] font-bold uppercase rounded-sm hover:bg-ink-1 disabled:opacity-50 transition-all shadow-sm"
                 >
                   {saving
                     ? 'Applying...'
                     : unresolvedCount > 0
                     ? `${unresolvedCount} Error${unresolvedCount !== 1 ? 's' : ''} to Resolve`
-                    : 'Apply Changes'}
+                    : 'Sync Data'}
                 </button>
               )}
             </div>

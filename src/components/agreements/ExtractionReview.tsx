@@ -152,31 +152,31 @@ function FlagsPanel({
   const infos = pending.filter(f => f.severity === 'info')
 
   return (
-    <div className="mb-6 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-      <div className="px-5 py-3 bg-slate-800/50 flex items-center justify-between border-b border-slate-800">
+    <div className="mb-6 bg-surface border border-hairline rounded-sm overflow-hidden">
+      <div className="px-5 py-3 bg-surface-2 flex items-center justify-between border-b border-hairline">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-semibold text-slate-200">
+          <AlertTriangle className="w-4 h-4 text-clay" />
+          <h3 className="text-sm font-semibold text-ink-1">
             {pending.length} item{pending.length !== 1 ? 's' : ''} to review
           </h3>
           <div className="flex items-center gap-1.5 ml-2">
-            {errors.length > 0 && <span className="px-1.5 py-0.5 rounded bg-red-900/40 text-red-400 text-[10px] font-bold uppercase">{errors.length} Errors</span>}
-            {warnings.length > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 text-[10px] font-bold uppercase">{warnings.length} Warnings</span>}
-            {infos.length > 0 && <span className="px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-400 text-[10px] font-bold uppercase">{infos.length} Info</span>}
+            {errors.length > 0 && <span className="px-1.5 py-0.5 rounded-sm bg-rust-soft text-rust text-[10px] font-bold uppercase">{errors.length} Errors</span>}
+            {warnings.length > 0 && <span className="px-1.5 py-0.5 rounded-sm bg-clay-soft text-clay text-[10px] font-bold uppercase">{warnings.length} Warnings</span>}
+            {infos.length > 0 && <span className="px-1.5 py-0.5 rounded-sm bg-surface-3 text-ink-3 text-[10px] font-bold uppercase">{infos.length} Info</span>}
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onAcceptAll}
-            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            className="text-xs font-semibold text-forest hover:text-forest-2 transition-colors"
           >
             Mark all as correct
           </button>
           <button
             type="button"
             onClick={onReUpload}
-            className="text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+            className="text-xs font-semibold text-ink-4 hover:text-ink-1 transition-colors"
           >
             Re-upload
           </button>
@@ -186,18 +186,18 @@ function FlagsPanel({
         {pending.map(flag => (
           <div key={flag.id} className="flex items-start justify-between gap-4 group">
             <div className="space-y-0.5">
-              <p className={`text-xs ${flag.severity === 'error' ? 'text-red-400' : flag.severity === 'warning' ? 'text-amber-400' : 'text-slate-300'}`}>
+              <p className={`text-xs ${flag.severity === 'error' ? 'text-rust' : flag.severity === 'warning' ? 'text-clay' : 'text-ink-2'}`}>
                 {flag.message}
               </p>
-              <p className="text-[10px] text-slate-500">
-                Expected: <span className="text-emerald-500/80">{flag.expected}</span> · Found: <span className="text-red-500/80">{flag.found}</span>
+              <p className="text-[10px] text-ink-5">
+                Expected: <span className="text-gain">{flag.expected}</span> · Found: <span className="text-rust">{flag.found}</span>
               </p>
             </div>
             {flag.rowIndex !== null && (
               <button
                 type="button"
                 onClick={() => onFix(flag.id, flag.rowIndex!)}
-                className="text-[10px] font-bold uppercase text-indigo-400 hover:text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-[10px] font-bold uppercase text-forest hover:text-forest-2 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 Locate
               </button>
@@ -413,8 +413,8 @@ export default function ExtractionReview({
 
   function fieldClass(field: keyof FormState, base: string = ''): string {
     const warned = warnings.length > 0 && fieldMentionedInWarning(field, warnings)
-    return `${base} bg-slate-900 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-      warned ? 'border-amber-500 ring-1 ring-amber-500/40' : 'border-slate-600'
+    return `${base} h-7 bg-surface border rounded-sm px-2 text-sm text-ink-1 focus:outline-none focus:ring-2 focus:ring-forest/12 focus:border-forest ${
+      warned ? 'border-clay ring-1 ring-clay/20' : 'border-hairline-strong'
     }`
   }
 
@@ -530,7 +530,7 @@ export default function ExtractionReview({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-100 transition-colors"
+        className="flex items-center gap-1 text-sm text-ink-4 hover:text-ink-1 transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
         Back to Upload
@@ -538,13 +538,13 @@ export default function ExtractionReview({
 
       {/* Confidence warnings banner */}
       {warnings.length > 0 && (
-        <div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4 flex gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="bg-clay-soft border border-clay/20 rounded-sm p-4 flex gap-3">
+          <AlertTriangle className="w-5 h-5 text-clay flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-amber-300 mb-1">
+            <p className="text-sm font-semibold text-clay mb-1">
               Gemini flagged some uncertainty — please verify the highlighted fields.
             </p>
-            <ul className="text-xs text-amber-200/80 space-y-0.5 list-disc list-inside">
+            <ul className="text-xs text-clay/80 space-y-0.5 list-disc list-inside">
               {warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -562,16 +562,16 @@ export default function ExtractionReview({
 
       {/* Duplicate warning banner */}
       {duplicates.length > 0 && (
-        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 space-y-3">
+        <div className="bg-rust-soft border border-rust/20 rounded-sm p-4 space-y-3">
           <div className="flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-rust flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-300 mb-1">
+              <p className="text-sm font-semibold text-rust mb-1">
                 Possible duplicate — this investor already has an agreement on this date
               </p>
               <div className="space-y-1">
                 {duplicates.map(d => (
-                  <div key={d.id} className="flex items-center gap-2 text-xs text-red-200/80">
+                  <div key={d.id} className="flex items-center gap-2 text-xs text-rust/80">
                     <span className="font-mono">{d.reference_id}</span>
                     <span>—</span>
                     <span>{d.investor_name}</span>
@@ -583,7 +583,7 @@ export default function ExtractionReview({
                       href={`/agreements/${d.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-1 inline-flex items-center gap-0.5 text-red-300 hover:text-red-100 transition-colors"
+                      className="ml-1 inline-flex items-center gap-0.5 text-rust hover:text-rust/70 transition-colors"
                     >
                       View <ExternalLink className="w-3 h-3" />
                     </a>
@@ -600,9 +600,9 @@ export default function ExtractionReview({
                 setBypassDuplicate(e.target.checked)
                 if (e.target.checked) setSaveError(null)
               }}
-              className="accent-red-400 w-4 h-4 flex-shrink-0"
+              className="accent-rust w-4 h-4 flex-shrink-0"
             />
-            <span className="text-xs text-red-200">
+            <span className="text-xs text-rust/80">
               I confirm this is a new agreement and not a duplicate of the above
             </span>
           </label>
@@ -613,24 +613,24 @@ export default function ExtractionReview({
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
         {/* Left: Form (60%) */}
         <div className="xl:col-span-3 space-y-5">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Details</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-5 space-y-4">
+            <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">Agreement Details</h2>
 
             {/* Reference ID */}
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Reference ID (auto-generated)</label>
+              <label className="text-xs text-ink-4">Reference ID (auto-generated)</label>
               <input
                 type="text"
                 value={form.reference_id}
                 readOnly
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 opacity-70 cursor-not-allowed"
+                className="w-full bg-canvas border border-hairline rounded-sm px-2 h-7 text-sm text-ink-3 opacity-70 cursor-not-allowed"
               />
             </div>
 
             {/* Dates row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Agreement Date</label>
+                <label className="text-xs text-ink-4">Agreement Date</label>
                 <input
                   type="date"
                   value={form.agreement_date}
@@ -639,7 +639,7 @@ export default function ExtractionReview({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Investment Start Date</label>
+                <label className="text-xs text-ink-4">Investment Start Date</label>
                 <input
                   type="date"
                   value={form.investment_start_date}
@@ -654,7 +654,7 @@ export default function ExtractionReview({
                   const differsFromAllPayments = paymentDates.length > 0 && paymentDates.every(d => toDateInput(d) !== form.investment_start_date)
                   if (matchesPeriodFrom || differsFromAllPayments) {
                     return (
-                      <p className="text-xs text-amber-400 mt-1 flex items-start gap-1">
+                      <p className="text-xs text-clay mt-1 flex items-start gap-1">
                         <span>⚠</span>
                         <span>
                           {matchesPeriodFrom
@@ -672,7 +672,7 @@ export default function ExtractionReview({
 
             {/* Agreement Type */}
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Agreement Type</label>
+              <label className="text-xs text-ink-4">Agreement Type</label>
               <input
                 type="text"
                 value={form.agreement_type}
@@ -683,11 +683,11 @@ export default function ExtractionReview({
           </div>
 
           {/* Investor Details */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Investor Details</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-5 space-y-4">
+            <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">Investor Details</h2>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Investor Name *</label>
+              <label className="text-xs text-ink-4">Investor Name *</label>
               <input
                 type="text"
                 value={form.investor_name}
@@ -698,7 +698,7 @@ export default function ExtractionReview({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">PAN</label>
+                <label className="text-xs text-ink-4">PAN</label>
                 <input
                   type="text"
                   value={form.investor_pan}
@@ -707,7 +707,7 @@ export default function ExtractionReview({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Aadhaar</label>
+                <label className="text-xs text-ink-4">Aadhaar</label>
                 <input
                   type="text"
                   value={form.investor_aadhaar}
@@ -718,7 +718,7 @@ export default function ExtractionReview({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Address</label>
+              <label className="text-xs text-ink-4">Address</label>
               <textarea
                 rows={3}
                 value={form.investor_address}
@@ -728,45 +728,45 @@ export default function ExtractionReview({
             </div>
 
             {/* Second Investor (joint agreements) */}
-            <div className="border-t border-slate-700/50 pt-4 space-y-3">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Second Investor (if joint)</p>
+            <div className="border-t border-hairline pt-4 space-y-3">
+              <p className="text-xs text-ink-5 font-semibold uppercase tracking-wider">Second Investor (if joint)</p>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Name</label>
+                <label className="text-xs text-ink-4">Name</label>
                 <input
                   type="text"
                   value={form.investor2_name}
                   onChange={e => update('investor2_name', e.target.value)}
-                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full h-7 bg-surface border border-hairline-strong rounded-sm px-2 text-sm text-ink-1 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/12"
                   placeholder="e.g. Ms. Gayathri Muralidharan"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-400">PAN</label>
+                  <label className="text-xs text-ink-4">PAN</label>
                   <input
                     type="text"
                     value={form.investor2_pan}
                     onChange={e => update('investor2_pan', e.target.value)}
-                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                    className="w-full h-7 bg-surface border border-hairline-strong rounded-sm px-2 text-sm text-ink-1 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/12"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-400">Aadhaar</label>
+                  <label className="text-xs text-ink-4">Aadhaar</label>
                   <input
                     type="text"
                     value={form.investor2_aadhaar}
                     onChange={e => update('investor2_aadhaar', e.target.value)}
-                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                    className="w-full h-7 bg-surface border border-hairline-strong rounded-sm px-2 text-sm text-ink-1 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/12"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Address</label>
+                <label className="text-xs text-ink-4">Address</label>
                 <textarea
                   rows={2}
                   value={form.investor2_address}
                   onChange={e => update('investor2_address', e.target.value)}
-                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"
+                  className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-sm text-ink-1 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/12 resize-none"
                 />
               </div>
             </div>
@@ -774,11 +774,11 @@ export default function ExtractionReview({
             {/* Nominees */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-400">Nominees</label>
+                <label className="text-xs text-ink-4">Nominees</label>
                 <button
                   type="button"
                   onClick={addNominee}
-                  className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  className="flex items-center gap-1 text-xs text-forest hover:text-forest-2 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add Nominee
@@ -786,53 +786,53 @@ export default function ExtractionReview({
               </div>
 
               {form.nominees.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">No nominees — click &ldquo;Add Nominee&rdquo; to add one.</p>
+                <p className="text-xs text-ink-5 italic">No nominees — click &ldquo;Add Nominee&rdquo; to add one.</p>
               ) : (
                 <div className="space-y-3">
                   {form.nominees.map((nominee, idx) => (
-                    <div key={idx} className="relative bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                    <div key={idx} className="relative bg-canvas border border-hairline rounded-sm p-3 space-y-2">
                       <button
                         type="button"
                         onClick={() => removeNominee(idx)}
-                        className="absolute top-2 right-2 text-slate-500 hover:text-red-400 transition-colors"
+                        className="absolute top-2 right-2 text-ink-5 hover:text-rust transition-colors"
                         title="Remove nominee"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
-                      <p className="text-xs font-medium text-slate-400">Nominee {idx + 1}</p>
+                      <p className="text-xs font-medium text-ink-4">Nominee {idx + 1}</p>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs text-slate-500 mb-0.5 block">Name</label>
+                          <label className="text-xs text-ink-5 mb-0.5 block">Name</label>
                           <input
                             type="text"
                             value={nominee.name}
                             onChange={e => updateNominee(idx, 'name', e.target.value)}
                             placeholder="Full name"
-                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1 focus:outline-none focus:ring-1 focus:ring-forest/12 focus:border-forest"
                           />
                         </div>
                         <div>
-                          <label className="text-xs text-slate-500 mb-0.5 block">PAN</label>
+                          <label className="text-xs text-ink-5 mb-0.5 block">PAN</label>
                           <input
                             type="text"
                             value={nominee.pan}
                             onChange={e => updateNominee(idx, 'pan', e.target.value)}
                             placeholder="PAN number"
-                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1 focus:outline-none focus:ring-1 focus:ring-forest/12 focus:border-forest"
                           />
                         </div>
                         <div>
-                          <label className="text-xs text-slate-500 mb-0.5 block">Relationship</label>
+                          <label className="text-xs text-ink-5 mb-0.5 block">Relationship</label>
                           <input
                             type="text"
                             value={nominee.relationship}
                             onChange={e => updateNominee(idx, 'relationship', e.target.value)}
                             placeholder="e.g. Spouse, Son"
-                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1 focus:outline-none focus:ring-1 focus:ring-forest/12 focus:border-forest"
                           />
                         </div>
                         <div>
-                          <label className="text-xs text-slate-500 mb-0.5 block">Share %</label>
+                          <label className="text-xs text-ink-5 mb-0.5 block">Share %</label>
                           <input
                             type="number"
                             value={nominee.share}
@@ -840,7 +840,7 @@ export default function ExtractionReview({
                             placeholder="e.g. 100"
                             min={0}
                             max={100}
-                            className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1 focus:outline-none focus:ring-1 focus:ring-forest/12 focus:border-forest"
                           />
                         </div>
                       </div>
@@ -852,12 +852,12 @@ export default function ExtractionReview({
           </div>
 
           {/* Financial Terms */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Financial Terms</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-5 space-y-4">
+            <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">Financial Terms</h2>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Principal Amount (₹) *</label>
+                <label className="text-xs text-ink-4">Principal Amount (₹) *</label>
                 <input
                   type="number"
                   value={form.principal_amount}
@@ -866,7 +866,7 @@ export default function ExtractionReview({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">ROI % *</label>
+                <label className="text-xs text-ink-4">ROI % *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -879,7 +879,7 @@ export default function ExtractionReview({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Payout Frequency *</label>
+                <label className="text-xs text-ink-4">Payout Frequency *</label>
                 <select
                   value={form.payout_frequency}
                   onChange={e => update('payout_frequency', e.target.value as PayoutFrequency)}
@@ -893,7 +893,7 @@ export default function ExtractionReview({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Interest Type</label>
+                <label className="text-xs text-ink-4">Interest Type</label>
                 <select
                   value={form.interest_type}
                   onChange={e => {
@@ -911,7 +911,7 @@ export default function ExtractionReview({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Lock-in Years *</label>
+                <label className="text-xs text-ink-4">Lock-in Years *</label>
                 <input
                   type="number"
                   step="0.5"
@@ -921,7 +921,7 @@ export default function ExtractionReview({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-400">Maturity Date *</label>
+                <label className="text-xs text-ink-4">Maturity Date *</label>
                 <input
                   type="date"
                   value={form.maturity_date}
@@ -933,30 +933,30 @@ export default function ExtractionReview({
           </div>
 
           {/* Payment Info */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+          <div className="bg-surface border border-hairline rounded-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Payments</h2>
+              <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">Payments</h2>
               <button
                 type="button"
                 onClick={() => setForm(f => ({
                   ...f,
                   payments: [...f.payments, { date: null, mode: null, bank: null, amount: null }]
                 }))}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                className="text-xs text-forest hover:text-forest-2 font-medium"
               >
                 + Add payment
               </button>
             </div>
 
             {form.payments.length === 0 && (
-              <p className="text-xs text-slate-600 italic">No payments recorded</p>
+              <p className="text-xs text-ink-5 italic">No payments recorded</p>
             )}
 
             <div className="space-y-3">
               {form.payments.map((p, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 relative group">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start bg-canvas p-3 rounded-sm border border-hairline relative group">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Date</label>
+                    <label className="text-[10px] text-ink-5 uppercase font-semibold">Date</label>
                     <input
                       type="date"
                       value={p.date ?? ''}
@@ -965,11 +965,11 @@ export default function ExtractionReview({
                         updated[i] = { ...updated[i], date: e.target.value || null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Mode</label>
+                    <label className="text-[10px] text-ink-5 uppercase font-semibold">Mode</label>
                     <input
                       type="text"
                       value={p.mode ?? ''}
@@ -978,12 +978,12 @@ export default function ExtractionReview({
                         updated[i] = { ...updated[i], mode: e.target.value || null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1"
                       placeholder="NEFT, RTGS..."
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Bank</label>
+                    <label className="text-[10px] text-ink-5 uppercase font-semibold">Bank</label>
                     <input
                       type="text"
                       value={p.bank ?? ''}
@@ -992,12 +992,12 @@ export default function ExtractionReview({
                         updated[i] = { ...updated[i], bank: e.target.value || null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1"
                       placeholder="Bank name"
                     />
                   </div>
                   <div className="space-y-1 pr-6">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Amount (₹)</label>
+                    <label className="text-[10px] text-ink-5 uppercase font-semibold">Amount (₹)</label>
                     <input
                       type="number"
                       value={p.amount ?? ''}
@@ -1006,7 +1006,7 @@ export default function ExtractionReview({
                         updated[i] = { ...updated[i], amount: e.target.value ? Number(e.target.value) : null }
                         setForm(f => ({ ...f, payments: updated }))
                       }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-xs text-white"
+                      className="w-full bg-surface border border-hairline-strong rounded-sm px-2 py-1.5 text-xs text-ink-1"
                       placeholder="0.00"
                     />
                   </div>
@@ -1016,7 +1016,7 @@ export default function ExtractionReview({
                       ...f,
                       payments: f.payments.filter((_, j) => j !== i)
                     }))}
-                    className="absolute top-2 right-2 text-slate-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 text-ink-5 hover:text-rust p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove payment"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -1027,14 +1027,14 @@ export default function ExtractionReview({
           </div>
 
           {/* Agreement Settings */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Agreement Settings</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-5 space-y-4">
+            <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">Agreement Settings</h2>
 
             <div className="pb-2">
               {/* Salesperson display */}
               <div className="space-y-0.5">
-                <label className="text-[10px] text-slate-500 uppercase font-bold">Salesperson</label>
-                <p className="text-sm text-slate-200">
+                <label className="text-[10px] text-ink-5 uppercase font-bold">Salesperson</label>
+                <p className="text-sm text-ink-2">
                   {form.salesperson_id === 'other' || !form.salesperson_id
                     ? (form.salesperson_custom || '— None —')
                     : (salespersonOptions.find(m => m.id === form.salesperson_id)?.name || '— None —')
@@ -1044,32 +1044,32 @@ export default function ExtractionReview({
             </div>
 
             {/* Mark historical payouts as paid */}
-            <label className="flex items-start gap-3 cursor-pointer border-t border-slate-700/50 pt-4">
+            <label className="flex items-start gap-3 cursor-pointer border-t border-hairline pt-4">
               <input
                 type="checkbox"
                 checked={form.mark_historical_paid}
                 onChange={e => update('mark_historical_paid', e.target.checked)}
-                className="accent-emerald-500 w-4 h-4 mt-0.5"
+                className="accent-forest w-4 h-4 mt-0.5"
               />
-              <span className="text-sm text-slate-100">
+              <span className="text-sm text-ink-1">
                 Mark all past payouts as paid
-                <span className="block text-xs text-slate-400 mt-0.5">For existing agreements — marks all payout rows with due date before today as paid</span>
+                <span className="block text-xs text-ink-4 mt-0.5">For existing agreements — marks all payout rows with due date before today as paid</span>
               </span>
             </label>
           </div>
 
           {/* Validation errors */}
           {validationErrors.length > 0 && (
-            <div className="bg-red-900/30 border border-red-700 rounded-xl p-4">
-              <p className="text-sm font-semibold text-red-300 mb-1">Required fields missing:</p>
-              <ul className="text-xs text-red-200/80 list-disc list-inside space-y-0.5">
+            <div className="bg-rust-soft border border-rust/20 rounded-sm p-4">
+              <p className="text-sm font-semibold text-rust mb-1">Required fields missing:</p>
+              <ul className="text-xs text-rust/80 list-disc list-inside space-y-0.5">
                 {validationErrors.map(f => <li key={f}>{f}</li>)}
               </ul>
             </div>
           )}
 
           {saveError && (
-            <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-300">
+            <div className="bg-rust-soft border border-rust/20 rounded-sm p-4 text-sm text-rust">
               {saveError}
             </div>
           )}
@@ -1078,7 +1078,7 @@ export default function ExtractionReview({
           <div className="flex gap-3">
             <a
               href="/agreements"
-              className="px-6 py-3 rounded-xl border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 text-sm font-semibold transition-colors flex items-center justify-center"
+              className="px-6 py-2 rounded-sm border border-hairline-strong text-ink-3 hover:text-ink-1 hover:bg-surface-2 text-sm font-medium transition-colors flex items-center justify-center"
             >
               Cancel
             </a>
@@ -1086,7 +1086,7 @@ export default function ExtractionReview({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 py-3 px-6 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
+              className="flex-1 py-2 px-6 bg-forest hover:bg-forest-2 disabled:opacity-40 disabled:cursor-not-allowed text-paper font-medium rounded-sm transition-colors text-sm"
             >
               {saving
                 ? 'Saving...'
@@ -1101,26 +1101,26 @@ export default function ExtractionReview({
 
         {/* Right: Document Preview (40%) */}
         <div className="xl:col-span-2 space-y-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3 sticky top-6">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Document Preview</h2>
+          <div className="bg-surface border border-hairline rounded-sm p-4 space-y-3 sticky top-6">
+            <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">Document Preview</h2>
 
             {isPdf ? (
               <iframe
                 src={pdfObjectUrl ?? fileUrl}
                 title="Agreement document preview"
-                className="w-full rounded-lg bg-slate-900"
+                className="w-full rounded-sm bg-canvas"
                 style={{ height: '600px', border: 'none' }}
               />
             ) : isDocx && docxHtml ? (
               <div
-                className="w-full rounded-lg bg-white text-slate-900 overflow-auto p-4 text-sm"
+                className="w-full rounded-sm bg-white text-ink-1 overflow-auto p-4 text-sm"
                 style={{ height: '600px' }}
                 dangerouslySetInnerHTML={{ __html: docxHtml }}
               />
             ) : isDocx ? (
-              <div className="flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700 py-16 text-center">
+              <div className="flex items-center justify-center rounded-sm bg-canvas border border-hairline py-16 text-center">
                 <div>
-                  <p className="text-slate-400 text-sm">Rendering DOCX preview…</p>
+                  <p className="text-ink-4 text-sm">Rendering DOCX preview…</p>
                 </div>
               </div>
             ) : null}
@@ -1129,7 +1129,7 @@ export default function ExtractionReview({
               href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="flex items-center gap-2 text-sm text-forest hover:text-forest-2 transition-colors"
             >
               <Download className="w-4 h-4" />
               Download original document
@@ -1140,10 +1140,10 @@ export default function ExtractionReview({
 
       {/* Payout Schedule */}
       {(extracted.payout_schedule ?? []).length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
+        <div className="bg-surface border border-hairline rounded-sm p-5 space-y-4">
+          <h2 className="text-[10px] uppercase tracking-widest font-semibold text-ink-1 border-b border-hairline pb-2 mb-2">
             Payout Schedule
-            <span className="ml-2 text-xs text-slate-500 normal-case font-normal">(extracted + auto-generated)</span>
+            <span className="ml-2 text-xs text-ink-4 normal-case font-normal">(extracted + auto-generated)</span>
           </h2>
           <PayoutScheduleTable
             payouts={[

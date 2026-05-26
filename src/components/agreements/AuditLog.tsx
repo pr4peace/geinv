@@ -12,13 +12,13 @@ interface AuditEntry {
   created_at: string
 }
 
-const changeTypeLabel: Record<string, { label: string; cls: string }> = {
-  created: { label: 'Created', cls: 'text-green-400' },
-  updated: { label: 'Updated', cls: 'text-slate-300' },
-  status_changed: { label: 'Status changed', cls: 'text-amber-400' },
-  doc_status_changed: { label: 'Doc status changed', cls: 'text-indigo-400' },
-  deleted: { label: 'Deleted', cls: 'text-red-400' },
-  restored: { label: 'Restored', cls: 'text-green-400' },
+const changeTypeLabel: Record<string, { label: string; cls: string; dot: string }> = {
+  created: { label: 'Created', cls: 'text-gain', dot: 'sdot-paid' },
+  updated: { label: 'Updated', cls: 'text-ink-2', dot: 'sdot-pending' },
+  status_changed: { label: 'Status changed', cls: 'text-ink-2', dot: 'sdot-pending' },
+  doc_status_changed: { label: 'Doc status changed', cls: 'text-ink-2', dot: 'sdot-notified' },
+  deleted: { label: 'Deleted', cls: 'text-rust', dot: 'sdot-overdue' },
+  restored: { label: 'Restored', cls: 'text-gain', dot: 'sdot-active' },
 }
 
 function fmtValue(v: unknown): string {
@@ -40,16 +40,19 @@ function ChangeDiff({
   )
   if (keys.length === 0) return null
   return (
-    <div className="mt-2 space-y-1">
+    <div className="mt-3 space-y-2 pl-5">
       {keys.map((k) => (
-        <div key={k} className="flex gap-2 text-xs">
-          <span className="text-slate-500 min-w-[120px] shrink-0">{k}</span>
-          {oldValues?.[k] !== undefined && (
-            <span className="text-red-400 line-through">{fmtValue(oldValues[k])}</span>
-          )}
-          {newValues?.[k] !== undefined && (
-            <span className="text-green-400">{fmtValue(newValues[k])}</span>
-          )}
+        <div key={k} className="flex gap-4 text-[11px]">
+          <span className="text-ink-5 font-bold uppercase tracking-wider w-32 shrink-0">{k.replace(/_/g, ' ')}</span>
+          <div className="flex flex-wrap gap-2 items-center">
+            {oldValues?.[k] !== undefined && (
+              <span className="text-rust/60 line-through font-medium">{fmtValue(oldValues[k])}</span>
+            )}
+            {oldValues?.[k] !== undefined && newValues?.[k] !== undefined && <ArrowRight className="w-3 h-3 text-ink-5" />}
+            {newValues?.[k] !== undefined && (
+              <span className="text-gain font-bold">{fmtValue(newValues[k])}</span>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -62,43 +65,49 @@ export default function AuditLog({ entries }: { entries: AuditEntry[] }) {
   if (entries.length === 0) return null
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-sm overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-700/40 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-5 hover:bg-surface-2 transition-colors text-left"
       >
-        <div className="flex items-center gap-2">
-          <History className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
-            Change History
+        <div className="flex items-center gap-3">
+          <History className="w-4 h-4 text-ink-4" />
+          <span className="lbl font-bold text-ink-1 tracking-widest">
+            Agreement History
           </span>
-          <span className="text-xs text-slate-500">({entries.length})</span>
+          <span className="text-[10px] font-bold text-ink-5 opacity-60 ml-1">({entries.length})</span>
         </div>
         {open ? (
-          <ChevronUp className="w-4 h-4 text-slate-500" />
+          <ChevronUp className="w-4 h-4 text-ink-5" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-slate-500" />
+          <ChevronDown className="w-4 h-4 text-ink-5" />
         )}
       </button>
 
       {open && (
-        <div className="border-t border-slate-700 divide-y divide-slate-700/50">
+        <div className="border-t border-hairline divide-y divide-hairline">
           {entries.map((entry) => {
             const style = changeTypeLabel[entry.change_type] ?? {
               label: entry.change_type,
-              cls: 'text-slate-300',
+              cls: 'text-ink-2',
+              dot: 'sdot-pending'
             }
             return (
-              <div key={entry.id} className="px-5 py-3">
+              <div key={entry.id} className="px-6 py-4 bg-canvas/10">
                 <div className="flex items-center justify-between">
-                  <span className={`text-xs font-medium ${style.cls}`}>{style.label}</span>
-                  <span className="text-xs text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <span className={`sdot ${style.dot} m-0`} />
+                    <span className={`text-[11px] font-bold uppercase tracking-wider ${style.cls}`}>{style.label}</span>
+                    <span className="text-[10px] text-ink-5 italic font-medium ml-2">— by {entry.changed_by.split('@')[0]}</span>
+                  </div>
+                  <span className="num text-[10px] font-bold text-ink-4 uppercase">
                     {new Date(entry.created_at).toLocaleString('en-IN', {
                       day: '2-digit',
                       month: 'short',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
+                      hour12: false
                     })}
                   </span>
                 </div>
@@ -111,3 +120,5 @@ export default function AuditLog({ entries }: { entries: AuditEntry[] }) {
     </div>
   )
 }
+
+import { ArrowRight } from 'lucide-react'

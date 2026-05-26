@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Circle } from 'lucide-react'
+import { Check } from 'lucide-react'
 import type { DocStatus } from '@/types/database'
 import UploadSignedButton from './UploadSignedButton'
 
@@ -82,9 +82,9 @@ export default function DocLifecycleStepper({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Stepper */}
-      <div className="flex items-start gap-0">
+      <div className="flex items-start gap-0 px-2">
         {STAGES.map((stage, idx) => {
           const isLastStep = idx === STAGES.length - 1
           const isCompleted = idx < currentIdx || (isLastStep && idx === currentIdx)
@@ -95,32 +95,29 @@ export default function DocLifecycleStepper({
               <div className="flex flex-col items-center flex-1">
                 {/* Circle */}
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${
                     isCompleted
-                      ? 'bg-green-500 border-green-500 text-white'
+                      ? 'bg-gain border-gain text-paper'
                       : isCurrent
-                      ? 'bg-indigo-600 border-indigo-600 text-white'
-                      : 'bg-slate-800 border-slate-600 text-slate-500'
+                      ? 'bg-forest border-forest text-paper'
+                      : 'bg-canvas border-hairline-strong text-ink-4'
                   }`}
                 >
                   {isCompleted ? (
-                    <Check className="w-4 h-4" />
+                    <Check className="w-3 h-3 stroke-[3]" />
                   ) : (
-                    <Circle
-                      className={`w-3 h-3 ${isCurrent ? 'text-white' : 'text-slate-600'}`}
-                      fill="currentColor"
-                    />
+                    <span className="text-[10px] font-bold num">{idx + 1}</span>
                   )}
                 </div>
 
                 {/* Label */}
                 <p
-                  className={`mt-1.5 text-xs text-center leading-tight max-w-[80px] ${
+                  className={`mt-2 text-[10px] uppercase tracking-widest text-center leading-tight max-w-[80px] font-bold ${
                     isCurrent
-                      ? 'text-indigo-400 font-semibold'
+                      ? 'text-forest'
                       : isCompleted
-                      ? 'text-green-400 font-medium'
-                      : 'text-slate-500'
+                      ? 'text-gain'
+                      : 'text-ink-5'
                   }`}
                 >
                   {stage.label}
@@ -128,12 +125,12 @@ export default function DocLifecycleStepper({
 
                 {/* Date beneath stage */}
                 {stage.key === 'sent_to_client' && docSentToClientDate && (
-                  <p className="mt-0.5 text-[10px] text-slate-500 text-center">
+                  <p className="mt-1 num text-[9px] text-ink-4 text-center font-bold">
                     {formatDate(docSentToClientDate)}
                   </p>
                 )}
                 {stage.key === 'returned' && docReturnedDate && (
-                  <p className="mt-0.5 text-[10px] text-slate-500 text-center">
+                  <p className="mt-1 num text-[9px] text-ink-4 text-center font-bold">
                     {formatDate(docReturnedDate)}
                   </p>
                 )}
@@ -142,8 +139,8 @@ export default function DocLifecycleStepper({
               {/* Connector line (not after last) */}
               {idx < STAGES.length - 1 && (
                 <div
-                  className={`h-0.5 flex-1 mt-4 ${
-                    idx < currentIdx ? 'bg-green-500' : 'bg-slate-700'
+                  className={`h-px flex-1 mt-3 ${
+                    idx < currentIdx ? 'bg-gain' : 'bg-hairline'
                   }`}
                 />
               )}
@@ -153,28 +150,28 @@ export default function DocLifecycleStepper({
       </div>
 
       {/* Action area */}
-      <div className="pt-2">
+      <div className="pt-2 flex flex-col items-center sm:items-start">
         {docStatus === 'draft' && (
           <button
             onClick={() => advance('partner_signed')}
             disabled={loading}
-            className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+            className="h-8 px-4 rounded-sm bg-forest text-paper text-[11px] font-bold uppercase transition-all shadow-sm hover:bg-ink-1 disabled:opacity-50"
           >
             {loading ? 'Updating…' : 'Mark as Partner Signed'}
           </button>
         )}
 
         {docStatus === 'partner_signed' && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <label className="text-sm text-slate-400 whitespace-nowrap">
+              <label className="text-[10px] font-bold uppercase text-ink-4 tracking-wider">
                 Sent Date
               </label>
               <input
                 type="date"
                 value={sentDate}
                 onChange={(e) => setSentDate(e.target.value)}
-                className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="h-7 border border-hairline-strong bg-surface px-2 text-sm rounded-sm focus:border-forest focus:ring-2 focus:ring-forest/12 outline-none"
               />
             </div>
             <button
@@ -184,7 +181,7 @@ export default function DocLifecycleStepper({
                 })
               }
               disabled={loading}
-              className="w-fit px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+              className="h-8 px-4 rounded-sm bg-forest text-paper text-[11px] font-bold uppercase transition-all shadow-sm hover:bg-ink-1 disabled:opacity-50"
             >
               {loading ? 'Updating…' : 'Mark as Sent to Client'}
             </button>
@@ -192,16 +189,16 @@ export default function DocLifecycleStepper({
         )}
 
         {docStatus === 'sent_to_client' && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <label className="text-sm text-slate-400 whitespace-nowrap">
+              <label className="text-[10px] font-bold uppercase text-ink-4 tracking-wider">
                 Returned Date
               </label>
               <input
                 type="date"
                 value={returnedDate}
                 onChange={(e) => setReturnedDate(e.target.value)}
-                className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="h-7 border border-hairline-strong bg-surface px-2 text-sm rounded-sm focus:border-forest focus:ring-2 focus:ring-forest/12 outline-none"
               />
             </div>
             <button
@@ -211,7 +208,7 @@ export default function DocLifecycleStepper({
                 })
               }
               disabled={loading}
-              className="w-fit px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+              className="h-8 px-4 rounded-sm bg-forest text-paper text-[11px] font-bold uppercase transition-all shadow-sm hover:bg-ink-1 disabled:opacity-50"
             >
               {loading ? 'Updating…' : 'Mark as Returned'}
             </button>
@@ -226,13 +223,13 @@ export default function DocLifecycleStepper({
         )}
 
         {docStatus === 'uploaded' && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-900/40 text-green-400 text-sm font-medium">
-            <Check className="w-3.5 h-3.5" />
-            Complete
-          </span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-gain-soft text-gain border border-gain/20 shadow-sm">
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Complete</span>
+          </div>
         )}
 
-        {error && <p className="mt-2 text-red-400 text-xs">{error}</p>}
+        {error && <p className="mt-2 text-rust text-[10px] font-bold uppercase">{error}</p>}
       </div>
     </div>
   )

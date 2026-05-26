@@ -41,12 +41,12 @@ export default function QuickActions({ userRole }: Props) {
   if (!isCoordinator) return null
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+    <div className="bg-surface border border-hairline rounded-sm p-6 shadow-sm">
       <div className="flex items-center gap-3">
         <button
           onClick={runAllJobs}
           disabled={running}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-indigo-500 text-white text-xs font-bold uppercase tracking-wide transition-colors"
+          className="inline-flex items-center gap-2 h-8 px-4 rounded-sm bg-forest text-paper hover:bg-ink-1 disabled:opacity-50 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${running ? 'animate-spin' : ''}`} />
           {running ? 'Running Jobs…' : 'Refresh All Jobs'}
@@ -54,7 +54,9 @@ export default function QuickActions({ userRole }: Props) {
       </div>
 
       {result && (
-        <p className="mt-3 text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-2 border border-slate-700/30">{result}</p>
+        <div className="mt-4 px-4 py-3 bg-canvas border border-hairline rounded-sm">
+          <p className="text-[11px] font-medium text-ink-3 italic">{result}</p>
+        </div>
       )}
     </div>
   )
