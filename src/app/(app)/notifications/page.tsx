@@ -15,8 +15,8 @@ export default async function NotificationsPage() {
     .select('id, due_by, gross_interest, tds_amount, net_interest, agreement:agreements!inner(investor_name, reference_id, status, deleted_at)')
     .eq('status', 'pending')
     .eq('is_tds_only', false)
-    .eq('agreements.status', 'active')
-    .is('agreements.deleted_at', null)
+    .eq('agreement.status', 'active')
+    .is('agreement.deleted_at', null)
     .lte('due_by', window60)
     .order('due_by', { ascending: true })
 
@@ -26,8 +26,8 @@ export default async function NotificationsPage() {
     .select('id, due_by, tds_amount, agreement:agreements!inner(investor_name, reference_id, status, deleted_at)')
     .eq('status', 'pending')
     .eq('is_tds_only', true)
-    .eq('agreements.status', 'active')
-    .is('agreements.deleted_at', null)
+    .eq('agreement.status', 'active')
+    .is('agreement.deleted_at', null)
     .lte('due_by', window60)
     .order('due_by', { ascending: true })
 
