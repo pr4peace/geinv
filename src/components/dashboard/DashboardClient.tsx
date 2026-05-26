@@ -60,15 +60,29 @@ interface Props {
   maturingSoon: MaturingItem[]
   docsPending: DocPendingItem[]
   activity: ActivityItem[]
+  totalAUM: number
+  activeCount: number
+  uniqueInvestors: number
+  ytdNetPaid: number
 }
 
-export default function DashboardClient({ 
-  overdue, 
-  thisWeek, 
-  laterThisMonth, 
-  maturingSoon, 
-  docsPending, 
-  activity 
+function fmtCr(n: number) {
+  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} Cr`
+  if (n >= 100000) return `₹${(n / 100000).toFixed(2)} L`
+  return `₹${n.toLocaleString('en-IN')}`
+}
+
+export default function DashboardClient({
+  overdue,
+  thisWeek,
+  laterThisMonth,
+  maturingSoon,
+  docsPending,
+  activity,
+  totalAUM,
+  activeCount,
+  uniqueInvestors,
+  ytdNetPaid,
 }: Props) {
   // Simple local state for optimistic updates
   const [localOverdue, setLocalOverdue] = useState(overdue)
@@ -121,7 +135,27 @@ export default function DashboardClient({
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto space-y-10">
-      {/* Row 1: KPI Tiles */}
+      {/* Row 0: Portfolio Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <KPITile
+          label="Total AUM"
+          value={fmtCr(totalAUM)}
+          sub={`${activeCount} active agreement${activeCount !== 1 ? 's' : ''}`}
+          accent
+        />
+        <KPITile
+          label="Investors"
+          value={uniqueInvestors.toString()}
+          sub="active portfolios"
+        />
+        <KPITile
+          label="YTD interest paid"
+          value={fmtCr(ytdNetPaid)}
+          sub="net, this financial year"
+        />
+      </div>
+
+      {/* Row 1: Operational KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPITile 
           label="Open actions" 
@@ -246,12 +280,12 @@ export default function DashboardClient({
   )
 }
 
-function KPITile({ label, value, sub }: { label: string, value: string, sub: string }) {
+function KPITile({ label, value, sub, accent }: { label: string, value: string, sub: string, accent?: boolean }) {
   return (
-    <div className="bg-surface border border-hairline p-5 rounded-sm shadow-sm hover:shadow-md transition-shadow">
-      <p className="lbl mb-3">{label}</p>
-      <p className="num text-2xl font-medium text-ink-1 leading-none">{value}</p>
-      <p className="text-[11px] text-ink-4 mt-2 font-medium">{sub}</p>
+    <div className={`p-5 rounded-sm shadow-sm hover:shadow-md transition-shadow border ${accent ? 'bg-forest-soft border-forest/20' : 'bg-surface border-hairline'}`}>
+      <p className={`lbl mb-3 ${accent ? 'text-forest' : ''}`}>{label}</p>
+      <p className={`num text-2xl font-medium leading-none ${accent ? 'text-forest' : 'text-ink-1'}`}>{value}</p>
+      <p className={`text-[11px] mt-2 font-medium ${accent ? 'text-forest/70' : 'text-ink-4'}`}>{sub}</p>
     </div>
   )
 }

@@ -86,14 +86,40 @@ export default async function DashboardPage() {
     .order('sent_at', { ascending: false })
     .limit(5)
 
+  // 7. Portfolio summary — active agreements
+  const { data: activeAgreements } = await supabase
+    .from('agreements')
+    .select('principal_amount, investor_id')
+    .eq('status', 'active')
+    .is('deleted_at', null)
+
+  // 8. YTD interest paid (Indian FY: Apr 1 – Mar 31)
+  const fyStartYear = todayDate.getMonth() >= 3 ? todayDate.getFullYear() : todayDate.getFullYear() - 1
+  const fyStartStr = `${fyStartYear}-04-01`
+  const { data: ytdPaid } = await supabase
+    .from('payout_schedule')
+    .select('net_interest')
+    .eq('status', 'paid')
+    .eq('is_tds_only', false)
+    .gte('paid_date', fyStartStr)
+
+  const totalAUM = (activeAgreements ?? []).reduce((s, a) => s + (a.principal_amount ?? 0), 0)
+  const activeCount = (activeAgreements ?? []).length
+  const uniqueInvestors = new Set((activeAgreements ?? []).map(a => a.investor_id).filter(Boolean)).size
+  const ytdNetPaid = (ytdPaid ?? []).reduce((s, p) => s + (p.net_interest ?? 0), 0)
+
   return (
-    <DashboardClient 
+    <DashboardClient
       overdue={overdue ?? []}
       thisWeek={thisWeek ?? []}
       laterThisMonth={laterThisMonth ?? []}
       maturingSoon={maturingSoon}
       docsPending={docsPending}
       activity={activity ?? []}
+      totalAUM={totalAUM}
+      activeCount={activeCount}
+      uniqueInvestors={uniqueInvestors}
+      ytdNetPaid={ytdNetPaid}
     />
   )
 }
