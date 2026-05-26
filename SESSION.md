@@ -1,13 +1,13 @@
 # SESSION
 
 ## Branch
-- feature/batch-e3-remaining
+- main
 
 ## Phase
-- reviewing
+- idle
 
 ## Active Batch
-- Batch E.3 — Remaining Pages Light-Mode Redesign (2026-05-25)
+- None — Batch E released to main (2026-05-26)
 
 ---
 
@@ -36,7 +36,7 @@
 - `SESSION.md`
 
 ## Next Agent Action
-- Codex
+- None — awaiting next batch
 
 ## Session Log
 2026-05-25 · Gemini · building

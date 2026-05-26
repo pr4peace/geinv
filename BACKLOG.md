@@ -90,14 +90,14 @@ Each batch = one branch + one release. Gemini works through all items in a batch
 
 ---
 
-### 🟡 Batch E — UI Design Pass (branch: `feature/batch-e-design`)
-*Do this last — after all core flows work. Use claude.ai/design for mockups first.*
+### ✅ Batch E — UI Design Pass
+*Bloomberg/Carta-style light mode. Design system (paper/canvas/surface/hairline/ink/forest/clay/rust/gain), JetBrains Mono for numbers, Source Serif 4 for headings. All 41 files converted. Released to main.*
 
-| Item | Notes |
+| Item | Status |
 |---|---|
-| **Dashboard segmentation** | Split into Upcoming Payouts / Portfolio Health / Compliance Checklist. Design mockup first. |
-| **Changelog / What's new modal** | Show on first load after version bump using localStorage. |
-| **Full UI polish** | Apply design pass across all pages based on mockups. Typography, spacing, colour consistency. |
+| **Design system foundation + dashboard** | ✅ main |
+| **Agreements redesign (19 files)** | ✅ main |
+| **Remaining pages (10 files)** | ✅ main |
 
 ---
 
