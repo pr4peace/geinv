@@ -1,63 +1,44 @@
 # SESSION
 
 ## Branch
-- main
+- feature/batch-d-calculator
 
 ## Phase
-- idle
+- complete
 
 ## Active Batch
-- None — Batch E released to main (2026-05-26)
+- Batch D (partial) — Calculator feature
 
 ---
 
 ## Work Completed
-- **Batch E.1 — Design System Foundation + Dashboard:** ✅ complete
-- **Batch E.2 — Agreements Redesign:** ✅ complete (restyled 19 files related to agreement list and details)
-- **Batch E.3 — Remaining Pages Light-Mode Redesign:**
-  - Migrated error and not-found pages to light design system.
-  - Restyled login page with light surface and serif typography.
-  - Converted settings and batch-rescan pages to Bloomberg-style flat design.
-  - Updated global components: SplashScreen, WhatsNewModal, and UndoToast.
-  - Completed NotificationsClient restyle with tabbed navigation and action-oriented sections.
-- **Codex Review Fixes:**
-  - Dashboard: Scoped payout queries to active, non-deleted agreements.
-  - New Agreement Page: Completed light-mode transition for page shell and loading state.
-  - Tailwind Config: Updated font tokens to use CSS variables for better consistency.
-  - Dashboard UI: Fixed dynamic sparkline classes by using an explicit class map.
-  - Layout: Added mobile breakpoint to hide the fixed sidebar on narrow viewports.
+- **Task 1 — Two-option entry screen:** ✅ `/agreements/new` shows Upload Document / Enter Details cards
+- **Task 2 — CalculatorForm:** ✅ Three-section form (Agreement, Investor, Investment) with live payout schedule table and Create Agreement action
+- **Task 3 — Calculator page shell:** ✅ `/agreements/new/calculator` — server component fetching team members
+- **Task 4 — Unit tests:** ✅ 7 tests for `validateCalculatorForm` (investor name, principal, ROI, dates)
+- **Task 5 — PDF info sheet:** ✅ `src/lib/pdf-info-sheet.tsx` template + `src/app/api/agreements/pdf-info-sheet/route.ts` endpoint + 3 route tests
 
 ## Files Changed
-- `src/app/(app)/dashboard/page.tsx`
 - `src/app/(app)/agreements/new/page.tsx`
-- `tailwind.config.ts`
-- `src/components/dashboard/DashboardClient.tsx`
-- `src/app/(app)/layout.tsx`
-- `SESSION.md`
+- `src/app/(app)/agreements/new/calculator/page.tsx` (new)
+- `src/components/agreements/CalculatorForm.tsx` (new)
+- `src/lib/calculator-validation.ts` (new)
+- `src/lib/pdf-info-sheet.tsx` (new)
+- `src/app/api/agreements/pdf-info-sheet/route.ts` (new)
+- `src/__tests__/calculator-form.test.ts` (new)
+- `src/__tests__/pdf-info-sheet.test.ts` (new)
+- `package.json` / `package-lock.json` — added `@react-pdf/renderer`
 
 ## Next Agent Action
-- None — awaiting next batch
+- Codex review of the branch diff
+- Then merge to main
 
 ## Session Log
-2026-05-25 · Gemini · building
-✅ Successfully implemented light-mode design foundation and high-fidelity dashboard (E.1).
-✅ Completed comprehensive restyling of Agreements module (E.2).
-✅ Finalized light-mode transition for all remaining app surfaces (E.3).
-✅ All build and test gates passed (31/31 tests).
-💡 The flat design (rounded-sm) combined with hairline borders provides a much more professional, institutional feel.
+2026-05-26 · Claude Code · planning
+✅ Created spec (docs/superpowers/specs/2026-05-26-calculator-design.md) and plan (docs/superpowers/plans/2026-05-26-calculator.md).
 
-## Batch E.3 — Gemini session log
-Date: 2026-05-25 · Agent: Gemini · Phase: building
-✅ Migrated all remaining UI surfaces to the new light design system.
-✅ Verified production build and unit tests pass with zero regressions.
-💡 Consistent use of `.num` and `.lbl` utility classes simplifies complex data-dense layouts.
-
-2026-05-26 · Codex · reviewing
-✅ Production build passes, and the redesign is mostly well-contained in presentation components with the new token vocabulary applied broadly across settings, notifications, agreements, and global surfaces.
-❌ Issues found that required rework: dashboard payout queries lost active/non-deleted agreement scoping, `/agreements/new` still contains dark slate/indigo/emerald styling, font tokens bypass the `next/font` CSS variables, dashboard sparkline classes are dynamically generated, and the fixed sidebar needs a mobile hiding breakpoint.
-💡 Patterns to watch for in future reviews: token-swap branches still need route-level shell checks, joined Supabase queries should preserve previous status/deleted filters, and dynamic Tailwind class construction should be replaced with explicit class maps.
-
-2026-05-26 · Gemini · reviewing
-✅ Applied all 5 fixes from Codex review notes (dashboard scoping, new agreement light-mode, font variables, sparkline map, mobile sidebar).
-✅ Verified build and tests pass cleanly (31/31).
-💡 Explicitly checking the "missed" routes after a broad redesign is critical for consistency.
+2026-05-27 · Claude Code · building
+✅ Tasks 1–4 implemented: two-option entry screen, CalculatorForm with live schedule, calculator page shell, 7 unit tests.
+✅ Task 5 implemented: PDF info sheet template + API route + 3 route tests.
+✅ All tests pass (41/41), production build clean.
+💡 Route kept as `.ts` (not `.tsx`) — vitest has no JSX plugin. React.createElement with type cast avoids JSX in the route while satisfying TypeScript.
