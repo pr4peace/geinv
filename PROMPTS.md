@@ -61,6 +61,45 @@ git add -A && git commit -m "fix: apply codex review fixes" && git push
 
 ---
 
+## CODEX — FULL CODEBASE SANITY CHECK
+
+Read CLAUDE.md, AGENTS.md, and SESSION.md.
+
+This is a full codebase sanity check — review all production-facing code, not just the recent diff. Focus on correctness, safety, and dead weight. Cover:
+
+- **Security**: auth bypasses, missing role checks, unvalidated input reaching the DB
+- **Data integrity**: API routes that could corrupt `agreements`, `payout_schedule`, or `reminders`
+- **Error handling**: unhandled rejections, silent failures, missing rollbacks at API boundaries
+- **Email safety**: anything that could fire real emails accidentally in dev/test
+- **Cron safety**: `/api/reminders/process` — double-sends, state corruption
+- **Streamlining**: dead code, unused exports, redundant logic worth removing
+- **Type safety**: `any` casts, unsafe spreads (especially into Supabase inserts)
+
+Key files to check:
+- `src/app/api/**` (all route handlers)
+- `src/middleware.ts`
+- `src/lib/reminders.ts`
+- `src/lib/payout-calculator.ts`
+- `src/lib/calculator-validation.ts`
+- `src/lib/pdf-info-sheet.tsx`
+- `src/components/agreements/CalculatorForm.tsx`
+- `src/app/(app)/agreements/new/calculator/page.tsx`
+- `src/lib/claude.ts`
+
+Update SESSION.md — ONLY "## Codex Review Notes", replace fully, max 8 bullets. Mark each as **blocking** or **minor**. Do NOT edit code.
+
+Every issue MUST include the exact fix: file path, line range, and replacement code as a code block. Vague fixes will be sent back.
+
+Then append a session log entry to `## Session Log` in SESSION.md:
+```
+YYYY-MM-DD · Codex · reviewing
+✅ What was clean / well-structured
+❌ Issues found that required rework
+💡 Patterns to watch for in future reviews
+```
+
+---
+
 ## CODEX — FINAL PRE-LAUNCH REVIEW
 
 Read CLAUDE.md, AGENTS.md, and SESSION.md.

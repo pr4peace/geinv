@@ -30,8 +30,11 @@
 - `package.json` / `package-lock.json` — added `@react-pdf/renderer`
 
 ## Next Agent Action
-- Codex review of the branch diff
-- Then merge to main
+- **Codex: full codebase sanity check** — use "CODEX — FULL CODEBASE SANITY CHECK" prompt from PROMPTS.md
+- After Codex issues resolved → Gemini releases batch to main
+
+## Codex Review Notes
+_Pending review_
 
 ## Session Log
 2026-05-26 · Claude Code · planning
